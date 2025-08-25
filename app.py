@@ -1816,7 +1816,7 @@ initial_setup_and_logging()
 
 # --- Flask App Setup ---
 app = Flask(__name__)
-PROD_ORIGIN = "https://kutair.github.io"
+PROD_ORIGIN = "https://vasiliy-katsyka.github.io"
 NULL_ORIGIN = "null"
 LOCAL_DEV_ORIGINS = ["http://localhost:5500","http://127.0.0.1:5500","http://localhost:8000","http://127.0.0.1:8000",]
 final_allowed_origins = list(set([PROD_ORIGIN, NULL_ORIGIN] + LOCAL_DEV_ORIGINS))
