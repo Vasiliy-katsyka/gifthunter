@@ -1126,6 +1126,19 @@ function showTGNotification(message, type = 'info') {
         else if (type === 'warning') Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
     }
 }
+
+async function checkSubscription() {
+    try {
+        const response = await apiRequest('/api/check_subscription', 'GET');
+        return response.is_subscribed;
+    } catch (error) {
+        console.error("Subscription check failed:", error);
+        // Default to allowing the action if the check fails, 
+        // or handle the error as you see fit.
+        return true; 
+    }
+}
+    
 function renderHeader() {
     updateBalances();
 }
@@ -1435,6 +1448,13 @@ function getItemValue(prizeObject) {
 }
 async function spinRoulette() {
     if (!currentOpenCaseOrSlot) return;
+
+    const isSubscribed = await checkSubscription();
+    if (!isSubscribed) {
+        Telegram.WebApp.showAlert("Please subscribe to @CompactTelegram to spin the case.");
+        return;
+    }
+
     spinButton.disabled = true;
     spinButton.textContent = 'Spinning...';
     Telegram.WebApp.HapticFeedback?.impactOccurred('light');
@@ -1579,6 +1599,7 @@ async function spinRoulette() {
         showTGNotification("Error during spin. Please try again.", "error");
     }
 }
+    
 async function handleSingleConvert(itemId) {
     const success = await convertItemToTon(itemId);
     if (success) {
