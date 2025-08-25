@@ -1911,6 +1911,35 @@ def validate_init_data(init_data_str: str, bot_token_for_validation: str) -> dic
 def index_route():
     return "Case Hunter API Backend is Running!"
 
+CHANNEL_ID = '@CompactTelegram' # Or your channel's ID: -100...
+
+@app.route('/api/check_subscription', methods=['GET'])
+def check_subscription_api():
+    auth = validate_init_data(request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
+    if not auth:
+        return jsonify({"error": "Auth failed"}), 401
+    
+    user_id = auth["id"]
+    
+    if not bot:
+        # If the bot is not configured, we cannot check.
+        # Decide on your desired behavior: allow or deny.
+        # Allowing is a safe fallback for development.
+        return jsonify({"is_subscribed": True, "status": "bot_not_configured"})
+
+    try:
+        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
+        if chat_member.status in ['member', 'administrator', 'creator']:
+            return jsonify({"is_subscribed": True})
+        else:
+            return jsonify({"is_subscribed": False})
+    except Exception as e:
+        # This can happen if the user has never interacted with the bot,
+        # or if the bot is not an admin in the channel.
+        logger.error(f"Could not check subscription for user {user_id}: {e}")
+        # Again, decide on fallback behavior. Returning False is safer in production.
+        return jsonify({"is_subscribed": False, "error": "Could not verify subscription."})
+
 @app.route('/api/get_user_data', methods=['POST'])
 def get_user_data_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
