@@ -271,7 +271,7 @@ if bot: # Ensure bot instance exists
         bot.send_photo(
             message.chat.id,
             photo="https://i.ibb.co/5Q2KK6D/IMG-20250522-184911-835.jpg",
-            caption="Welcome to Pusik Gifts! 🎁\n\nTap the button below to start!",
+            caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
             reply_markup=markup
         )
 
