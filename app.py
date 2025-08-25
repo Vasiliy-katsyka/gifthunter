@@ -37,7 +37,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 AUTH_DATE_MAX_AGE_SECONDS = 3600 * 24 # 24 hours for Telegram Mini App auth data
 TONNEL_SENDER_INIT_DATA = os.environ.get("TONNEL_SENDER_INIT_DATA")
 TONNEL_GIFT_SECRET = os.environ.get("TONNEL_GIFT_SECRET", "yowtfisthispieceofshitiiit")
-ADMIN_USER_ID = os.environ.get("TARGET_WITHDRAWER_ID")
+ADMIN_USER_ID = 6529588448
 TARGET_WITHDRAWER_ID = os.environ.get("TARGET_WITHDRAWER_ID") # Add this line
 
 DEPOSIT_RECIPIENT_ADDRESS_RAW = os.environ.get("DEPOSIT_WALLET_ADDRESS")
