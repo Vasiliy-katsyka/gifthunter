@@ -270,7 +270,7 @@ if bot: # Ensure bot instance exists
 
         bot.send_photo(
             message.chat.id,
-            photo="https://i.ibb.co/5Q2KK6D/IMG-20250522-184911-835.jpg",
+            photo="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250825_191850_208.jpg?raw=true",
             caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
             reply_markup=markup
         )
