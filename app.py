@@ -1915,7 +1915,7 @@ CHANNEL_ID = '@CompactTelegram' # Or your channel's ID: -100...
 
 @app.route('/api/check_subscription', methods=['GET'])
 def check_subscription_api():
-    auth = validate_init_data(request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
+    auth = validate_init_data("flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Auth failed"}), 401
     
