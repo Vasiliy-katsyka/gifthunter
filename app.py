@@ -1460,7 +1460,11 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Precious Peach','probability': 0.00002}, # Drastically reduced
         {'name':'Bonded Ring','probability': 0.00005}, # Drastically reduced
         {'name':'Lol Pop','probability': 0.001}, # Reduced
-        {'name':'Nothing','probability': 0.998924, 'imageFilename': 'placeholder_nothing.png'} # Increased
+        {'name': "💝", 'probability': 0.25},
+        {'name': "🐻", 'probability': 0.25},
+        {'name': "🌹", 'probability': 0.20},
+        {'name': "🚀", 'probability': 0.148924}, # Adjusted to ensure sum is 1
+        {'name': "🍾", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.5,'prizes': sorted([
@@ -1469,7 +1473,11 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Signet Ring','probability': 0.00013},# Drastically reduced
         {'name':'Swiss Watch','probability': 0.00015},# Drastically reduced
         {'name':'Snake Box', 'probability': 0.005},  # Reduced
-        {'name':'Nothing','probability': 0.9945, 'imageFilename': 'placeholder_nothing.png'} # Increased
+        {'name': "💝", 'probability': 0.25},
+        {'name': "🐻", 'probability': 0.25},
+        {'name': "🌹", 'probability': 0.20},
+        {'name': "🚀", 'probability': 0.148924}, # Adjusted to ensure sum is 1
+        {'name': "🍾", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.0,'prizes': sorted([
@@ -2292,7 +2300,6 @@ def open_case_api():
     """
     Handles the logic for a user opening one or more cases.
     """
-    # 1. Authentication
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Authentication failed"}), 401
@@ -2302,7 +2309,6 @@ def open_case_api():
     cid = data.get('case_id')
     multiplier = data.get('multiplier', 1)
 
-    # 2. Input Validation
     if not cid:
         return jsonify({"error": "case_id is a required parameter."}), 400
     try:
@@ -2314,17 +2320,14 @@ def open_case_api():
 
     db = next(get_db())
     try:
-        # Start a transaction and lock the user row to prevent race conditions
         user = db.query(User).filter(User.id == uid).with_for_update().first()
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        # Find the case data from the backend configuration
         target_case = next((c for c in cases_data_backend if c['id'] == cid), None)
         if not target_case:
             return jsonify({"error": "Case data not found on server."}), 404
 
-        # 3. Balance Check
         cost_per_case_ton = Decimal(str(target_case['priceTON']))
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
         user_balance_ton = Decimal(str(user.ton_balance))
@@ -2334,16 +2337,13 @@ def open_case_api():
             current_stars = int(user_balance_ton * TON_TO_STARS_RATE_BACKEND)
             return jsonify({"error": f"Not enough balance. You need {needed_stars} Stars but have {current_stars}."}), 400
 
-        # Deduct cost from user's balance
         user.ton_balance = float(user_balance_ton - total_cost_ton)
 
         prizes_in_case = target_case['prizes']
         won_prizes_response_list = []
         total_value_this_spin_ton = Decimal('0')
 
-        # Loop for each case opening in a multi-open
         for _ in range(multiplier):
-            # 4. Prize Selection
             roll = random.random()
             cumulative_probability = 0.0
             chosen_prize_info = None
@@ -2353,51 +2353,40 @@ def open_case_api():
                 if roll <= cumulative_probability:
                     chosen_prize_info = prize_info
                     break
-
-            # Fallback if no prize is chosen (should not happen if probabilities sum to 1)
+            
             if not chosen_prize_info:
-                logger.warning(f"Prize selection fallback triggered for case '{cid}'. Probabilities may not sum to 1.")
                 chosen_prize_info = prizes_in_case[-1] if prizes_in_case else None
 
             if not chosen_prize_info:
-                 logger.error(f"Case '{cid}' has an empty prize pool. Cannot proceed.")
-                 # Rollback transaction and return error
                  db.rollback()
                  return jsonify({"error": "Case prize pool is empty."}), 500
 
             prize_name = chosen_prize_info['name']
+            
+            # Use the floor price from the RTP-calculated case data
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
             
-            # 5. Handle Emoji Gifts
             if prize_name in EMOJI_GIFTS_BACKEND:
                 gift_data = EMOJI_GIFTS_BACKEND[prize_name]
                 try:
                     if bot:
                         bot.send_gift(chat_id=uid, gift_id=gift_data['id'])
-                        logger.info(f"Successfully sent emoji gift '{prize_name}' (ID: {gift_data['id']}) to user {uid}")
+                        logger.info(f"Successfully sent emoji gift '{prize_name}' to user {uid}")
                     else:
-                        raise Exception("Bot not initialized, cannot send gift.")
+                        raise Exception("Bot not initialized")
                     
-                    # Prepare response for the frontend
                     won_prizes_response_list.append({
-                        "id": f"emoji_{gift_data['id']}_{uuid.uuid4()}", # Unique ID for frontend key
+                        "id": f"emoji_{gift_data['id']}_{uuid.uuid4()}",
                         "name": prize_name,
                         "imageFilename": generate_image_filename_from_name(prize_name),
-                        "currentValue": float(prize_value_ton),
-                        "is_ton_prize": False,
-                        "is_emoji_gift": True, # Flag for frontend to handle display
+                        "currentValue": float(prize_value_ton), # Value in TON for consistency
+                        "is_emoji_gift": True,
                     })
-
                 except Exception as e_gift:
-                    logger.error(f"Failed to send emoji gift '{prize_name}' to user {uid}. Refunding value. Error: {e_gift}")
-                    # If sending fails, credit the star value back to the user's balance as a fallback
+                    logger.error(f"Failed to send emoji gift '{prize_name}' to user {uid}. Refunding. Error: {e_gift}")
                     user.ton_balance = float(Decimal(str(user.ton_balance)) + prize_value_ton)
-                    total_value_this_spin_ton -= prize_value_ton # Adjust total winnings for this spin
-                    # We don't add this failed gift to the prize list for the user.
-                    # Optionally, you could add a "failed gift" message here.
-
-            # 6. Handle Regular NFT Gifts
+                    total_value_this_spin_ton -= prize_value_ton
             else:
                 db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
                 variant_name = prize_name if prize_name in KISSED_FROG_VARIANT_FLOORS else None
@@ -2412,43 +2401,18 @@ def open_case_api():
                     is_ton_prize=False
                 )
                 db.add(inventory_item)
-                db.flush()  # Assigns an ID to the inventory_item
-
+                db.flush()
+                
                 won_prizes_response_list.append({
                     "id": inventory_item.id,
                     "name": prize_name,
                     "imageFilename": inventory_item.item_image_override,
                     "currentValue": inventory_item.current_value,
-                    "is_ton_prize": False,
                     "is_emoji_gift": False,
                     "variant": inventory_item.variant
                 })
-
-                # 7. Big Win Notification Logic for NFT gifts
-                if cost_per_case_ton > 0 and prize_value_ton > (cost_per_case_ton * Decimal('1.5')):
-                    win_rate_x = (prize_value_ton / cost_per_case_ton).quantize(Decimal('0.1'), ROUND_HALF_UP)
-                    user_handle = auth.get("username", f"id:{uid}")
-                    user_display_name = f"@{user_handle}" if auth.get("username") else auth.get("first_name", f"User {uid}")
-                    
-                    message_to_channel = (
-                        f"🎉 *Big Win!* 🎉\n\n"
-                        f"Player *{user_display_name}* just won ✨ *{prize_name}* ✨\n"
-                        f"from the *{target_case['name']}* case!\n\n"
-                        f"Value: *{int(prize_value_ton * TON_TO_STARS_RATE_BACKEND)}* ⭐\n"
-                        f"Win Rate: 🚀 *{win_rate_x}x*\n\n"
-                        f"Play now: @{BOT_USERNAME_FOR_LINK}"
-                    )
-                    try:
-                        if bot and BIG_WIN_CHANNEL_ID:
-                            bot.send_message(BIG_WIN_CHANNEL_ID, message_to_channel, parse_mode="Markdown")
-                            logger.info(f"Sent big win notification for user {uid}, prize {prize_name}")
-                    except Exception as e_channel:
-                        logger.error(f"Failed to send big win message to channel: {e_channel}")
-
-        # 10. Update user's total winnings statistic
+        
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
-
-        # Commit the entire transaction
         db.commit()
 
         return jsonify({
@@ -2458,12 +2422,12 @@ def open_case_api():
         })
 
     except Exception as e:
-        db.rollback() # Rollback any changes if an error occurs
+        db.rollback()
         logger.error(f"Critical error in open_case for user {uid}: {e}", exc_info=True)
         return jsonify({"error": "A server error occurred during the case opening process."}), 500
     finally:
         db.close()
-
+        
 @app.route('/api/spin_slot', methods=['POST'])
 def spin_slot_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
