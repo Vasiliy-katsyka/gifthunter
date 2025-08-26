@@ -641,12 +641,11 @@ const currentUser = {
     photo_url: null
 };
 const EMOJI_GIFTS = {
-    "💝": { id: "5170145012310081615", value: 15 },
-    "🚀": { id: "5170564780938756245", value: 50 },
-    "🍾": { id: "6028601630662853006", value: 50 },
-    "🐻": { id: "5170233102089322756", value: 15 },
-    "💍": { id: "5170690322832818290", value: 100 },
-    "🌹": { id: "5168103777563050263", value: 25 },
+    "Heart":  { emoji: "💝", id: "5170145012310081615", value: 15 },
+    "Bear":   { emoji: "🐻", id: "5170233102089322756", value: 15 },
+    "Rose":   { emoji: "🌹", id: "5168103777563050263", value: 25 },
+    "Rocket": { emoji: "🚀", id: "5170564780938756245", value: 50 },
+    "Bottle": { emoji: "🍾", id: "6028601630662853006", value: 50 }
 };
 let currentOpenCaseOrSlot = null;
 let selectedCaseMultiplier = 1;
@@ -761,8 +760,8 @@ function generateImageFilename(nameOrUrl) {
     if (!nameOrUrl) return IMAGE_BASE_URL + 'placeholder.png';
     if (nameOrUrl.startsWith('http://') || nameOrUrl.startsWith('https://')) return nameOrUrl;
     const name = nameOrUrl;
-    if (Object.keys(EMOJI_GIFTS).includes(nameOrUrl)) {
-        return nameOrUrl; // e.g., returns "💝"
+    if (EMOJI_GIFTS[nameOrUrl]) {
+        return EMOJI_GIFTS[nameOrUrl].emoji; // Return the actual emoji character, e.g., "💝"
     }
     if (name.toLowerCase().includes("ton") && name.toLowerCase().includes("prize")) return TON_COIN_FULL_URL;
     if (GIFT_NAME_TO_ID_MAP[name]) return `https://cdn.changes.tg/gifts/originals/${GIFT_NAME_TO_ID_MAP[name]}/Original.png`;
@@ -858,11 +857,11 @@ const casesData = [
             {'name':'Precious Peach', 'probability': 0.00002},
             {'name':'Bonded Ring', 'probability': 0.00005},
             {'name':'Lol Pop', 'probability': 0.001},
-            {'name': "💝", 'probability': 0.25},
-            {'name': "🐻", 'probability': 0.25},
-            {'name': "🌹", 'probability': 0.20},
-            {'name': "🚀", 'probability': 0.1489245}, // Adjusted to sum to 1
-            {'name': "🍾", 'probability': 0.15},
+            {'name': "Heart",  'probability': 0.25},
+            {'name': "Bear",   'probability': 0.25},
+            {'name': "Rose",   'probability': 0.20},
+            {'name': "Rocket", 'probability': 0.148924},
+            {'name': "Bottle", 'probability': 0.15},
         ]
     },
     {
@@ -876,11 +875,11 @@ const casesData = [
             {'name':'Signet Ring', 'probability': 0.00013},
             {'name':'Swiss Watch', 'probability': 0.00015},
             {'name':'Snake Box', 'probability': 0.005},
-            {'name': "💝", 'probability': 0.25},
-            {'name': "🐻", 'probability': 0.25},
-            {'name': "🌹", 'probability': 0.20},
-            {'name': "🚀", 'probability': 0.1445}, // Adjusted to sum to 1
-            {'name': "🍾", 'probability': 0.15},
+            {'name': "Heart",  'probability': 0.25},
+            {'name': "Bear",   'probability': 0.25},
+            {'name': "Rose",   'probability': 0.20},
+            {'name': "Rocket", 'probability': 0.148924},
+            {'name': "Bottle", 'probability': 0.15},
         ]
     },
     {
@@ -1450,17 +1449,19 @@ function renderInventory() {
             const imgSrc = generateImageFilename(item.imageFilename || item.name);
 
             // --- NEW LOGIC: Check if it's an emoji or a URL ---
-            if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
-                 const emojiSpan = document.createElement('span');
-                 emojiSpan.className = 'emoji-as-image';
-                 emojiSpan.textContent = imgSrc;
-                 imgCont.appendChild(emojiSpan);
-            } else {
+            if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
+                // It's a real image URL
                 const img = document.createElement('img');
                 img.src = imgSrc;
                 img.alt = item.name;
                 img.loading = 'lazy';
                 imgCont.appendChild(img);
+            } else {
+                // It's an emoji!
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'emoji-as-image';
+                emojiSpan.textContent = imgSrc;
+                imgCont.appendChild(emojiSpan);
             }
             
             const withdrawAction = `startWithdrawalProcess(${item.id}, ${item.is_emoji_gift})`;
@@ -1543,18 +1544,17 @@ function showWinOverlay(wonPrizesArray) {
         const imgSrc = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
         
         // --- NEW LOGIC: Check if it's an emoji or a URL ---
-        if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
-            const emojiSpan = document.createElement('span');
-            // Adjust emoji size for the win overlay
-            emojiSpan.className = 'emoji-as-image';
-            emojiSpan.style.fontSize = '64px';
-            emojiSpan.textContent = imgSrc;
-            winOverlayPrizeImageContainer.appendChild(emojiSpan);
-        } else {
+        if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
             const img = document.createElement('img');
             img.src = imgSrc;
             img.alt = prizeItem.name;
             winOverlayPrizeImageContainer.appendChild(img);
+        } else {
+            const emojiSpan = document.createElement('span');
+            emojiSpan.className = 'emoji-as-image';
+            emojiSpan.style.fontSize = '64px'; // Nice and big for the win screen
+            emojiSpan.textContent = imgSrc;
+            winOverlayPrizeImageContainer.appendChild(emojiSpan);
         }
 
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
@@ -1605,9 +1605,18 @@ function initializeRouletteVisuals(caseItem, multiplier) {
             defaultVisualItemsData.forEach(pData => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'roulette-item';
-                const img = document.createElement('img');
-                img.src = generateImageFilename(pData.imageFilename || pData.name);
-                img.alt = pData.name;
+                if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    img.alt = randomPrize.name;
+                    itemEl.appendChild(img);
+                } else {
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.className = 'emoji-as-image';
+                    emojiSpan.style.fontSize = '52px'; // Larger for the roulette wheel itself
+                    emojiSpan.textContent = imgSrc;
+                    itemEl.appendChild(emojiSpan);
+                }
                 itemEl.appendChild(img);
                 itemEl.dataset.prizeData = JSON.stringify({
                     name: pData.name, imageFilename: pData.imageFilename,
@@ -1647,18 +1656,17 @@ function openRouletteModal(caseItem) {
         const imgSrc = generateImageFilename(pData.imageFilename || pData.name);
 
         // --- NEW LOGIC: Check if it's an emoji or a URL ---
-        if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
-            // It's an emoji, create a styled text element
-            const emojiSpan = document.createElement('span');
-            emojiSpan.className = 'emoji-as-image';
-            emojiSpan.textContent = imgSrc;
-            imgCont.appendChild(emojiSpan);
-        } else {
-            // It's a URL, create an img element as before
+        if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
             const img = document.createElement('img');
             img.src = imgSrc;
             img.alt = pData.name;
             imgCont.appendChild(img);
+        } else {
+            const emojiSpan = document.createElement('span');
+            emojiSpan.className = 'emoji-as-image';
+            emojiSpan.style.fontSize = '36px'; // A bit smaller for the prize grid
+            emojiSpan.textContent = imgSrc;
+            imgCont.appendChild(emojiSpan);
         }
 
         const priceHTML = `<span class="prize-card-price">${formatLargeNumber(displayPriceInStars)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 10px; height: 10px; vertical-align: baseline;"></span>`;
@@ -1738,9 +1746,18 @@ async function spinRoulette() {
             const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
-            const img = document.createElement('img');
-            img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
-            img.alt = randomPrize.name;
+            if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.alt = randomPrize.name;
+                itemEl.appendChild(img);
+            } else {
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'emoji-as-image';
+                emojiSpan.style.fontSize = '52px'; // Larger for the roulette wheel itself
+                emojiSpan.textContent = imgSrc;
+                itemEl.appendChild(emojiSpan);
+            }
             itemEl.appendChild(img);
             itemEl.dataset.prizeData = JSON.stringify({
                 name: randomPrize.name, imageFilename: randomPrize.imageFilename,
