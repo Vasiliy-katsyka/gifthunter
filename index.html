@@ -640,12 +640,34 @@ const currentUser = {
     invited_friends_count: 0,
     photo_url: null
 };
+// --- In your <script> tag in index.html ---
+
 const EMOJI_GIFTS = {
-    "Heart":  { emoji: "💝", id: "5170145012310081615", value: 15 },
-    "Bear":   { emoji: "🐻", id: "5170233102089322756", value: 15 },
-    "Rose":   { emoji: "🌹", id: "5168103777563050263", value: 25 },
-    "Rocket": { emoji: "🚀", id: "5170564780938756245", value: 50 },
-    "Bottle": { emoji: "🍾", id: "6028601630662853006", value: 50 }
+    "Heart": {
+        id: "5170145012310081615",
+        value: 15, // Star value
+        imageFilename: "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADYEwAAiHMUUk.png?raw=true"
+    },
+    "Bear": {
+        id: "5170233102089322756",
+        value: 15, // Star value
+        imageFilename: "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADomAAAvRzSEk.png?raw=true"
+    },
+    "Rose": {
+        id: "5168103777563050263",
+        value: 25, // Star value
+        imageFilename: "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADslsAAqCxSUk.png?raw=true"
+    },
+    "Rocket": {
+        id: "5170564780938756245",
+        value: 50, // Star value
+        imageFilename: "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgAD9lAAAsBFUUk.png?raw=true"
+    },
+    "Bottle": {
+        id: "6028601630662853006",
+        value: 50, // Star value
+        imageFilename: "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADA2cAAm0PqUs.png?raw=true"
+    }
 };
 let currentOpenCaseOrSlot = null;
 let selectedCaseMultiplier = 1;
@@ -751,7 +773,12 @@ const UPDATED_FLOOR_PRICES_FRONTEND = {
     "Big Year": 4.4,
     "Snake Box": 3.3,
     "Bonded Ring": 60.5,
-    "Xmas Stocking": 2.5
+    "Xmas Stocking": 2.5,
+    "Heart": 0.06,   // 15 stars / 250 = 0.06 TON
+    "Bear": 0.06,    // 15 stars / 250 = 0.06 TON
+    "Rose": 0.1,     // 25 stars / 250 = 0.10 TON
+    "Rocket": 0.2,   // 50 stars / 250 = 0.20 TON
+    "Bottle": 0.2,   // 50 stars / 250 = 0.20 TON
 };
 const KISSED_FROG_VARIANT_FLOORS={"Happy Pepe":500.0,"Tree Frog":150.0,"Brewtoad":150.0,"Puddles":150.0,"Honeyhop":150.0,"Melty Butter":150.0,"Lucifrog":150.0,"Zodiak Croak":150.0,"Count Croakula":150.0,"Lilie Pond":150.0,"Sweet Dream":150.0,"Frogmaid":150.0,"Rocky Hopper":150.0,"Icefrog":45.0,"Lava Leap":45.0,"Toadstool":45.0,"Desert Frog":45.0,"Cupid":45.0,"Hopberry":45.0,"Ms. Toad":45.0,"Trixie":45.0,"Prince Ribbit":45.0,"Pond Fairy":45.0,"Boingo":45.0,"Tesla Frog":45.0,"Starry Night":30.0,"Silver":30.0,"Ectofrog":30.0,"Poison":30.0,"Minty Bloom":30.0,"Sarutoad":30.0,"Void Hopper":30.0,"Ramune":30.0,"Lemon Drop":30.0,"Ectobloom":30.0,"Duskhopper":30.0,"Bronze":30.0,"Lily Pond":19.0,"Toadberry":19.0,"Frogwave":19.0,"Melon":19.0,"Sky Leaper":19.0,"Frogtart":19.0,"Peach":19.0,"Sea Breeze":19.0,"Lemon Juice":19.0,"Cranberry":19.0,"Tide Pod":19.0,"Brownie":19.0,"Banana Pox":19.0};
 Object.assign(UPDATED_FLOOR_PRICES_FRONTEND, KISSED_FROG_VARIANT_FLOORS);
@@ -759,18 +786,23 @@ Object.assign(UPDATED_FLOOR_PRICES_FRONTEND, KISSED_FROG_VARIANT_FLOORS);
 function generateImageFilename(nameOrUrl) {
     if (!nameOrUrl) return IMAGE_BASE_URL + 'placeholder.png';
     if (nameOrUrl.startsWith('http://') || nameOrUrl.startsWith('https://')) return nameOrUrl;
-    const name = nameOrUrl;
+
+    // Check if the name is one of our special image gifts
     if (EMOJI_GIFTS[nameOrUrl]) {
-        return EMOJI_GIFTS[nameOrUrl].emoji; // Return the actual emoji character, e.g., "💝"
+        return EMOJI_GIFTS[nameOrUrl].imageFilename; // Return the new image URL
     }
+
+    const name = nameOrUrl;
     if (name.toLowerCase().includes("ton") && name.toLowerCase().includes("prize")) return TON_COIN_FULL_URL;
     if (GIFT_NAME_TO_ID_MAP[name]) return `https://cdn.changes.tg/gifts/originals/${GIFT_NAME_TO_ID_MAP[name]}/Original.png`;
     if (Object.keys(KISSED_FROG_VARIANT_FLOORS).includes(name)) return `https://cdn.changes.tg/gifts/models/Kissed%20Frog/png/${name.replace(/\s/g, '%20')}.png`;
+    
     let filename = name.replace(/\s+/g, '-').replace(/&/g, 'and').replace(/'/g, "");
     if (name === "Durov's Cap") filename = "Durov's-Cap";
     if (name === "Vintage Cigar") filename = "Vintage-Cigar";
     if (name === "placeholder_nothing.png") return 'https://images.emojiterra.com/mozilla/512px/274c.png';
     if (['Amber', 'Midnight_Blue', 'Onyx_Black', 'Black'].includes(name.replace(/-/g, '_'))) filename = name.replace('-', '_');
+    
     if (!/\.(jpeg|jpg|gif|png|svg)$/i.test(filename)) filename += '.png';
     return IMAGE_BASE_URL + filename;
 }
@@ -1445,26 +1477,16 @@ function renderInventory() {
 
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
-            
-            const imgSrc = generateImageFilename(item.imageFilename || item.name);
 
-            // --- NEW LOGIC: Check if it's an emoji or a URL ---
-            if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
-                // It's a real image URL
-                const img = document.createElement('img');
-                img.src = imgSrc;
-                img.alt = item.name;
-                img.loading = 'lazy';
-                imgCont.appendChild(img);
-            } else {
-                // It's an emoji!
-                const emojiSpan = document.createElement('span');
-                emojiSpan.className = 'emoji-as-image';
-                emojiSpan.textContent = imgSrc;
-                imgCont.appendChild(emojiSpan);
-            }
+            // Simplified image logic
+            const img = document.createElement('img');
+            img.src = generateImageFilename(item.imageFilename || item.name);
+            img.alt = item.name;
+            img.loading = 'lazy';
+            imgCont.appendChild(img);
             
-            const withdrawAction = `startWithdrawalProcess(${item.id}, ${item.is_emoji_gift})`;
+            // Note: item.is_emoji_gift might need adjustment depending on your backend response now
+            const withdrawAction = `startWithdrawalProcess(${item.id}, ${!!EMOJI_GIFTS[item.name]})`;
 
             const valueHTML = `<div class="inventory-item-value">${itemValueInStars} ⭐</div>`;
             const actionsHTML = `<div class="inventory-item-actions">
@@ -1534,33 +1556,26 @@ function showWinOverlay(wonPrizesArray) {
 
     if (wonPrizesArray.length === 1) {
         const prizeItem = wonPrizesArray[0];
-        winOverlayNameEl.textContent = prizeItem.is_emoji_gift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
+        // Now using EMOJI_GIFTS to check if it's one of the special gifts
+        const isSpecialGift = !!EMOJI_GIFTS[prizeItem.name];
+        winOverlayNameEl.textContent = isSpecialGift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
     } else {
         winOverlayNameEl.textContent = `You Won ${wonPrizesArray.length} Items!`;
     }
 
     let prizeDetailsHTML = '';
     wonPrizesArray.forEach(prizeItem => {
-        const imgSrc = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
-        
-        // --- NEW LOGIC: Check if it's an emoji or a URL ---
-        if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
-            const img = document.createElement('img');
-            img.src = imgSrc;
-            img.alt = prizeItem.name;
-            winOverlayPrizeImageContainer.appendChild(img);
-        } else {
-            const emojiSpan = document.createElement('span');
-            emojiSpan.className = 'emoji-as-image';
-            emojiSpan.style.fontSize = '64px'; // Nice and big for the win screen
-            emojiSpan.textContent = imgSrc;
-            winOverlayPrizeImageContainer.appendChild(emojiSpan);
-        }
+        // Simplified image logic
+        const img = document.createElement('img');
+        img.src = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
+        img.alt = prizeItem.name;
+        winOverlayPrizeImageContainer.appendChild(img);
 
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
         prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} ⭐)</div>`;
 
-        if (!prizeItem.is_emoji_gift) {
+        // Check if it's a special gift by name
+        if (!EMOJI_GIFTS[prizeItem.name]) {
             totalConvertValueInTon += (prizeItem.currentValue || 0);
         }
     });
@@ -1573,8 +1588,10 @@ function showWinOverlay(wonPrizesArray) {
     } else {
         winOverlayConvertBtn.style.display = 'none';
     }
-
-    winOverlaySaveBtn.textContent = wonPrizesArray.every(p => p.is_emoji_gift) ? 'Awesome!' : 'Save to Collection';
+    
+    // Check if ALL prizes won are from the special EMOJI_GIFTS list
+    const allAreSpecialGifts = wonPrizesArray.every(p => !!EMOJI_GIFTS[p.name]);
+    winOverlaySaveBtn.textContent = allAreSpecialGifts ? 'Awesome!' : 'Save to Collection';
 
     winOverlayModal.classList.add('active');
     if (tgBackButton) pushTgBackButtonHandler(closeWinOverlayModalWithBackButton);
@@ -1608,20 +1625,12 @@ function initializeRouletteVisuals(caseItem, multiplier) {
             defaultVisualItemsData.forEach(pData => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'roulette-item';
-                const imgSrc = generateImageFilename(pData.imageFilename || pData.name);
 
-                if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
-                    const img = document.createElement('img');
-                    img.src = imgSrc;
-                    img.alt = pData.name;
-                    itemEl.appendChild(img);
-                } else {
-                    const emojiSpan = document.createElement('span');
-                    emojiSpan.className = 'emoji-as-image';
-                    emojiSpan.style.fontSize = '52px';
-                    emojiSpan.textContent = imgSrc;
-                    itemEl.appendChild(emojiSpan);
-                }
+                // Simplified image logic
+                const img = document.createElement('img');
+                img.src = generateImageFilename(pData.imageFilename || pData.name);
+                img.alt = pData.name;
+                itemEl.appendChild(img);
 
                 itemEl.dataset.prizeData = JSON.stringify({
                     name: pData.name,
@@ -1662,21 +1671,11 @@ function openRouletteModal(caseItem) {
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
 
-        const imgSrc = generateImageFilename(pData.imageFilename || pData.name);
-
-        // --- NEW LOGIC: Check if it's an emoji or a URL ---
-        if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
-            const img = document.createElement('img');
-            img.src = imgSrc;
-            img.alt = pData.name;
-            imgCont.appendChild(img);
-        } else {
-            const emojiSpan = document.createElement('span');
-            emojiSpan.className = 'emoji-as-image';
-            emojiSpan.style.fontSize = '36px'; // A bit smaller for the prize grid
-            emojiSpan.textContent = imgSrc;
-            imgCont.appendChild(emojiSpan);
-        }
+        // Simplified image logic
+        const img = document.createElement('img');
+        img.src = generateImageFilename(pData.imageFilename || pData.name);
+        img.alt = pData.name;
+        imgCont.appendChild(img);
 
         const priceHTML = `<span class="prize-card-price">${formatLargeNumber(displayPriceInStars)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 10px; height: 10px; vertical-align: baseline;"></span>`;
         const nameHTML = `<span class="prize-card-name">${pData.name}</span>`;
@@ -1759,20 +1758,12 @@ async function spinRoulette() {
             const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
-            const imgSrc = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
-
-            if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
-                const img = document.createElement('img');
-                img.src = imgSrc;
-                img.alt = randomPrize.name;
-                itemEl.appendChild(img);
-            } else {
-                const emojiSpan = document.createElement('span');
-                emojiSpan.className = 'emoji-as-image';
-                emojiSpan.style.fontSize = '52px';
-                emojiSpan.textContent = imgSrc;
-                itemEl.appendChild(emojiSpan);
-            }
+            
+            // Simplified image logic
+            const img = document.createElement('img');
+            img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
+            img.alt = randomPrize.name;
+            itemEl.appendChild(img);
             
             itemEl.dataset.prizeData = JSON.stringify({
                 name: randomPrize.name,
