@@ -1605,6 +1605,7 @@ function initializeRouletteVisuals(caseItem, multiplier) {
             defaultVisualItemsData.forEach(pData => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'roulette-item';
+                const imgSrc = generateImageFilename(pData.imageFilename || pData.name);
                 if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
                     const img = document.createElement('img');
                     img.src = imgSrc;
@@ -1746,6 +1747,7 @@ async function spinRoulette() {
             const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
+            const imgSrc = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
             if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
                 const img = document.createElement('img');
                 img.src = imgSrc;
