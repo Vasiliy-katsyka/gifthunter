@@ -72,7 +72,7 @@
         .content-card { background-color: var(--surface-color); padding: 20px; border-radius: var(--main-border-radius); margin-bottom: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .cases-grid, .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(150px, calc(50% - 10px - 1px)), 1fr)); gap: 20px; }
         
-        .case-card { background-image: var(--case-grad-default); border-radius: var(--main-border-radius); text-align: center; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color); overflow: hidden; position: relative; display: flex; flex-direction: column; padding: 0; }
+        .case-card { background-image: var(--case-grad-default); border-radius: var(--main-border-radius); text-align: center; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color); overflow: hidden; position: relative; display: flex; flex-direction: column; padding: 0; justify-content: space-between; }
         .case-card:hover { filter: brightness(1.12); transform: translateY(-6px) scale(1.02); box-shadow: var(--soft-shadow); }
         .case-image-display { width: 100%; height: 0; padding-bottom: 100%; position: relative; background-color: var(--surface-hover-color); display:flex; align-items:center; justify-content:center; }
         .case-image-display img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -343,6 +343,27 @@
         .channel-link-container { position: absolute; bottom: 30px; width: 100%; text-align: center; }
         .channel-link-container a { color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 1.1em; padding: 8px 15px; border-radius: 8px; background-color: rgba(0,122,255,0.1); transition: background-color 0.2s, color 0.2s; }
         .channel-link-container a:hover { background-color: rgba(0,122,255,0.2); color: var(--text-primary); }
+        .balance-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .case-name-container {
+            padding: 12px 10px;
+            min-height: 50px; /* Ensure space for the name */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .case-name {
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
@@ -358,7 +379,14 @@
     <div id="app-container">
         <header id="app-header">
             <div class="app-title-container"><img src="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/black%20(3).png?raw=true" alt="Pusik Gifts Logo" class="app-logo"><div class="app-title">Case Hunter</div></div>
-            <div class="wallet-info"><div id="wallet-address-display">Connected: ...</div><div id="balance"><span id="ton-balance">0.00</span> TON</div><div id="ton-connect-button"></div></div>
+            <div class="wallet-info">
+                <div id="wallet-address-display">Connected: ...</div>
+                <div id="balance">
+                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+                    <span id="star-balance">0</span>
+                </div>
+                <div id="ton-connect-button"></div>
+            </div>
         </header>
 
         <main id="app-content">
@@ -425,7 +453,27 @@
 
             <div id="invite-page" class="page"><h2>Referrals</h2><div class="content-card"><p>Invite friends & earn <strong>10%</strong> of deposits!</p><input type="text" id="referral-link" value="Loading..." readonly><button id="copy-ref-link-button" class="button">Copy Code</button><div class="stats-box"><div class="stat-item"><div id="referral-balance" class="value">0.00 TON</div><div class="label">Earnings</div></div><div class="stat-item"><div id="invited-count" class="value">0</div><div class="label">Invited</div></div></div><button id="withdraw-referral-button" class="button button-secondary">Withdraw</button></div><div class="content-card"><h3>Invited Friends</h3><div id="invited-users-list-display" class="invited-users-list"><p>No friends invited yet.</p></div></div></div>
             <div id="leaderboard-page" class="page"><h2>Leaderboard</h2><div id="leaderboard-list" class="leaderboard-list content-card" style="padding-top:0; padding-bottom:0;"></div></div>
-            <div id="profile-page" class="page"><div class="profile-header"><div id="profile-avatar" class="profile-avatar-placeholder"></div><div class="profile-info"><div id="profile-username" class="username">User</div><div id="profile-userid" class="userid">#...</div></div></div><div class="content-card"><h3>Balance</h3><div id="profile-balance-display">0.00 TON</div><input type="number" id="deposit-amount-input" placeholder="Amount in TON"><button id="initiate-deposit-button" class="button">Deposit TON</button></div><div class="content-card"><h3>Promocode</h3><div class="promocode-input-group"><input type="text" id="promocode-input" placeholder="Enter code"><button id="redeem-promocode-button" class="button button-secondary">Redeem</button></div></div><div class="content-card"><h3>Wallet</h3><div id="profile-wallet-address">Not Connected</div><button id="disconnect-wallet-button" class="button button-secondary" style="display: none;">Disconnect</button></div><div class="content-card"><h3>My Collection (<span id="inventory-count">0</span>)</h3><div id="inventory-grid" class="inventory-grid"><p id="empty-inventory-message" style="grid-column: 1 / -1; text-align: center; color: var(--text-placeholder); padding:15px 0;">Your collection is empty.</p></div><button id="sell-all-button" class="button" style="display: none;">Sell All for <span id="sell-all-value">0.00</span> TON</button></div></div>
+            <div id="profile-page" class="page"><div class="profile-header"><div id="profile-avatar" class="profile-avatar-placeholder"></div><div class="profile-info"><div id="profile-username" class="username">User</div><div id="profile-userid" class="userid">#...</div></div></div>
+            <div class="content-card">
+                <h3>Balance</h3>
+                <div id="profile-balance-display" style="display: flex; align-items: center; justify-content: center;">
+                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 28px; height: 28px; margin-right: 8px;">
+                    <span>0</span>
+                </div>
+                <input type="number" id="deposit-amount-input" placeholder="Amount">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="initiate-deposit-stars-button" class="button">Deposit Stars</button>
+                    <button id="initiate-deposit-ton-button" class="button button-secondary">Deposit TON</button>
+                </div>
+            </div><div class="content-card"><h3>Promocode</h3><div class="promocode-input-group"><input type="text" id="promocode-input" placeholder="Enter code"><button id="redeem-promocode-button" class="button button-secondary">Redeem</button></div></div><div class="content-card"><h3>Wallet</h3><div id="profile-wallet-address">Not Connected</div><button id="disconnect-wallet-button" class="button button-secondary" style="display: none;">Disconnect</button></div>
+            <div class="content-card">
+                <h3>My Collection (<span id="inventory-count">0</span>)</h3>
+                <div id="inventory-grid" class="inventory-grid">
+                    <p id="empty-inventory-message" style="grid-column: 1 / -1; text-align: center; color: var(--text-placeholder); padding:15px 0;">Your collection is empty.</p>
+                </div>
+                <button id="sell-all-button" class="button" style="display: none;">Sell All for <span id="sell-all-value">0</span> <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 16px; height: 16px;"></button>
+            </div>
+            </div>    
         </main>
 
         <nav id="app-nav">
@@ -548,6 +596,8 @@
 const IMAGE_BASE_URL = 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/GiftImages/';
 const API_BASE_URL = 'https://gifthunter.onrender.com';
 const BOT_USERNAME = 'Hunter_Case_bot';
+const TON_TO_STARS_RATE = 250;
+const STAR_ICON_URL = 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png';
 const MINI_APP_NAME = 'app';
 const TON_COIN_FULL_URL = 'https://case-bot.com/images/actions/ton.svg';
 const currentUser = {
@@ -556,6 +606,14 @@ const currentUser = {
     inventory: [], referralCode: null, referralEarningsPending: 0, total_won_ton: 0,
     invited_friends_count: 0,
     photo_url: null
+};
+const EMOJI_GIFTS = {
+    "💝": { id: "5170145012310081615", value: 15 },
+    "🚀": { id: "5170564780938756245", value: 50 },
+    "🍾": { id: "6028601630662853006", value: 50 },
+    "🐻": { id: "5170233102089322756", value: 15 },
+    "💍": { id: "5170690322832818290", value: 100 },
+    "🌹": { id: "5168103777563050263", value: 25 },
 };
 let currentOpenCaseOrSlot = null;
 let selectedCaseMultiplier = 1;
@@ -682,6 +740,16 @@ function generateImageFilename(nameOrUrl) {
     return IMAGE_BASE_URL + filename;
 }
 
+function formatLargeNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    }
+    return num.toString();
+}
+    
 const finalKissedFrogPrizesWithConsolation = [
     {'name':'Happy Pepe','probability': 0.0000001, 'imageFilename':'https://cdn.changes.tg/gifts/models/Kissed%20Frog/png/Happy%20Pepe.png','floorPrice':500.0},
     {'name':'Tree Frog','probability': 0.0000005, 'imageFilename':'https://cdn.changes.tg/gifts/models/Kissed%20Frog/png/Tree%20Frog.png','floorPrice':150.0},
@@ -1094,8 +1162,10 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
     }
 }
 function updateBalances() {
-    headerElements.tonBalanceSpan.textContent = `${currentUser.tonBalance.toFixed(2)}`;
-    profileElements.balanceDisplay.innerHTML = `${currentUser.tonBalance.toFixed(2)} TON`;
+    // All balances are now in Stars
+    const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
+    headerElements.tonBalanceSpan.textContent = `${starBalance}`; // Keep ID for now, but it's stars
+    document.querySelector('#profile-balance-display span').textContent = `${starBalance}`;
 }
 function navigateToPage(pageId) {
     pages.forEach(p => p.classList.remove('active'));
@@ -1133,9 +1203,7 @@ async function checkSubscription() {
         return response.is_subscribed;
     } catch (error) {
         console.error("Subscription check failed:", error);
-        // Default to allowing the action if the check fails, 
-        // or handle the error as you see fit.
-        return true; 
+        return true; // Default to allowing action if check fails
     }
 }
     
@@ -1199,9 +1267,17 @@ function renderCases() {
         img.onerror = () => { imgCont.textContent = '❓'; imgCont.style.cssText = 'font-size:2.5em;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);'; };
         img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
         imgCont.appendChild(img);
+        const nameCont = document.createElement('div');
+        nameCont.className = 'case-name-container';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'case-name';
+        nameEl.textContent = caseItem.name;
+        nameCont.appendChild(nameEl);
+
         const priceEl = document.createElement('div');
         priceEl.className = 'case-price';
-        priceEl.textContent = `${parseFloat(caseItem.priceTON).toFixed(1)} TON`;
+        const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+        priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
         card.append(imgCont, priceEl);
         casesGrid.appendChild(card);
     });
@@ -1420,8 +1496,9 @@ function openRouletteModal(caseItem) {
 }
 function updateSpinButtonText() {
     if (currentOpenCaseOrSlot && currentOpenCaseOrSlot.priceTON) {
-        const totalPrice = parseFloat(currentOpenCaseOrSlot.priceTON) * selectedCaseMultiplier;
-        spinButton.textContent = `Spin ${selectedCaseMultiplier}x (${totalPrice.toFixed(1)} TON)`;
+        const priceInStars = Math.floor(currentOpenCaseOrSlot.priceTON * TON_TO_STARS_RATE);
+        const totalPrice = priceInStars * selectedCaseMultiplier;
+        spinButton.innerHTML = `Spin ${selectedCaseMultiplier}x (${totalPrice} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 16px; height: 16px;">)`;
     }
 }
 function updateCaseMultiplierButtons() {
@@ -1451,7 +1528,12 @@ async function spinRoulette() {
 
     const isSubscribed = await checkSubscription();
     if (!isSubscribed) {
-        Telegram.WebApp.showAlert("Please subscribe to @CompactTelegram to spin the case.");
+        // Show a confirmation dialog with a subscribe button
+        Telegram.WebApp.showConfirm("Please subscribe to @CompactTelegram to spin the case.", (ok) => {
+            if (ok) {
+                Telegram.WebApp.openTelegramLink('https://t.me/CompactTelegram');
+            }
+        });
         return;
     }
 
@@ -1737,48 +1819,95 @@ function closeWithdrawModal() {
     withdrawModal.classList.remove('active');
     itemToWithdraw = null;
 }
-async function initiateDepositProcedure() {
-    const amtTxt = profileElements.depositAmountInput.value;
-    if (!amtTxt.trim()) {
-        showTGNotification("Enter amount.", "warning");
+    
+@param {('ton'|'stars')}
+async function initiateDepositProcedure(currency) {
+    const amountInput = profileElements.depositAmountInput;
+    const amountStr = amountInput.value.trim();
+
+    if (!amountStr) {
+        showTGNotification("Please enter an amount to deposit.", "warning");
         return;
     }
-    const amt = parseFloat(amtTxt);
-    if (isNaN(amt) || amt < 0.1 || amt > 10000) {
-        showTGNotification("Invalid amount. Min 0.1 TON", "error");
+
+    const amount = parseFloat(amountStr);
+
+    if (isNaN(amount) || amount <= 0) {
+        showTGNotification("Please enter a valid, positive amount.", "error");
         return;
     }
-    profileElements.initiateDepositButton.disabled = true;
-    profileElements.initiateDepositButton.textContent = "Initializing...";
+
+    // Determine API endpoint and payload based on the selected currency
+    const isStarsDeposit = currency === 'stars';
+    const endpoint = isStarsDeposit ? '/api/initiate_stars_deposit' : '/api/initiate_deposit';
+    const payload = { amount: amount };
+
+    // Set UI feedback on the correct button
+    const buttonId = isStarsDeposit ? 'initiate-deposit-stars-button' : 'initiate-deposit-ton-button';
+    const button = document.getElementById(buttonId);
+    const originalButtonText = button.textContent;
+    button.disabled = true;
+    button.textContent = "Initializing...";
+
     try {
-        const res = await apiRequest('/api/initiate_deposit', 'POST', { amount: amt });
-        profileElements.initiateDepositButton.disabled = false;
-        profileElements.initiateDepositButton.textContent = "Deposit TON";
+        const res = await apiRequest(endpoint, 'POST', payload);
+
         if (res.status === 'success') {
-            currentPendingDepositId = res.pending_deposit_id;
-            depositRecipientAddressRaw = res.recipient_address;
-            depositCommentText = res.comment;
-            const nanoAmt = res.final_amount_nano_ton;
-            depositWalletAddressEl.textContent = depositRecipientAddressRaw;
-            depositCommentTextEl.textContent = depositCommentText;
-            tonTransferLink.href = `ton://transfer/${depositRecipientAddressRaw}?amount=${nanoAmt}&text=${encodeURIComponent(depositCommentText)};`;
-            startDepositExpiryTimer(res.expires_at);
-            depositStatusMessageEl.textContent = '';
-            depositLoader.style.display = 'none';
-            confirmPaymentSentButton.disabled = false;
-            confirmPaymentSentButton.textContent = 'I Sent Funds';
-            depositInstructionsModal.classList.add('active');
-            if (tgBackButton) {
-                pushTgBackButtonHandler(closeDepositModalWithBackButton);
+            if (isStarsDeposit) {
+                // Handle Telegram Stars deposit via Telegram.WebApp.openInvoice
+                Telegram.WebApp.openInvoice(res.invoice_link, (status) => {
+                    if (status === 'paid') {
+                        showTGNotification('Deposit successful! Your balance will be updated.', 'success');
+                        // Fetch fresh user data to reflect the new balance
+                        fetchInitialUserData().then(() => {
+                            updateBalances();
+                            renderProfile();
+                        });
+                    } else if (status === 'failed') {
+                        showTGNotification('Payment failed. Please try again.', 'error');
+                    } else if (status === 'cancelled') {
+                        showTGNotification('Payment was cancelled.', 'warning');
+                    }
+                });
+                // Clear input after initiating
+                amountInput.value = '';
+
+            } else {
+                // Handle TON deposit using the existing modal flow
+                currentPendingDepositId = res.pending_deposit_id;
+                depositRecipientAddressRaw = res.recipient_address;
+                depositCommentText = res.comment;
+                const nanoAmt = res.final_amount_nano_ton;
+
+                depositWalletAddressEl.textContent = depositRecipientAddressRaw;
+                depositCommentTextEl.textContent = depositCommentText;
+                tonTransferLink.href = `ton://transfer/${depositRecipientAddressRaw}?amount=${nanoAmt}&text=${encodeURIComponent(depositCommentText)}`;
+
+                startDepositExpiryTimer(res.expires_at);
+
+                // Reset modal state before showing
+                depositStatusMessageEl.textContent = '';
+                depositLoader.style.display = 'none';
+                confirmPaymentSentButton.disabled = false;
+                confirmPaymentSentButton.textContent = 'I Sent Funds';
+
+                // Show the modal and set up back button
+                depositInstructionsModal.classList.add('active');
+                if (tgBackButton) {
+                    pushTgBackButtonHandler(closeDepositModalWithBackButton);
+                }
             }
         } else {
+            // Handle API errors (e.g., invalid amount range, etc.)
             showTGNotification(res.message || res.error || 'Failed to initiate deposit.', 'error');
         }
     } catch (e) {
-        profileElements.initiateDepositButton.disabled = false;
-        profileElements.initiateDepositButton.textContent = "Deposit TON";
-        showTGNotification("Deposit init request failed.", "error");
-        console.error("Error during deposit initiation:", e);
+        console.error(`Error during ${currency} deposit initiation:`, e);
+        showTGNotification("A network error occurred. Please try again.", "error");
+    } finally {
+        // Restore button state regardless of outcome
+        button.disabled = false;
+        button.textContent = originalButtonText;
     }
 }
 function startDepositExpiryTimer(expiresISO) {
@@ -2103,6 +2232,8 @@ function closeUpgradeResultModal() {
 // Event Listeners
 upgradePageElements.selectedInventoryItemSlot.addEventListener('click', () => openUpgradeItemPicker('inventory'));
 upgradePageElements.desiredUpgradeItemSlot.addEventListener('click', () => openUpgradeItemPicker('desired'));
+document.getElementById('initiate-deposit-stars-button').addEventListener('click', () => initiateDepositProcedure('stars'));
+document.getElementById('initiate-deposit-ton-button').addEventListener('click', () => initiateDepositProcedure('ton'));
 upgradePageElements.closeUpgradePickerButton.addEventListener('click', closeUpgradeItemPicker);
 upgradePageElements.doUpgradeButton.addEventListener('click', handleUpgrade);
 upgradePageElements.closeUpgradeResultModalButton.addEventListener('click', closeUpgradeResultModal);
