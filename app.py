@@ -60,12 +60,11 @@ PAYMENT_PROVIDER_TOKEN = "" # Add this to your .env file!
 
 # New Emoji Gift Definitions
 EMOJI_GIFTS_BACKEND = {
-    "💝": {"id": "5170145012310081615", "value": 15 },
-    "🚀": {"id": "5170564780938756245", "value": 50 },
-    "🍾": {"id": "6028601630662853006", "value": 50 },
-    "🐻": {"id": "5170233102089322756", "value": 15 },
-    "💍": {"id": "5170690322832818290", "value": 100 },
-    "🌹": {"id": "5168103777563050263", "value": 25 },
+    "Heart":  {"id": "5170145012310081615", "value": 15},
+    "Bear":   {"id": "5170233102089322756", "value": 15},
+    "Rose":   {"id": "5168103777563050263", "value": 25},
+    "Rocket": {"id": "5170564780938756245", "value": 50},
+    "Bottle": {"id": "6028601630662853006", "value": 50}
 }
 KISS_FROG_MODEL_STATIC_PERCENTAGES = {
     "Brewtoad": 0.5,
@@ -1023,7 +1022,12 @@ UPDATED_FLOOR_PRICES = {
     "Big Year": 4.4,
     "Snake Box": 3.3,
     "Bonded Ring": 60.5,
-    "Xmas Stocking": 2.5
+    "Xmas Stocking": 2.5,
+    'Heart': 0.06,
+    'Bear': 0.06,
+    'Rose': 0.1,
+    'Rocket': 0.2,
+    'Bottle': 0.2,
     # Add Light Sword and Gem Signet if they have defined prices
     # "Light Sword": XX.X,
     # "Gem Signet": XX.X
