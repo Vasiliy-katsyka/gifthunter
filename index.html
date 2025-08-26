@@ -364,6 +364,16 @@
             color: var(--text-primary);
             line-height: 1.3;
         }
+
+        .emoji-as-image {
+            font-size: 48px; /* Adjust size to match your images */
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -751,6 +761,9 @@ function generateImageFilename(nameOrUrl) {
     if (!nameOrUrl) return IMAGE_BASE_URL + 'placeholder.png';
     if (nameOrUrl.startsWith('http://') || nameOrUrl.startsWith('https://')) return nameOrUrl;
     const name = nameOrUrl;
+    if (Object.keys(EMOJI_GIFTS).includes(nameOrUrl)) {
+        return nameOrUrl; // e.g., returns "💝"
+    }
     if (name.toLowerCase().includes("ton") && name.toLowerCase().includes("prize")) return TON_COIN_FULL_URL;
     if (GIFT_NAME_TO_ID_MAP[name]) return `https://cdn.changes.tg/gifts/originals/${GIFT_NAME_TO_ID_MAP[name]}/Original.png`;
     if (Object.keys(KISSED_FROG_VARIANT_FLOORS).includes(name)) return `https://cdn.changes.tg/gifts/models/Kissed%20Frog/png/${name.replace(/\s/g, '%20')}.png`;
@@ -1022,6 +1035,27 @@ casesData.forEach(caseItem => {
         caseItem.prizes.forEach(prize => { prize.probability *= factor; });
     }
     caseItem.prizes.sort((a,b) => (b.floorPrice || 0) - (a.floorPrice || 0));
+});
+
+casesData.forEach(caseItem => {
+    let totalProb = 0;
+    caseItem.prizes.forEach(prize => {
+        // Assign floor price from our master list
+        prize.floorPrice = UPDATED_FLOOR_PRICES_FRONTEND[prize.name] || 0;
+        // Assign image filename for emoji gifts
+        if (EMOJI_GIFTS[prize.name]) {
+            prize.imageFilename = `https://cdn.changes.tg/gifts/originals/${EMOJI_GIFTS[prize.name].id}/Original.png`;
+        }
+        totalProb += prize.probability;
+    });
+
+    // Simple normalization check (optional but good practice)
+    if (Math.abs(totalProb - 1.0) > 0.0001) {
+        console.warn(`Probabilities for case ${caseItem.name} do not sum to 1.0! Sum is ${totalProb}`);
+    }
+
+    // Sort by value for display purposes
+    caseItem.prizes.sort((a, b) => b.floorPrice - a.floorPrice);
 });
 
 // DOM Element References
@@ -1334,50 +1368,53 @@ function renderProfile() {
 }
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
-    let totalValueInStars = 0; // This will now be in Stars
+    let totalValueInStars = 0;
 
     if (currentUser.inventory.length === 0) {
         profileElements.emptyInventoryMessage.style.display = 'block';
         profileElements.sellAllButton.style.display = 'none';
     } else {
         profileElements.emptyInventoryMessage.style.display = 'none';
-        
+
         currentUser.inventory.forEach(item => {
-            // The backend sends currentValue in TON, so we convert it to Stars for display
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
-            
+
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
-            const img = document.createElement('img');
-            img.src = generateImageFilename(item.imageFilename || item.name);
-            img.alt = item.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
             
-            // Display value in Stars
-            const valueHTML = `<div class="inventory-item-value">${itemValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px;"></div>`;
-            const actionsHTML = `<div class="inventory-item-actions">
-                                    <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
-                                 </div>`;
+            const imgSrc = generateImageFilename(item.imageFilename || item.name);
 
-            itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div>
-                                 ${valueHTML}
-                                 ${actionsHTML}`;
+            // --- NEW LOGIC: Check if it's an emoji or a URL ---
+            if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
+                 const emojiSpan = document.createElement('span');
+                 emojiSpan.className = 'emoji-as-image';
+                 emojiSpan.textContent = imgSrc;
+                 imgCont.appendChild(emojiSpan);
+            } else {
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.alt = item.name;
+                img.loading = 'lazy';
+                imgCont.appendChild(img);
+            }
+            
+            const valueHTML = `<div class="inventory-item-value">${itemValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px;"></div>`;
+            const actionsHTML = `<div class="inventory-item-actions"><button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button></div>`;
+
+            itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
             itemDiv.insertBefore(imgCont, itemDiv.firstChild);
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
 
         profileElements.sellAllButton.style.display = 'block';
-        // The "Sell All" button should also show the value in Stars
         profileElements.sellAllValueSpan.textContent = totalValueInStars;
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
-
 async function renderLeaderboard() {
     try {
         const leaders = await apiRequest('/api/get_leaderboard');
@@ -1422,41 +1459,57 @@ function showWinOverlay(wonPrizesArray) {
     lastWonPrizesForOverlay = wonPrizesArray;
     winOverlayPrizeImageContainer.innerHTML = '';
     winOverlayPrizeDetailsEl.innerHTML = '';
+
+    const convertiblePrizes = wonPrizesArray.filter(p => !p.is_emoji_gift);
+    let totalConvertValueInTon = 0;
+
+    if (wonPrizesArray.length === 0) return;
+
     if (wonPrizesArray.length === 1) {
         const prizeItem = wonPrizesArray[0];
-        const img = document.createElement('img');
-        img.src = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
-        img.alt = prizeItem.name;
-        winOverlayPrizeImageContainer.appendChild(img);
-        winOverlayNameEl.textContent = `You Won: ${prizeItem.name}!`;
-        winOverlayConvertBtn.style.display = prizeItem.is_ton_prize ? 'none' : 'block';
-        if (!prizeItem.is_ton_prize) {
-            winOverlayConvertValue.textContent = (prizeItem.currentValue || 0).toFixed(2);
-            winOverlayConvertBtn.childNodes[0].nodeValue = "Convert to ";
-        }
-    } else if (wonPrizesArray.length > 1) {
+        winOverlayNameEl.textContent = prizeItem.is_emoji_gift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
+    } else {
         winOverlayNameEl.textContent = `You Won ${wonPrizesArray.length} Items!`;
-        let totalConvertValue = 0;
-        let canConvertAny = false;
-        let prizeNamesHTML = '';
-        wonPrizesArray.forEach(prizeItem => {
+    }
+
+    let prizeDetailsHTML = '';
+    wonPrizesArray.forEach(prizeItem => {
+        const imgSrc = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
+        
+        // --- NEW LOGIC: Check if it's an emoji or a URL ---
+        if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
+            const emojiSpan = document.createElement('span');
+            // Adjust emoji size for the win overlay
+            emojiSpan.className = 'emoji-as-image';
+            emojiSpan.style.fontSize = '64px';
+            emojiSpan.textContent = imgSrc;
+            winOverlayPrizeImageContainer.appendChild(emojiSpan);
+        } else {
             const img = document.createElement('img');
-            img.src = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
+            img.src = imgSrc;
             img.alt = prizeItem.name;
             winOverlayPrizeImageContainer.appendChild(img);
-            prizeNamesHTML += `<div>- ${prizeItem.name} (${(prizeItem.currentValue || 0).toFixed(2)} TON)</div>`;
-            if (!prizeItem.is_ton_prize) {
-                totalConvertValue += (prizeItem.currentValue || 0);
-                canConvertAny = true;
-            }
-        });
-        winOverlayPrizeDetailsEl.innerHTML = prizeNamesHTML;
-        winOverlayConvertBtn.style.display = canConvertAny ? 'block' : 'none';
-        if (canConvertAny) {
-            winOverlayConvertValue.textContent = totalConvertValue.toFixed(2);
-            winOverlayConvertBtn.childNodes[0].nodeValue = "Convert All to ";
         }
+
+        const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
+        prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} ⭐)</div>`;
+
+        if (!prizeItem.is_emoji_gift) {
+            totalConvertValueInTon += (prizeItem.currentValue || 0);
+        }
+    });
+    winOverlayPrizeDetailsEl.innerHTML = prizeDetailsHTML;
+
+    if (convertiblePrizes.length > 0) {
+        const totalConvertValueInStars = Math.floor(totalConvertValueInTon * TON_TO_STARS_RATE);
+        winOverlayConvertValue.textContent = totalConvertValueInStars;
+        winOverlayConvertBtn.style.display = 'block';
+    } else {
+        winOverlayConvertBtn.style.display = 'none';
     }
+
+    winOverlaySaveBtn.textContent = wonPrizesArray.every(p => p.is_emoji_gift) ? 'Awesome!' : 'Save to Collection';
+
     winOverlayModal.classList.add('active');
     if (tgBackButton) pushTgBackButtonHandler(closeWinOverlayModalWithBackButton);
     Telegram.WebApp.HapticFeedback?.notificationOccurred('success');
@@ -1510,29 +1563,38 @@ function openRouletteModal(caseItem) {
     updateCaseMultiplierButtons();
     rouletteCaseName.textContent = caseItem.name;
     updateSpinButtonText();
-    
-    possiblePrizesDisplay.innerHTML = ''; // Clear previous prizes
-    
-    // Sort prizes by value before displaying
+
+    possiblePrizesDisplay.innerHTML = '';
     const sortedPrizes = [...caseItem.prizes].sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0));
 
     sortedPrizes.forEach(pData => {
         if (!pData || !pData.name) return;
-        
-        // Convert floor price from TON to Stars for display
+
         const displayPriceInStars = Math.floor((pData.floorPrice || 0) * TON_TO_STARS_RATE);
 
         const card = document.createElement('div');
         card.className = 'prize-card';
-        
+
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
-        const img = document.createElement('img');
-        img.src = generateImageFilename(pData.imageFilename || pData.name);
-        img.alt = pData.name;
-        imgCont.appendChild(img);
 
-        // Use the formatted large number for the price display
+        const imgSrc = generateImageFilename(pData.imageFilename || pData.name);
+
+        // --- NEW LOGIC: Check if it's an emoji or a URL ---
+        if (Object.keys(EMOJI_GIFTS).includes(imgSrc)) {
+            // It's an emoji, create a styled text element
+            const emojiSpan = document.createElement('span');
+            emojiSpan.className = 'emoji-as-image';
+            emojiSpan.textContent = imgSrc;
+            imgCont.appendChild(emojiSpan);
+        } else {
+            // It's a URL, create an img element as before
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.alt = pData.name;
+            imgCont.appendChild(img);
+        }
+
         const priceHTML = `<span class="prize-card-price">${formatLargeNumber(displayPriceInStars)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 10px; height: 10px; vertical-align: baseline;"></span>`;
         const nameHTML = `<span class="prize-card-name">${pData.name}</span>`;
 
