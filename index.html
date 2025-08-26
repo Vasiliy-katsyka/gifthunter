@@ -1326,16 +1326,22 @@ function renderProfile() {
 }
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
-    let totalValue = 0;
+    let totalValueInStars = 0; // This will now be in Stars
+
     if (currentUser.inventory.length === 0) {
         profileElements.emptyInventoryMessage.style.display = 'block';
         profileElements.sellAllButton.style.display = 'none';
     } else {
         profileElements.emptyInventoryMessage.style.display = 'none';
+        
         currentUser.inventory.forEach(item => {
-            totalValue += item.currentValue || 0;
+            // The backend sends currentValue in TON, so we convert it to Stars for display
+            const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
+            totalValueInStars += itemValueInStars;
+
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
+            
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
             const img = document.createElement('img');
@@ -1343,15 +1349,27 @@ function renderInventory() {
             img.alt = item.name;
             img.loading = 'lazy';
             imgCont.appendChild(img);
-            itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div><div class="inventory-item-value">${(item.currentValue || 0).toFixed(2)} TON</div><div class="inventory-item-actions">${item.is_ton_prize ? '<span style="font-size:0.8em; color:var(--success-color);">TON Prize</span>' : `<button class="button button-secondary withdraw-button" onclick="startWithdrawalProcess(${item.id})">Withdraw</button><button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>`}</div>`;
+            
+            // Display value in Stars
+            const valueHTML = `<div class="inventory-item-value">${itemValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px;"></div>`;
+            const actionsHTML = `<div class="inventory-item-actions">
+                                    <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
+                                 </div>`;
+
+            itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div>
+                                 ${valueHTML}
+                                 ${actionsHTML}`;
             itemDiv.insertBefore(imgCont, itemDiv.firstChild);
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
+
         profileElements.sellAllButton.style.display = 'block';
-        profileElements.sellAllValueSpan.textContent = totalValue.toFixed(2);
+        // The "Sell All" button should also show the value in Stars
+        profileElements.sellAllValueSpan.textContent = totalValueInStars;
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
+
 async function renderLeaderboard() {
     try {
         const leaders = await apiRequest('/api/get_leaderboard');
@@ -1484,34 +1502,37 @@ function openRouletteModal(caseItem) {
     updateCaseMultiplierButtons();
     rouletteCaseName.textContent = caseItem.name;
     updateSpinButtonText();
-    possiblePrizesDisplay.innerHTML = '';
-    const prizeMap = new Map();
-    caseItem.prizes.forEach(p => {
-        if (!p || !p.name) return;
-        const prizeName = p.name;
-        const floorPrice = UPDATED_FLOOR_PRICES_FRONTEND[prizeName] || 0;
-        const pDataWithPrice = { name: prizeName, probability: p.probability, imageFilename: p.imageFilename || generateImageFilename(prizeName), floorPrice: floorPrice };
-        if (prizeMap.has(prizeName)) {
-            const existing = prizeMap.get(prizeName);
-            prizeMap.set(prizeName, { ...existing, probability: (existing.probability || 0) + (p.probability || 0), floorPrice: floorPrice });
-        } else {
-            prizeMap.set(prizeName, pDataWithPrice);
-        }
-    });
-    prizeMap.forEach((pData, name) => {
-        const displayPrice = pData.floorPrice || 0;
+    
+    possiblePrizesDisplay.innerHTML = ''; // Clear previous prizes
+    
+    // Sort prizes by value before displaying
+    const sortedPrizes = [...caseItem.prizes].sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0));
+
+    sortedPrizes.forEach(pData => {
+        if (!pData || !pData.name) return;
+        
+        // Convert floor price from TON to Stars for display
+        const displayPriceInStars = Math.floor((pData.floorPrice || 0) * TON_TO_STARS_RATE);
+
         const card = document.createElement('div');
         card.className = 'prize-card';
+        
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
         const img = document.createElement('img');
-        img.src = pData.imageFilename;
-        img.alt = name;
+        img.src = generateImageFilename(pData.imageFilename || pData.name);
+        img.alt = pData.name;
         imgCont.appendChild(img);
-        card.innerHTML = `<span class="prize-card-price">${displayPrice.toFixed(2)} TON</span><span class="prize-card-name">${name}</span>`;
+
+        // Use the formatted large number for the price display
+        const priceHTML = `<span class="prize-card-price">${formatLargeNumber(displayPriceInStars)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 10px; height: 10px; vertical-align: baseline;"></span>`;
+        const nameHTML = `<span class="prize-card-name">${pData.name}</span>`;
+
+        card.innerHTML = `${priceHTML}${nameHTML}`;
         card.insertBefore(imgCont, card.firstChild);
         possiblePrizesDisplay.appendChild(card);
     });
+
     rouletteModal.classList.add('active');
     if (tgBackButton) pushTgBackButtonHandler(closeRouletteModalWithBackButton);
     Telegram.WebApp.HapticFeedback?.impactOccurred('light');
