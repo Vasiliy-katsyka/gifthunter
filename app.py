@@ -130,6 +130,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+EMOJI_GIFT_IMAGES = {
+    "Heart": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADYEwAAiHMUUk.png?raw=true",
+    "Bear": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADomAAAvRzSEk.png?raw=true",
+    "Rose": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADslsAAqCxSUk.png?raw=true",
+    "Rocket": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgAD9lAAAsBFUUk.png?raw=true",
+    "Bottle": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADA2cAAm0PqUs.png?raw=true"
+}
+
 # Basic checks for essential environment variables
 if not BOT_TOKEN:
     logger.error("BOT_TOKEN not set for backend (needed for initData validation)!")
@@ -1464,11 +1472,11 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Precious Peach','probability': 0.00002}, # Drastically reduced
         {'name':'Bonded Ring','probability': 0.00005}, # Drastically reduced
         {'name':'Lol Pop','probability': 0.001}, # Reduced
-        {'name': "💝", 'probability': 0.25},
-        {'name': "🐻", 'probability': 0.25},
-        {'name': "🌹", 'probability': 0.20},
-        {'name': "🚀", 'probability': 0.148924}, # Adjusted to ensure sum is 1
-        {'name': "🍾", 'probability': 0.15},
+        {'name': "Heart",  'probability': 0.25},
+        {'name': "Bear",   'probability': 0.25},
+        {'name': "Rose",   'probability': 0.20},
+        {'name': "Rocket", 'probability': 0.148924},
+        {'name': "Bottle", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.5,'prizes': sorted([
@@ -1477,11 +1485,11 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Signet Ring','probability': 0.00013},# Drastically reduced
         {'name':'Swiss Watch','probability': 0.00015},# Drastically reduced
         {'name':'Snake Box', 'probability': 0.005},  # Reduced
-        {'name': "💝", 'probability': 0.25},
-        {'name': "🐻", 'probability': 0.25},
-        {'name': "🌹", 'probability': 0.20},
-        {'name': "🚀", 'probability': 0.148924}, # Adjusted to ensure sum is 1
-        {'name': "🍾", 'probability': 0.15},
+        {'name': "Heart",  'probability': 0.25},
+        {'name': "Bear",   'probability': 0.25},
+        {'name': "Rose",   'probability': 0.20},
+        {'name': "Rocket", 'probability': 0.148924},
+        {'name': "Bottle", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.0,'prizes': sorted([
@@ -2405,14 +2413,15 @@ def open_case_api():
             # All items, including emojis, are now added to inventory.
             db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
+            image_url = EMOJI_GIFT_IMAGES.get(prize_name) or (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
+
             inventory_item = InventoryItem(
                 user_id=uid,
-                # nft_id will be None for emoji gifts, which is correct
                 nft_id=db_nft.id if db_nft else None,
                 item_name_override=prize_name,
-                item_image_override=generate_image_filename_from_name(prize_name),
+                item_image_override=image_url, # Use the determined URL
                 current_value=float(prize_value_ton),
-                is_ton_prize=False # No prizes are TON balance prizes
+                is_ton_prize=False
             )
             db.add(inventory_item)
             db.flush()
@@ -2420,10 +2429,9 @@ def open_case_api():
             won_prizes_response_list.append({
                 "id": inventory_item.id,
                 "name": prize_name,
-                "imageFilename": inventory_item.item_image_override,
+                "imageFilename": inventory_item.item_image_override, # Send correct URL
                 "currentValue": inventory_item.current_value,
-                # Add a flag to tell the frontend how to handle withdrawal
-                "is_emoji_gift": prize_name in EMOJI_GIFTS_BACKEND,
+                "is_emoji_gift": prize_name in EMOJI_GIFT_IMAGES, # Send a helpful flag
             })
 
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
