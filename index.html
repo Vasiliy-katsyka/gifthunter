@@ -1058,7 +1058,6 @@ const profileElements = {
     emptyInventoryMessage: document.getElementById('empty-inventory-message'),
     disconnectWalletButton: document.getElementById('disconnect-wallet-button'),
     depositAmountInput: document.getElementById('deposit-amount-input'),
-    initiateDepositButton: document.getElementById('initiate-deposit-button'),
     sellAllButton: document.getElementById('sell-all-button'),
     sellAllValueSpan: document.getElementById('sell-all-value'),
     promocodeInput: document.getElementById('promocode-input'),
@@ -2298,7 +2297,6 @@ caseMultiplierSelector.querySelectorAll('button').forEach(btn => {
     });
 });
 profileElements.disconnectWalletButton.addEventListener('click', () => tonConnectUI.disconnect());
-profileElements.initiateDepositButton.addEventListener('click', initiateDepositProcedure);
 profileElements.redeemPromocodeButton.addEventListener('click', redeemPromocode);
 copyDepositAddressBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(depositRecipientAddressRaw)
