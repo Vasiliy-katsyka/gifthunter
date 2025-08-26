@@ -2179,8 +2179,13 @@ def register_referral_api():
     finally:
         db.close()
 
+# --- FULLY UPDATED: initiate_stars_deposit_api (with error handling and lower limit) ---
 @app.route('/api/initiate_stars_deposit', methods=['POST'])
 def initiate_stars_deposit_api():
+    # Make sure PAYMENT_PROVIDER_TOKEN is set in your environment!
+    if not PAYMENT_PROVIDER_TOKEN:
+        logger.error("CRITICAL: PAYMENT_PROVIDER_TOKEN is not set. Cannot create any invoices.")
+        return jsonify({"status": "error", "message": "Payment service is currently unavailable."}), 503
 
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
@@ -2192,6 +2197,7 @@ def initiate_stars_deposit_api():
 
     try:
         amount_stars_int = int(amount_stars)
+        # --- NEW LIMIT ---
         if not (5 <= amount_stars_int <= 10000):
              return jsonify({"error": "Amount must be between 5 and 10,000 Stars."}), 400
     except (ValueError, TypeError):
@@ -2200,33 +2206,35 @@ def initiate_stars_deposit_api():
     db = next(get_db())
     try:
         user = db.query(User).filter(User.id == uid).first()
-        if not user:
-            return jsonify({"error": "User not found."}), 404
+        if not user: return jsonify({"error": "User not found."}), 404
 
         title = f"Top up {amount_stars_int} Stars"
         description = f"Add {amount_stars_int} Stars to your Case Hunter balance."
-        # Unique payload to identify this transaction later in webhooks if needed
         payload = f"stars-topup-{uid}-{uuid.uuid4()}"
         prices = [types.LabeledPrice(label=f"{amount_stars_int} Stars", amount=amount_stars_int)]
 
-        # The bot.create_invoice_link method is synchronous in pyTelegramBotAPI
         invoice_link = bot.create_invoice_link(
             title=title,
             description=description,
             payload=payload,
-            provider_token="", # Empty for Telegram Stars
+            provider_token="", # MUST provide a token, even if empty for XTR. Use your real one.
             currency="XTR",
-            prices=prices
+            prices=prices,
         )
 
-        return jsonify({
-            "status": "success",
-            "invoice_link": invoice_link
-        })
+        return jsonify({"status": "success", "invoice_link": invoice_link})
 
     except Exception as e:
+        # Check for the specific "bot was blocked" error
+        if 'bot was blocked by the user' in str(e):
+            logger.warning(f"Failed to create invoice for user {uid}, likely because they haven't started the bot. Error: {e}")
+            return jsonify({
+                "status": "error",
+                "message": "Could not create payment link. Please start a chat with our bot first and try again."
+            }), 400
+        
         logger.error(f"Error creating Stars invoice for user {uid}: {e}", exc_info=True)
-        return jsonify({"error": "Could not create Stars invoice."}), 500
+        return jsonify({"error": "Could not create Stars invoice due to a server error."}), 500
     finally:
         db.close()
 
@@ -2295,38 +2303,74 @@ def get_tonnel_gift_listings_api(inventory_item_id):
         
         db.close()
 
+# --- NEW BACKEND ENDPOINT for withdrawing emoji gifts ---
+
+@app.route('/api/withdraw_emoji_gift', methods=['POST'])
+def withdraw_emoji_gift_api():
+    auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
+    if not auth: return jsonify({"error": "Auth failed"}), 401
+
+    uid = auth["id"]
+    data = flask_request.get_json()
+    inventory_item_id = data.get('inventory_item_id')
+
+    if not inventory_item_id: return jsonify({"error": "inventory_item_id required"}), 400
+
+    db = next(get_db())
+    try:
+        item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).first()
+
+        if not item: return jsonify({"error": "Item not found in your inventory."}), 404
+        
+        item_name = item.item_name_override
+        if item_name not in EMOJI_GIFTS_BACKEND:
+            return jsonify({"error": "This item is not a withdrawable emoji gift."}), 400
+
+        gift_data = EMOJI_GIFTS_BACKEND[item_name]
+        
+        if bot:
+            bot.send_gift(chat_id=uid, gift_id=gift_data['id'])
+            logger.info(f"Withdrew and sent emoji gift '{item_name}' to user {uid}")
+            
+            # Remove from inventory after successful send
+            db.delete(item)
+            db.commit()
+            return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent!"})
+        else:
+            return jsonify({"error": "Bot is not configured to send gifts."}), 500
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error withdrawing emoji gift for user {uid}: {e}", exc_info=True)
+        return jsonify({"error": "Server error during withdrawal."}), 500
+    finally:
+        db.close()
+
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
-    """
-    Handles the logic for a user opening one or more cases.
-    """
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
-        return jsonify({"error": "Authentication failed"}), 401
+        return jsonify({"error": "Auth failed"}), 401
 
     uid = auth["id"]
     data = flask_request.get_json()
     cid = data.get('case_id')
     multiplier = data.get('multiplier', 1)
 
-    if not cid:
-        return jsonify({"error": "case_id is a required parameter."}), 400
+    if not cid: return jsonify({"error": "case_id required"}), 400
     try:
         multiplier = int(multiplier)
-        if multiplier not in [1, 2, 3]:
-            return jsonify({"error": "Invalid multiplier. Allowed values are 1, 2, or 3."}), 400
+        if multiplier not in [1, 2, 3]: return jsonify({"error": "Invalid multiplier."}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid multiplier format."}), 400
 
     db = next(get_db())
     try:
         user = db.query(User).filter(User.id == uid).with_for_update().first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"error": "User not found"}), 404
 
         target_case = next((c for c in cases_data_backend if c['id'] == cid), None)
-        if not target_case:
-            return jsonify({"error": "Case data not found on server."}), 404
+        if not target_case: return jsonify({"error": "Case not found"}), 404
 
         cost_per_case_ton = Decimal(str(target_case['priceTON']))
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
@@ -2334,8 +2378,7 @@ def open_case_api():
 
         if user_balance_ton < total_cost_ton:
             needed_stars = int(total_cost_ton * TON_TO_STARS_RATE_BACKEND)
-            current_stars = int(user_balance_ton * TON_TO_STARS_RATE_BACKEND)
-            return jsonify({"error": f"Not enough balance. You need {needed_stars} Stars but have {current_stars}."}), 400
+            return jsonify({"error": f"Not enough balance. Need {needed_stars} Stars"}), 400
 
         user.ton_balance = float(user_balance_ton - total_cost_ton)
 
@@ -2347,71 +2390,43 @@ def open_case_api():
             roll = random.random()
             cumulative_probability = 0.0
             chosen_prize_info = None
-
-            for prize_info in prizes_in_case:
-                cumulative_probability += prize_info['probability']
+            for p_info in prizes_in_case:
+                cumulative_probability += p_info['probability']
                 if roll <= cumulative_probability:
-                    chosen_prize_info = prize_info
+                    chosen_prize_info = p_info
                     break
             
-            if not chosen_prize_info:
-                chosen_prize_info = prizes_in_case[-1] if prizes_in_case else None
-
-            if not chosen_prize_info:
-                 db.rollback()
-                 return jsonify({"error": "Case prize pool is empty."}), 500
+            if not chosen_prize_info: chosen_prize_info = prizes_in_case[-1]
 
             prize_name = chosen_prize_info['name']
-            
-            # Use the floor price from the RTP-calculated case data
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
-            
-            if prize_name in EMOJI_GIFTS_BACKEND:
-                gift_data = EMOJI_GIFTS_BACKEND[prize_name]
-                try:
-                    if bot:
-                        bot.send_gift(chat_id=uid, gift_id=gift_data['id'])
-                        logger.info(f"Successfully sent emoji gift '{prize_name}' to user {uid}")
-                    else:
-                        raise Exception("Bot not initialized")
-                    
-                    won_prizes_response_list.append({
-                        "id": f"emoji_{gift_data['id']}_{uuid.uuid4()}",
-                        "name": prize_name,
-                        "imageFilename": generate_image_filename_from_name(prize_name),
-                        "currentValue": float(prize_value_ton), # Value in TON for consistency
-                        "is_emoji_gift": True,
-                    })
-                except Exception as e_gift:
-                    logger.error(f"Failed to send emoji gift '{prize_name}' to user {uid}. Refunding. Error: {e_gift}")
-                    user.ton_balance = float(Decimal(str(user.ton_balance)) + prize_value_ton)
-                    total_value_this_spin_ton -= prize_value_ton
-            else:
-                db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
-                variant_name = prize_name if prize_name in KISSED_FROG_VARIANT_FLOORS else None
 
-                inventory_item = InventoryItem(
-                    user_id=uid,
-                    nft_id=db_nft.id if db_nft else None,
-                    item_name_override=prize_name,
-                    item_image_override=generate_image_filename_from_name(prize_name),
-                    current_value=float(prize_value_ton),
-                    variant=variant_name,
-                    is_ton_prize=False
-                )
-                db.add(inventory_item)
-                db.flush()
-                
-                won_prizes_response_list.append({
-                    "id": inventory_item.id,
-                    "name": prize_name,
-                    "imageFilename": inventory_item.item_image_override,
-                    "currentValue": inventory_item.current_value,
-                    "is_emoji_gift": False,
-                    "variant": inventory_item.variant
-                })
-        
+            # --- UNIFIED GIFT HANDLING ---
+            # All items, including emojis, are now added to inventory.
+            db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
+            
+            inventory_item = InventoryItem(
+                user_id=uid,
+                # nft_id will be None for emoji gifts, which is correct
+                nft_id=db_nft.id if db_nft else None,
+                item_name_override=prize_name,
+                item_image_override=generate_image_filename_from_name(prize_name),
+                current_value=float(prize_value_ton),
+                is_ton_prize=False # No prizes are TON balance prizes
+            )
+            db.add(inventory_item)
+            db.flush()
+
+            won_prizes_response_list.append({
+                "id": inventory_item.id,
+                "name": prize_name,
+                "imageFilename": inventory_item.item_image_override,
+                "currentValue": inventory_item.current_value,
+                # Add a flag to tell the frontend how to handle withdrawal
+                "is_emoji_gift": prize_name in EMOJI_GIFTS_BACKEND,
+            })
+
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
         db.commit()
 
@@ -2424,7 +2439,7 @@ def open_case_api():
     except Exception as e:
         db.rollback()
         logger.error(f"Critical error in open_case for user {uid}: {e}", exc_info=True)
-        return jsonify({"error": "A server error occurred during the case opening process."}), 500
+        return jsonify({"error": "A server error occurred."}), 500
     finally:
         db.close()
         
