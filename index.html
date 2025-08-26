@@ -1609,14 +1609,14 @@ function initializeRouletteVisuals(caseItem, multiplier) {
                 if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
                     const img = document.createElement('img');
                     img.src = imgSrc;
-                    img.alt = pData.name; // Uses pData
-                    itemEl.appendChild(img);
+                    img.alt = pData.name;
+                    itemEl.appendChild(img); // Appended immediately
                 } else {
                     const emojiSpan = document.createElement('span');
                     emojiSpan.className = 'emoji-as-image';
                     emojiSpan.style.fontSize = '52px';
                     emojiSpan.textContent = imgSrc;
-                    itemEl.appendChild(emojiSpan);
+                    itemEl.appendChild(emojiSpan); // Appended immediately
                 }
                 itemEl.appendChild(img);
                 itemEl.dataset.prizeData = JSON.stringify({
@@ -1752,13 +1752,13 @@ async function spinRoulette() {
                 const img = document.createElement('img');
                 img.src = imgSrc;
                 img.alt = randomPrize.name;
-                itemEl.appendChild(img);
+                itemEl.appendChild(img); // Appended immediately
             } else {
                 const emojiSpan = document.createElement('span');
                 emojiSpan.className = 'emoji-as-image';
-                emojiSpan.style.fontSize = '52px'; // Larger for the roulette wheel itself
+                emojiSpan.style.fontSize = '52px';
                 emojiSpan.textContent = imgSrc;
-                itemEl.appendChild(emojiSpan);
+                itemEl.appendChild(emojiSpan); // Appended immediately
             }
             itemEl.appendChild(img);
             itemEl.dataset.prizeData = JSON.stringify({
