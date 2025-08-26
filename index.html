@@ -1556,26 +1556,24 @@ function showWinOverlay(wonPrizesArray) {
 
     if (wonPrizesArray.length === 1) {
         const prizeItem = wonPrizesArray[0];
-        // Now using EMOJI_GIFTS to check if it's one of the special gifts
-        const isSpecialGift = !!EMOJI_GIFTS[prizeItem.name];
-        winOverlayNameEl.textContent = isSpecialGift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
+        // Use the reliable flag from the backend
+        winOverlayNameEl.textContent = prizeItem.is_emoji_gift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
     } else {
         winOverlayNameEl.textContent = `You Won ${wonPrizesArray.length} Items!`;
     }
 
     let prizeDetailsHTML = '';
     wonPrizesArray.forEach(prizeItem => {
-        // Simplified image logic
         const img = document.createElement('img');
         img.src = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
         img.alt = prizeItem.name;
         winOverlayPrizeImageContainer.appendChild(img);
 
+        // This math will now work because currentValue is correct from the backend
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
         prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} ⭐)</div>`;
 
-        // Check if it's a special gift by name
-        if (!EMOJI_GIFTS[prizeItem.name]) {
+        if (!prizeItem.is_emoji_gift) {
             totalConvertValueInTon += (prizeItem.currentValue || 0);
         }
     });
@@ -1588,10 +1586,8 @@ function showWinOverlay(wonPrizesArray) {
     } else {
         winOverlayConvertBtn.style.display = 'none';
     }
-    
-    // Check if ALL prizes won are from the special EMOJI_GIFTS list
-    const allAreSpecialGifts = wonPrizesArray.every(p => !!EMOJI_GIFTS[p.name]);
-    winOverlaySaveBtn.textContent = allAreSpecialGifts ? 'Awesome!' : 'Save to Collection';
+
+    winOverlaySaveBtn.textContent = wonPrizesArray.every(p => p.is_emoji_gift) ? 'Awesome!' : 'Save to Collection';
 
     winOverlayModal.classList.add('active');
     if (tgBackButton) pushTgBackButtonHandler(closeWinOverlayModalWithBackButton);
@@ -1734,10 +1730,10 @@ async function spinRoulette() {
     spinButton.disabled = true;
     spinButton.textContent = 'Spinning...';
     Telegram.WebApp.HapticFeedback?.impactOccurred('light');
-    
+
     const allReelContainers = [rouletteReel1, rouletteReel2, rouletteReel3];
     const activeSpinners = allReelContainers.filter(container => container.classList.contains('active')).map(container => container.querySelector('.roulette-spinner-reel'));
-    
+
     if (activeSpinners.length === 0) {
         showTGNotification("No active reels to spin. Please select a multiplier.", "error");
         spinButton.disabled = false;
@@ -1753,18 +1749,14 @@ async function spinRoulette() {
     activeSpinners.forEach((spinnerReel, reelIndex) => {
         spinnerReel.style.transition = 'none';
         void spinnerReel.offsetWidth;
-        
         for (let j = 0; j < VISUAL_ITEMS_PER_REEL_SPIN_BUFFER; j++) {
             const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
-            
-            // Simplified image logic
             const img = document.createElement('img');
             img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
             img.alt = randomPrize.name;
             itemEl.appendChild(img);
-            
             itemEl.dataset.prizeData = JSON.stringify({
                 name: randomPrize.name,
                 imageFilename: randomPrize.imageFilename,
@@ -1780,12 +1772,12 @@ async function spinRoulette() {
         const result = await apiRequest('/api/open_case', 'POST', { case_id: currentOpenCaseOrSlot.id, multiplier: selectedCaseMultiplier });
         spinButton.disabled = false;
         updateSpinButtonText();
-        
+
         if (result.status === 'success' && result.won_prizes && result.won_prizes.length > 0) {
             currentUser.tonBalance = result.new_balance_ton;
             updateBalances();
             if (spinAnimationTimeoutOuter) clearTimeout(spinAnimationTimeoutOuter);
-            
+
             activeSpinners.forEach((spinnerReel, index) => {
                 let currentReelItemsDOMElements = Array.from(spinnerReel.children);
                 const actualWonPrizeBackendData = result.won_prizes[index] || (index === 0 && result.won_prizes[0]);
@@ -1793,45 +1785,33 @@ async function spinRoulette() {
                     console.warn(`No won prize data for reel ${index}. Skipping animation for this reel.`);
                     return;
                 }
-                
+
                 const landingSpotIndex = VISUAL_ITEMS_PER_REEL_INITIAL + Math.floor(VISUAL_ITEMS_PER_REEL_SPIN_BUFFER / 2);
-                
+
                 if (currentReelItemsDOMElements[landingSpotIndex]) {
                     const targetEl = currentReelItemsDOMElements[landingSpotIndex];
-                    
-                    // Clear the target element first
-                    targetEl.innerHTML = '';
-                    const wonImgSrc = generateImageFilename(actualWonPrizeBackendData.imageFilename || actualWonPrizeBackendData.name);
-                    
-                    if (wonImgSrc.startsWith('http') || wonImgSrc.includes('.png') || wonImgSrc.includes('.svg')) {
-                         const imgElement = document.createElement('img');
-                         imgElement.src = wonImgSrc;
-                         imgElement.alt = actualWonPrizeBackendData.name;
-                         targetEl.appendChild(imgElement);
-                    } else {
-                        const emojiSpan = document.createElement('span');
-                        emojiSpan.className = 'emoji-as-image';
-                        emojiSpan.style.fontSize = '52px';
-                        emojiSpan.textContent = wonImgSrc;
-                        targetEl.appendChild(emojiSpan);
+                    const imgElement = targetEl.querySelector('img');
+                    if (imgElement) {
+                        imgElement.src = generateImageFilename(actualWonPrizeBackendData.imageFilename || actualWonPrizeBackendData.name);
+                        imgElement.alt = actualWonPrizeBackendData.name;
                     }
-
                     targetEl.dataset.isWinner = 'true';
                     targetEl.dataset.prizeData = JSON.stringify(actualWonPrizeBackendData);
                 } else {
                     console.warn(`Could not place winning item at target index ${landingSpotIndex}. Reel may be too short or index is off.`);
                 }
-                
+
                 let scrollDist = (landingSpotIndex * itemHeight) + (itemHeight / 2) - centerOffset;
                 const randomBiasRange = itemHeight * 0.4;
                 let visualBiasOffsetPx = (Math.random() * randomBiasRange) - (randomBiasRange / 2);
                 scrollDist += visualBiasOffsetPx;
+
                 const nudgeRange = 3;
                 const winningItemValue = getItemValue(actualWonPrizeBackendData);
                 let nudgeValueThreshold = winningItemValue * 1.5;
                 let bestNudgeCandidate = null;
                 let maxNudgeAmount = itemHeight * 0.4;
-                
+
                 for (let j = 1; j <= nudgeRange; j++) {
                     const idxAbove = landingSpotIndex - j;
                     const idxBelow = landingSpotIndex + j;
@@ -1854,7 +1834,7 @@ async function spinRoulette() {
                         } catch (e) {}
                     }
                 }
-                
+
                 if (bestNudgeCandidate) {
                     let nudgeMagnitude = maxNudgeAmount * (1 / (bestNudgeCandidate.distance + 1));
                     nudgeMagnitude = Math.min(nudgeMagnitude, maxNudgeAmount);
@@ -1864,15 +1844,15 @@ async function spinRoulette() {
                         scrollDist += nudgeMagnitude;
                     }
                 }
-                
+
                 const minScrollPosForWinner = (landingSpotIndex * itemHeight) + (itemHeight * 0.1) - centerOffset;
                 const maxScrollPosForWinner = (landingSpotIndex * itemHeight) + (itemHeight * 0.9) - centerOffset;
                 scrollDist = Math.max(minScrollPosForWinner, Math.min(maxScrollPosForWinner, scrollDist));
-                
+
                 spinnerReel.style.transition = `top 6s cubic-bezier(0.25, 0.1, 0.2, 1)`;
                 spinnerReel.style.top = `-${scrollDist}px`;
             });
-            
+
             const animationDuration = 6000;
             spinAnimationTimeoutOuter = setTimeout(() => {
                 result.won_prizes.forEach(wp => {
@@ -1880,13 +1860,14 @@ async function spinRoulette() {
                     if (existingItemIndex === -1 && wp.id) {
                         currentUser.inventory.push({
                             id: wp.id, name: wp.name, imageFilename: wp.imageFilename,
-                            currentValue: wp.currentValue, variant: wp.variant, is_ton_prize: wp.is_ton_prize || false
+                            currentValue: wp.currentValue, variant: wp.variant, is_ton_prize: wp.is_ton_prize || false,
+                            is_emoji_gift: wp.is_emoji_gift
                         });
                     }
                 });
                 renderInventory();
                 showWinOverlay(result.won_prizes);
-                
+
                 activeSpinners.forEach(spinnerReel => {
                     const currentTop = parseFloat(spinnerReel.style.top.replace('px', ''));
                     const itemHeightCalc = spinnerReel.querySelector('.roulette-item') ? spinnerReel.querySelector('.roulette-item').offsetHeight : 80;
