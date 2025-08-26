@@ -1020,7 +1020,7 @@ casesData.forEach(caseItem => {
 const headerElements = {
     tonConnectButton: document.getElementById('ton-connect-button'),
     walletAddressDisplay: document.getElementById('wallet-address-display'),
-    tonBalanceSpan: document.getElementById('ton-balance'),
+    starBalanceSpan: document.getElementById('star-balance'),
     balanceDisplay: document.getElementById('balance')
 };
 const appNavButtons = document.querySelectorAll('.nav-button');
@@ -1186,7 +1186,7 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
 function updateBalances() {
     // All balances are now in Stars
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
-    headerElements.tonBalanceSpan.textContent = `${starBalance}`; // Keep ID for now, but it's stars
+    headerElements.starBalanceSpan.textContent = `${starBalance}`; // Keep ID for now, but it's stars
     document.querySelector('#profile-balance-display span').textContent = `${starBalance}`;
 }
 function navigateToPage(pageId) {
