@@ -2182,11 +2182,6 @@ def register_referral_api():
 # --- FULLY UPDATED: initiate_stars_deposit_api (with error handling and lower limit) ---
 @app.route('/api/initiate_stars_deposit', methods=['POST'])
 def initiate_stars_deposit_api():
-    # Make sure PAYMENT_PROVIDER_TOKEN is set in your environment!
-    if not PAYMENT_PROVIDER_TOKEN:
-        logger.error("CRITICAL: PAYMENT_PROVIDER_TOKEN is not set. Cannot create any invoices.")
-        return jsonify({"status": "error", "message": "Payment service is currently unavailable."}), 503
-
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Auth failed"}), 401
