@@ -453,26 +453,49 @@
 
             <div id="invite-page" class="page"><h2>Referrals</h2><div class="content-card"><p>Invite friends & earn <strong>10%</strong> of deposits!</p><input type="text" id="referral-link" value="Loading..." readonly><button id="copy-ref-link-button" class="button">Copy Code</button><div class="stats-box"><div class="stat-item"><div id="referral-balance" class="value">0.00 TON</div><div class="label">Earnings</div></div><div class="stat-item"><div id="invited-count" class="value">0</div><div class="label">Invited</div></div></div><button id="withdraw-referral-button" class="button button-secondary">Withdraw</button></div><div class="content-card"><h3>Invited Friends</h3><div id="invited-users-list-display" class="invited-users-list"><p>No friends invited yet.</p></div></div></div>
             <div id="leaderboard-page" class="page"><h2>Leaderboard</h2><div id="leaderboard-list" class="leaderboard-list content-card" style="padding-top:0; padding-bottom:0;"></div></div>
-            <div id="profile-page" class="page"><div class="profile-header"><div id="profile-avatar" class="profile-avatar-placeholder"></div><div class="profile-info"><div id="profile-username" class="username">User</div><div id="profile-userid" class="userid">#...</div></div></div>
-            <div class="content-card">
-                <h3>Balance</h3>
-                <div id="profile-balance-display" style="display: flex; align-items: center; justify-content: center;">
-                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 28px; height: 28px; margin-right: 8px;">
-                    <span>0</span>
+            <div id="profile-page" class="page">
+                <div class="profile-header">
+                    <div id="profile-avatar" class="profile-avatar-placeholder"></div>
+                    <div class="profile-info">
+                        <div id="profile-username" class="username">User</div>
+                        <div id="profile-userid" class="userid">#...</div>
+                    </div>
                 </div>
-                <input type="number" id="deposit-amount-input" placeholder="Amount">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <button id="initiate-deposit-stars-button" class="button">Deposit Stars</button>
-                    <button id="initiate-deposit-ton-button" class="button button-secondary">Deposit TON</button>
+            
+                <div class="content-card">
+                    <h3>Balance</h3>
+                    <div id="profile-balance-display" style="display: flex; align-items: center; justify-content: center;">
+                        <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 28px; height: 28px; margin-right: 8px;">
+                        <span>0</span>
+                    </div>
+                    <input type="number" id="deposit-amount-input" placeholder="Amount">
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button id="initiate-deposit-stars-button" class="button">Deposit Stars</button>
+                        <button id="initiate-deposit-ton-button" class="button button-secondary">Deposit TON</button>
+                    </div>
                 </div>
-            </div><div class="content-card"><h3>Promocode</h3><div class="promocode-input-group"><input type="text" id="promocode-input" placeholder="Enter code"><button id="redeem-promocode-button" class="button button-secondary">Redeem</button></div></div><div class="content-card"><h3>Wallet</h3><div id="profile-wallet-address">Not Connected</div><button id="disconnect-wallet-button" class="button button-secondary" style="display: none;">Disconnect</button></div>
-            <div class="content-card">
-                <h3>My Collection (<span id="inventory-count">0</span>)</h3>
-                <div id="inventory-grid" class="inventory-grid">
-                    <p id="empty-inventory-message" style="grid-column: 1 / -1; text-align: center; color: var(--text-placeholder); padding:15px 0;">Your collection is empty.</p>
+            
+                <div class="content-card">
+                    <h3>Promocode</h3>
+                    <div class="promocode-input-group">
+                        <input type="text" id="promocode-input" placeholder="Enter code">
+                        <button id="redeem-promocode-button" class="button button-secondary">Redeem</button>
+                    </div>
                 </div>
-                <button id="sell-all-button" class="button" style="display: none;">Sell All for <span id="sell-all-value">0</span> <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 16px; height: 16px;"></button>
-            </div>
+            
+                <div class="content-card">
+                    <h3>Wallet</h3>
+                    <div id="profile-wallet-address">Not Connected</div>
+                    <button id="disconnect-wallet-button" class="button button-secondary" style="display: none;">Disconnect</button>
+                </div>
+            
+                <div class="content-card">
+                    <h3>My Collection (<span id="inventory-count">0</span>)</h3>
+                    <div id="inventory-grid" class="inventory-grid">
+                        <p id="empty-inventory-message" style="grid-column: 1 / -1; text-align: center; color: var(--text-placeholder); padding:15px 0;">Your collection is empty.</p>
+                    </div>
+                    <button id="sell-all-button" class="button" style="display: none;">Sell All for <span id="sell-all-value">0</span> <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 16px; height: 16px;"></button>
+                </div>
             </div>    
         </main>
 
@@ -2168,6 +2191,34 @@ function calculateAndDisplayUpgradeStats() {
     upgradePageElements.chancePointer.classList.remove('spinning');
     upgradePageElements.chancePointer.style.transform = `translateX(-50%) rotate(0deg)`;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Now that the document is loaded, we can safely find our buttons.
+    const depositStarsButton = document.getElementById('initiate-deposit-stars-button');
+    const depositTonButton = document.getElementById('initiate-deposit-ton-button');
+
+    // It's a good practice to check if the elements were actually found before adding listeners.
+    if (depositStarsButton) {
+        depositStarsButton.addEventListener('click', () => initiateDepositProcedure('stars'));
+    } else {
+        console.error("Could not find the 'initiate-deposit-stars-button' element.");
+    }
+
+    if (depositTonButton) {
+        depositTonButton.addEventListener('click', () => initiateDepositProcedure('ton'));
+    } else {
+        console.error("Could not find the 'initiate-deposit-ton-button' element.");
+    }
+
+    // You should put ALL of your other initial event listeners and setup code
+    // that interacts with HTML elements inside this DOMContentLoaded block.
+    // For example:
+    const redeemButton = document.getElementById('redeem-promocode-button');
+    if (redeemButton) {
+        redeemButton.addEventListener('click', redeemPromocode);
+    }
+});
+    
 let upgradeSpinTimeout;
 function startUpgradeAnimation(isSuccess) {
     const pointer = upgradePageElements.chancePointer;
@@ -2231,8 +2282,6 @@ function closeUpgradeResultModal() {
 // Event Listeners
 upgradePageElements.selectedInventoryItemSlot.addEventListener('click', () => openUpgradeItemPicker('inventory'));
 upgradePageElements.desiredUpgradeItemSlot.addEventListener('click', () => openUpgradeItemPicker('desired'));
-document.getElementById('initiate-deposit-stars-button').addEventListener('click', () => initiateDepositProcedure('stars'));
-document.getElementById('initiate-deposit-ton-button').addEventListener('click', () => initiateDepositProcedure('ton'));
 upgradePageElements.closeUpgradePickerButton.addEventListener('click', closeUpgradeItemPicker);
 upgradePageElements.doUpgradeButton.addEventListener('click', handleUpgrade);
 upgradePageElements.closeUpgradeResultModalButton.addEventListener('click', closeUpgradeResultModal);
