@@ -1609,12 +1609,12 @@ function initializeRouletteVisuals(caseItem, multiplier) {
                 if (imgSrc.startsWith('http') || imgSrc.includes('.png') || imgSrc.includes('.svg')) {
                     const img = document.createElement('img');
                     img.src = imgSrc;
-                    img.alt = randomPrize.name;
+                    img.alt = pData.name; // Uses pData
                     itemEl.appendChild(img);
                 } else {
                     const emojiSpan = document.createElement('span');
                     emojiSpan.className = 'emoji-as-image';
-                    emojiSpan.style.fontSize = '52px'; // Larger for the roulette wheel itself
+                    emojiSpan.style.fontSize = '52px';
                     emojiSpan.textContent = imgSrc;
                     itemEl.appendChild(emojiSpan);
                 }
