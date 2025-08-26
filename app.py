@@ -2173,9 +2173,6 @@ def register_referral_api():
 
 @app.route('/api/initiate_stars_deposit', methods=['POST'])
 def initiate_stars_deposit_api():
-    if not PAYMENT_PROVIDER_TOKEN:
-        logger.error("PAYMENT_PROVIDER_TOKEN is not set. Cannot create Stars invoice.")
-        return jsonify({"status": "error", "message": "Service configuration error."}), 503
 
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
