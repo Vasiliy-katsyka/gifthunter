@@ -353,7 +353,59 @@ if bot: # Ensure bot instance exists
             except Exception as e:
                 logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
                 bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-    
+
+    @bot.pre_checkout_query_handler(func=lambda query: True)
+    def pre_checkout_process(pre_checkout_query: types.PreCheckoutQuery):
+        """
+        Handles the pre-checkout query from Telegram.
+        This function confirms that the bot is ready to accept the payment.
+        """
+        logger.info(f"Received pre-checkout query: {pre_checkout_query.id} for {pre_checkout_query.total_amount} {pre_checkout_query.currency}")
+        # Always confirm the payment is okay to proceed.
+        # You could add logic here to check if the item is still in stock, etc.
+        bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+        logger.info(f"Answered pre-checkout query {pre_checkout_query.id} with OK.")
+
+
+    @bot.message_handler(content_types=['successful_payment'])
+    def successful_payment_process(message: types.Message):
+        """
+        Handles the successful payment message from Telegram.
+        This function credits the user's account with the purchased Stars.
+        """
+        payment_info = message.successful_payment
+        currency = payment_info.currency
+        total_amount = payment_info.total_amount
+        invoice_payload = payment_info.invoice_payload
+        user_id = message.from_user.id
+
+        logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}. Payload: {invoice_payload}")
+
+        if currency == "XTR":
+            # This is a Telegram Stars payment.
+            # The 'total_amount' is the number of Stars.
+            stars_purchased = total_amount
+
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == user_id).with_for_update().first()
+                if user:
+                    # Convert Stars to internal TON balance
+                    ton_to_add = stars_purchased / TON_TO_STARS_RATE_BACKEND
+                    user.ton_balance += ton_to_add
+                    db.commit()
+                    logger.info(f"Credited {user_id} with {ton_to_add:.4f} TON for {stars_purchased} Stars.")
+                    
+                    # Send a confirmation message back to the user
+                    bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
+                else:
+                    logger.error(f"Could not find user {user_id} in DB after successful payment!")
+            except Exception as e:
+                db.rollback()
+                logger.error(f"DATABASE ERROR while processing successful payment for user {user_id}: {e}", exc_info=True)
+                bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
+            finally:
+                db.close()
     
     # --- Process New Promocode Creation (Next Step Handler) ---
     def process_new_promo_creation(message):
