@@ -2192,8 +2192,8 @@ def initiate_stars_deposit_api():
 
     try:
         amount_stars_int = int(amount_stars)
-        if not (100 <= amount_stars_int <= 10000):
-             return jsonify({"error": "Amount must be between 100 and 10,000 Stars."}), 400
+        if not (5 <= amount_stars_int <= 10000):
+             return jsonify({"error": "Amount must be between 5 and 10,000 Stars."}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid amount for Stars."}), 400
 
