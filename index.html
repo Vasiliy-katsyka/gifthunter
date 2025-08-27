@@ -558,7 +558,8 @@
             <div id="win-overlay-prize-details"></div>
             <div class="win-overlay-actions modal-actions">
                 <button id="win-overlay-save-button" class="button">Save to Collection</button>
-                <button id="win-overlay-convert-button" class="button button-secondary">Convert All to <span id="win-overlay-convert-value">0.00</span> TON</button>
+                <!-- CORRECTED: Removed hardcoded "TON" -->
+                <button id="win-overlay-convert-button" class="button button-secondary">Convert All for <span id="win-overlay-convert-value">0</span> <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 16px; height: 16px;"></button>
             </div>
         </div>
     </div>
@@ -1556,7 +1557,6 @@ function showWinOverlay(wonPrizesArray) {
 
     if (wonPrizesArray.length === 1) {
         const prizeItem = wonPrizesArray[0];
-        // Use the reliable flag from the backend
         winOverlayNameEl.textContent = prizeItem.is_emoji_gift ? `You received a ${prizeItem.name} gift!` : `You Won: ${prizeItem.name}!`;
     } else {
         winOverlayNameEl.textContent = `You Won ${wonPrizesArray.length} Items!`;
@@ -1569,9 +1569,9 @@ function showWinOverlay(wonPrizesArray) {
         img.alt = prizeItem.name;
         winOverlayPrizeImageContainer.appendChild(img);
 
-        // This math will now work because currentValue is correct from the backend
+        // CORRECTED: Display prize value in Stars with the star icon
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
-        prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} ⭐)</div>`;
+        prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px; vertical-align: middle;">)</div>`;
 
         if (!prizeItem.is_emoji_gift) {
             totalConvertValueInTon += (prizeItem.currentValue || 0);
@@ -1580,8 +1580,9 @@ function showWinOverlay(wonPrizesArray) {
     winOverlayPrizeDetailsEl.innerHTML = prizeDetailsHTML;
 
     if (convertiblePrizes.length > 0) {
+        // CORRECTED: Calculate and display total conversion value in Stars
         const totalConvertValueInStars = Math.floor(totalConvertValueInTon * TON_TO_STARS_RATE);
-        winOverlayConvertValue.textContent = totalConvertValueInStars;
+        winOverlayConvertValue.textContent = totalConvertValueInStars; // Just the number
         winOverlayConvertBtn.style.display = 'block';
     } else {
         winOverlayConvertBtn.style.display = 'none';
@@ -1894,9 +1895,14 @@ async function spinRoulette() {
 }
     
 async function handleSingleConvert(itemId) {
+    // CORRECTED: Notification now says Stars
+    const itemInInventory = currentUser.inventory.find(i => i.id === itemId);
+    if (!itemInInventory) return;
+
+    const itemValueInStars = Math.floor((itemInInventory.currentValue || 0) * TON_TO_STARS_RATE);
     const success = await convertItemToTon(itemId);
     if (success) {
-        showTGNotification("Item converted to TON!", 'success');
+        showTGNotification(`Item converted to ${itemValueInStars} Stars!`, 'success');
         updateBalances();
         renderInventory();
     }
@@ -1927,24 +1933,37 @@ async function handleConvertAll() {
         showTGNotification("No items to convert.", "warning");
         return;
     }
-    let successCount = 0;
-    let failCount = 0;
-    const itemsToConvert = lastWonPrizesForOverlay.filter(p => !p.is_ton_prize && p.id);
+
+    const itemsToConvert = lastWonPrizesForOverlay.filter(p => !p.is_emoji_gift && p.id);
     if (itemsToConvert.length === 0) {
         showTGNotification("No convertible items in this win.", "info");
         closeWinOverlayModal();
         return;
     }
-    for (const item of itemsToConvert) {
-        const success = await convertItemToTon(item.id);
-        if (success) successCount++;
-        else failCount++;
-    }
-    updateBalances();
-    renderInventory();
-    if (failCount > 0) showTGNotification(`${successCount} item(s) converted. ${failCount} failed.`, 'warning');
-    else showTGNotification(`${successCount} item(s) converted to TON!`, 'success');
-    closeWinOverlayModal();
+
+    // CORRECTED: Confirmation alert now shows Stars
+    let totalValueInTon = 0;
+    itemsToConvert.forEach(item => {
+        totalValueInTon += (item.currentValue || 0);
+    });
+    const totalValueInStars = Math.floor(totalValueInTon * TON_TO_STARS_RATE);
+
+    Telegram.WebApp.showConfirm(`Are you sure you want to convert these items for ${totalValueInStars} Stars?`, async (ok) => {
+        if (ok) {
+            let successCount = 0;
+            let failCount = 0;
+            for (const item of itemsToConvert) {
+                const success = await convertItemToTon(item.id);
+                if (success) successCount++;
+                else failCount++;
+            }
+            updateBalances();
+            renderInventory();
+            if (failCount > 0) showTGNotification(`${successCount} item(s) converted. ${failCount} failed.`, 'warning');
+            else showTGNotification(`${successCount} item(s) converted to Stars!`, 'success');
+            closeWinOverlayModal();
+        }
+    });
 }
 async function handleUpgrade() {
     if (!selectedItemForUpgrade || !desiredItemForUpgrade) {
@@ -1988,12 +2007,16 @@ async function sellAllItems() {
         showTGNotification("No sellable items.", "info");
         return;
     }
-    const val = parseFloat(profileElements.sellAllValueSpan.textContent);
+
+    // CORRECTED: Confirmation alert for "Sell All" now shows Stars
+    const valInStars = parseFloat(profileElements.sellAllValueSpan.textContent);
+    const confirmationMessage = `Sell all non-TON items for approximately ${valInStars} Stars?`;
+
     if (Telegram.WebApp.showConfirm) {
-        Telegram.WebApp.showConfirm(`Sell all non-TON items for ~${val.toFixed(2)} TON?`, async (ok) => {
+        Telegram.WebApp.showConfirm(confirmationMessage, async (ok) => {
             if (ok) doSellAll();
         });
-    } else if (confirm(`Sell all non-TON items for ~${val.toFixed(2)} TON?`)) {
+    } else if (confirm(confirmationMessage)) {
         doSellAll();
     }
 }
