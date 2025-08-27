@@ -375,33 +375,47 @@
             height: 100%;
         }
 
+        #roulette-modal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px; /* Space between header and roulette wheel */
+        }
+    
+        #roulette-modal .modal-header h3 {
+            margin-bottom: 0; /* Remove default margin from h3 */
+            padding-bottom: 0;
+            text-align: left;
+            flex-grow: 1; /* Allow title to take available space */
+        }
+    
+        /* New styles for the balance display to match the image */
         #roulette-modal-balance-display {
-            position: absolute;
-            top: 28px;
-            right: 28px;
             text-align: right;
-            line-height: 1.25; /* Adjusted line height */
+            line-height: 1.25;
+            flex-shrink: 0; /* Prevent balance from shrinking */
+            margin-left: 15px; /* Space between title and balance */
         }
     
         #roulette-modal-balance-display .balance-label {
-            font-size: 0.8em; /* Slightly smaller label */
+            font-size: 0.8em;
             font-weight: 500;
             color: var(--text-secondary);
-            margin-bottom: 2px; /* Small space between label and value */
+            margin-bottom: 2px;
         }
     
         #roulette-modal-balance-display .balance-value-line {
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 5px; /* Slightly reduced gap */
-            font-size: 1.25em; /* REDUCED font size for the value */
-            font-weight: 600; /* Slightly less bold */
+            gap: 5px;
+            font-size: 1.25em;
+            font-weight: 600;
             color: var(--text-primary);
         }
     
         #roulette-modal-balance-display .balance-value-line .balance-icon {
-            width: 20px; /* REDUCED icon size to match new font size */
+            width: 20px;
             height: 20px;
         }
     </style>
@@ -557,11 +571,14 @@
     <div id="roulette-modal" class="modal">
         <div class="modal-content">
             <!-- MOVED AND RESTRUCTURED: Balance Display -->
-            <div id="roulette-modal-balance-display">
-                <div class="balance-label">Balance</div>
-                <div class="balance-value-line">
-                    <span id="roulette-modal-balance-value">0</span>
-                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+            <div class="modal-header">
+                <h3 id="roulette-case-name">Opening Case...</h3>
+                <div id="roulette-modal-balance-display">
+                    <div class="balance-label">Balance</div>
+                    <div class="balance-value-line">
+                        <span id="roulette-modal-balance-value">0</span>
+                        <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+                    </div>
                 </div>
             </div>
     
@@ -1387,6 +1404,15 @@ function navigateToPage(pageId) {
     }
     window.scrollTo(0, 0);
 }
+
+function updateModalBalanceDisplay() {
+    const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
+    const balanceValueEl = document.getElementById('roulette-modal-balance-value');
+    if (balanceValueEl && rouletteModal.classList.contains('active')) {
+        balanceValueEl.textContent = formatLargeNumber(starBalance);
+    }
+}
+    
 function showTGNotification(message, type = 'info') {
     Telegram.WebApp.showAlert?.(message);
     if (Telegram.WebApp.HapticFeedback) {
@@ -1695,6 +1721,7 @@ function openRouletteModal(caseItem) {
     updateCaseMultiplierButtons();
     rouletteCaseName.textContent = caseItem.name;
     updateSpinButtonText();
+    updateModalBalanceDisplay();
 
     // NEW: Update balance display inside the modal when it opens
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
@@ -1763,6 +1790,8 @@ function getItemValue(prizeObject) {
     }
     return prizeObject.floorPrice || prizeObject.currentValue || 0; 
 }
+// --- In your <script> tag in index.html ---
+
 async function spinRoulette() {
     if (!currentOpenCaseOrSlot) return;
 
@@ -1780,6 +1809,22 @@ async function spinRoulette() {
     spinButton.textContent = 'Spinning...';
     Telegram.WebApp.HapticFeedback?.impactOccurred('light');
 
+    // LIVE UPDATE: Visually deduct balance for responsiveness
+    const costInTon = currentOpenCaseOrSlot.priceTON * selectedCaseMultiplier;
+    const starBalanceBeforeSpin = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
+    const costInStars = Math.floor(costInTon * TON_TO_STARS_RATE);
+
+    if (starBalanceBeforeSpin < costInStars) {
+        showTGNotification("Not enough Stars to spin.", "error");
+        spinButton.disabled = false;
+        updateSpinButtonText();
+        return;
+    }
+
+    currentUser.tonBalance -= costInTon;
+    updateBalances(); // Updates main header
+    updateModalBalanceDisplay(); // Updates modal display
+
     const allReelContainers = [rouletteReel1, rouletteReel2, rouletteReel3];
     const activeSpinners = allReelContainers.filter(container => container.classList.contains('active')).map(container => container.querySelector('.roulette-spinner-reel'));
 
@@ -1787,6 +1832,10 @@ async function spinRoulette() {
         showTGNotification("No active reels to spin. Please select a multiplier.", "error");
         spinButton.disabled = false;
         updateSpinButtonText();
+        // Revert balance change if spin doesn't happen
+        currentUser.tonBalance += costInTon;
+        updateBalances();
+        updateModalBalanceDisplay();
         return;
     }
 
@@ -1819,12 +1868,17 @@ async function spinRoulette() {
 
     try {
         const result = await apiRequest('/api/open_case', 'POST', { case_id: currentOpenCaseOrSlot.id, multiplier: selectedCaseMultiplier });
+
+        // API call is back, re-enable the button
         spinButton.disabled = false;
         updateSpinButtonText();
+        
+        // IMPORTANT: Sync with the true balance from the server
+        currentUser.tonBalance = result.new_balance_ton;
+        updateBalances();
+        updateModalBalanceDisplay();
 
         if (result.status === 'success' && result.won_prizes && result.won_prizes.length > 0) {
-            currentUser.tonBalance = result.new_balance_ton;
-            updateBalances();
             if (spinAnimationTimeoutOuter) clearTimeout(spinAnimationTimeoutOuter);
 
             activeSpinners.forEach((spinnerReel, index) => {
@@ -1936,6 +1990,10 @@ async function spinRoulette() {
         }
     } catch (e) {
         console.error("Spin roulette error", e);
+        // Revert the visual balance deduction if the API call fails
+        currentUser.tonBalance += costInTon;
+        updateBalances();
+        updateModalBalanceDisplay();
         spinButton.disabled = false;
         updateSpinButtonText();
         showTGNotification("Error during spin. Please try again.", "error");
@@ -1976,6 +2034,8 @@ async function convertItemToTon(itemId) {
         return false;
     }
 }
+// --- In your <script> tag in index.html ---
+
 async function handleConvertAll() {
     if (lastWonPrizesForOverlay.length === 0) {
         showTGNotification("No items to convert.", "warning");
@@ -1989,15 +2049,18 @@ async function handleConvertAll() {
         return;
     }
 
-    // CORRECTED: Confirmation alert now shows Stars
     let totalValueInTon = 0;
     itemsToConvert.forEach(item => {
         totalValueInTon += (item.currentValue || 0);
     });
     const totalValueInStars = Math.floor(totalValueInTon * TON_TO_STARS_RATE);
+    const confirmationMessage = `Are you sure you want to convert these items for ${totalValueInStars} Stars?`;
 
-    Telegram.WebApp.showConfirm(`Are you sure you want to convert these items for ${totalValueInStars} Stars?`, async (ok) => {
+    Telegram.WebApp.showConfirm(confirmationMessage, async (ok) => {
         if (ok) {
+            winOverlayConvertBtn.disabled = true; // Disable button while processing
+            winOverlayConvertBtn.textContent = 'Converting...';
+
             let successCount = 0;
             let failCount = 0;
             for (const item of itemsToConvert) {
@@ -2005,10 +2068,24 @@ async function handleConvertAll() {
                 if (success) successCount++;
                 else failCount++;
             }
+
+            // After all conversions, update the balances and UI
             updateBalances();
             renderInventory();
-            if (failCount > 0) showTGNotification(`${successCount} item(s) converted. ${failCount} failed.`, 'warning');
-            else showTGNotification(`${successCount} item(s) converted to Stars!`, 'success');
+
+            // LIVE UPDATE: Update the balance in the case modal if it's still open
+            updateModalBalanceDisplay();
+
+            if (failCount > 0) {
+                showTGNotification(`${successCount} item(s) converted. ${failCount} failed.`, 'warning');
+            } else {
+                showTGNotification(`${successCount} item(s) converted to Stars!`, 'success');
+            }
+
+            // Restore the button state before closing
+            winOverlayConvertBtn.disabled = false;
+            winOverlayConvertBtn.innerHTML = `Convert All for <span id="win-overlay-convert-value">${totalValueInStars}</span> <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 16px; height: 16px;">`;
+            
             closeWinOverlayModal();
         }
     });
