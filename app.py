@@ -2853,6 +2853,7 @@ def open_case_api():
         )
         # 9. COMMIT AND RESPOND
         db.commit()
+        db.refresh(user)
 
         return jsonify({
             "status": "success",
