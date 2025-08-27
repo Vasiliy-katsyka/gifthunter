@@ -3498,6 +3498,9 @@ def verify_deposit_api():
 # --- In your bot's Python file ---
 # Replace the entire request_manual_withdrawal_api function with this one.
 
+# --- In your bot's Python file ---
+# Replace the entire request_manual_withdrawal_api function with this one.
+
 @app.route('/api/request_manual_withdrawal', methods=['POST'])
 def request_manual_withdrawal_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3534,7 +3537,7 @@ def request_manual_withdrawal_api():
                 return jsonify({"error": "Item is marked as an emoji, but its name is not in the emoji gift list."}), 500
 
             gift_data = EMOJI_GIFTS_BACKEND[item_name]
-            comment_text = "Поздравляем с выигрышем!"
+            comment_text = "Congratulations on your win!"
 
             if bot:
                 try:
@@ -3581,7 +3584,7 @@ def request_manual_withdrawal_api():
         return jsonify({"error": "Database error or unexpected issue during withdrawal request."}), 500
     finally:
         db.close()
-
+        
 @app.route('/api/get_leaderboard', methods=['GET'])
 def get_leaderboard_api():
     db = next(get_db())
