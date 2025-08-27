@@ -91,7 +91,7 @@
         
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(10, 10, 20, 0.75); backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); overflow-y: auto; align-items: flex-start; justify-content: center; padding-top: 5vh; padding-bottom: 5vh; }
         .modal.active { display: flex; animation: modalFadeInMinimal 0.3s ease-out; }
-        .modal-content { background-color: var(--surface-color); padding: 28px; border-radius: var(--main-border-radius); width: 100%; max-width: 420px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-color); display: flex; flex-direction: column; margin: auto; }
+        .modal-content { background-color: var(--surface-color); padding: 28px; border-radius: var(--main-border-radius); width: 100%; max-width: 420px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.4); border: 1px solid var(--border-color); display: flex; flex-direction: column; margin: auto; position: relative; }
         .modal-content h3 { margin-top: 0; margin-bottom: 20px; font-size: 1.4em; font-weight: 700; color: var(--text-primary); flex-shrink: 0; }
         .modal-actions { margin-bottom: 18px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
         .modal-body { overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; margin-top: 12px; max-height: 60vh; }
@@ -374,6 +374,35 @@
             width: 100%;
             height: 100%;
         }
+
+        #roulette-modal-balance-display {
+            position: absolute;
+            top: 28px;  /* Corresponds to modal-content padding */
+            right: 28px; /* Corresponds to modal-content padding */
+            text-align: right;
+            line-height: 1.3;
+        }
+    
+        #roulette-modal-balance-display .balance-label {
+            font-size: 0.9em;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+    
+        #roulette-modal-balance-display .balance-value-line {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px; /* Space between number and star */
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+    
+        #roulette-modal-balance-display .balance-value-line .balance-icon {
+            width: 24px;
+            height: 24px;
+        }
     </style>
 </head>
 <body>
@@ -526,6 +555,15 @@
 
     <div id="roulette-modal" class="modal">
         <div class="modal-content">
+            <!-- MOVED AND RESTRUCTURED: Balance Display -->
+            <div id="roulette-modal-balance-display">
+                <div class="balance-label">Balance</div>
+                <div class="balance-value-line">
+                    <span id="roulette-modal-balance-value">0</span>
+                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+                </div>
+            </div>
+    
             <h3 id="roulette-case-name">Opening Case...</h3>
             <div id="roulette-wheel-container">
                 <div class="roulette-individual-reel-row-visual" id="roulette-reel-1">
@@ -538,13 +576,8 @@
                     <div class="roulette-spinner-reel"></div>
                 </div>
             </div>
-            
-            <!-- NEW: Balance Display inside the modal -->
-            <div id="roulette-modal-balance-display" style="margin-top: 20px; font-size: 1.1em; color: var(--text-secondary); text-align: center; font-weight: 500;">
-                Your Balance: 
-                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 18px; height: 18px; vertical-align: -4px; margin: 0 4px;">
-                <span id="roulette-modal-balance-value" style="color: var(--text-primary); font-weight: 600;">0</span>
-            </div>
+    
+            <!-- The old balance display from here has been removed -->
     
             <div class="case-multiplier-selector">
                 <button class="button button-secondary active-multiplier" data-multiplier="1">1x</button>
