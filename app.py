@@ -2737,17 +2737,16 @@ def withdraw_emoji_gift_api():
 
 # --- In your bot's Python file (e.g., app.py) ---
 
+# In your app.py file
+
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
-    # Import Decimal for precise financial calculations
     from decimal import Decimal, ROUND_HALF_UP
 
-    # 1. AUTHENTICATION
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Auth failed"}), 401
 
-    # 2. INPUT VALIDATION
     uid = auth["id"]
     data = flask_request.get_json()
     cid = data.get('case_id')
@@ -2762,10 +2761,8 @@ def open_case_api():
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid multiplier format."}), 400
 
-    # 3. DATABASE TRANSACTION
     db = next(get_db())
     try:
-        # Lock the user row to prevent race conditions with their balance
         user = db.query(User).filter(User.id == uid).with_for_update().first()
         if not user:
             return jsonify({"error": "User not found"}), 404
@@ -2774,25 +2771,21 @@ def open_case_api():
         if not target_case:
             return jsonify({"error": "Case not found"}), 404
 
-        # 4. BALANCE CHECK
         cost_per_case_ton = Decimal(str(target_case['priceTON']))
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
         user_balance_ton = Decimal(str(user.ton_balance))
 
         if user_balance_ton < total_cost_ton:
-            needed_stars = int(total_cost_ton * TON_TO_STARS_RATE_BACKEND)
+            needed_stars = int(total_cost_ton * TON_TO_STARS_RATE)
             return jsonify({"error": f"Not enough balance. Need {needed_stars} Stars"}), 400
 
-        # 5. DEDUCT COST
         user.ton_balance = float(user_balance_ton - total_cost_ton)
 
-        # 6. PROCESS PRIZES
         prizes_in_case = target_case['prizes']
         won_prizes_response_list = []
         total_value_this_spin_ton = Decimal('0')
 
         for _ in range(multiplier):
-            # Select a prize based on weighted probability
             roll = random.random()
             cumulative_probability = 0.0
             chosen_prize_info = None
@@ -2802,7 +2795,6 @@ def open_case_api():
                     chosen_prize_info = p_info
                     break
             
-            # Fallback to the last prize in case of floating point inaccuracies
             if not chosen_prize_info:
                 chosen_prize_info = prizes_in_case[-1]
 
@@ -2810,17 +2802,14 @@ def open_case_api():
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
 
-            # Check if it's an emoji gift
             is_emoji = prize_name in EMOJI_GIFTS_BACKEND
             
-            # Find the corresponding NFT in the database if it's not an emoji
             db_nft = None
             if not is_emoji:
                 db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
             image_url = EMOJI_GIFT_IMAGES.get(prize_name) or (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
 
-            # Create the new item in the user's inventory
             inventory_item = InventoryItem(
                 user_id=uid,
                 nft_id=db_nft.id if db_nft else None,
@@ -2828,12 +2817,11 @@ def open_case_api():
                 item_image_override=image_url,
                 current_value=float(prize_value_ton),
                 is_ton_prize=False,
-                is_emoji_gift=is_emoji # Set the flag
+                is_emoji_gift=is_emoji
             )
             db.add(inventory_item)
-            db.flush() # Assign an ID to the new inventory_item
+            db.flush()
 
-            # Prepare the response for the frontend
             won_prizes_response_list.append({
                 "id": inventory_item.id,
                 "name": prize_name,
@@ -2842,32 +2830,34 @@ def open_case_api():
                 "is_emoji_gift": is_emoji,
             })
 
-        # 7. UPDATE USER'S TOTAL WINNINGS
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
-        
-        # Update statistics with the total value won in this specific transaction.
         update_stats(
             db=db,
             cases_opened=multiplier,
             ton_won=float(total_value_this_spin_ton)
         )
-        # 9. COMMIT AND RESPOND
+        
         db.commit()
-        db.refresh(user)
+
+        # *** THE DEFINITIVE FIX ***
+        # Instead of refreshing, we perform a fresh query to get the guaranteed final state.
+        final_user_state = db.query(User).filter(User.id == uid).first()
+        if not final_user_state:
+             # This should almost never happen, but it's a safe fallback.
+             return jsonify({"error": "Could not confirm final user state."}), 500
 
         return jsonify({
             "status": "success",
             "won_prizes": won_prizes_response_list,
-            "new_balance_ton": user.ton_balance
+            "new_balance_ton": final_user_state.ton_balance # We use the balance from the fresh query.
         })
+        # *** END OF FIX ***
 
     except Exception as e:
-        # If anything goes wrong, roll back the entire transaction
         db.rollback()
         logger.error(f"Critical error in open_case for user {uid}: {e}", exc_info=True)
         return jsonify({"error": "A server error occurred."}), 500
     finally:
-        # Always close the database session
         db.close()
         
 @app.route('/api/spin_slot', methods=['POST'])
