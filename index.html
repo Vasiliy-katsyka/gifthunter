@@ -538,6 +538,14 @@
                     <div class="roulette-spinner-reel"></div>
                 </div>
             </div>
+            
+            <!-- NEW: Balance Display inside the modal -->
+            <div id="roulette-modal-balance-display" style="margin-top: 20px; font-size: 1.1em; color: var(--text-secondary); text-align: center; font-weight: 500;">
+                Your Balance: 
+                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 18px; height: 18px; vertical-align: -4px; margin: 0 4px;">
+                <span id="roulette-modal-balance-value" style="color: var(--text-primary); font-weight: 600;">0</span>
+            </div>
+    
             <div class="case-multiplier-selector">
                 <button class="button button-secondary active-multiplier" data-multiplier="1">1x</button>
                 <button class="button button-secondary" data-multiplier="2">2x</button>
@@ -1654,6 +1662,13 @@ function openRouletteModal(caseItem) {
     rouletteCaseName.textContent = caseItem.name;
     updateSpinButtonText();
 
+    // NEW: Update balance display inside the modal when it opens
+    const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
+    const balanceValueEl = document.getElementById('roulette-modal-balance-value');
+    if (balanceValueEl) {
+        balanceValueEl.textContent = formatLargeNumber(starBalance);
+    }
+
     possiblePrizesDisplay.innerHTML = '';
     const sortedPrizes = [...caseItem.prizes].sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0));
 
@@ -1668,7 +1683,6 @@ function openRouletteModal(caseItem) {
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
 
-        // Simplified image logic
         const img = document.createElement('img');
         img.src = generateImageFilename(pData.imageFilename || pData.name);
         img.alt = pData.name;
@@ -2316,7 +2330,11 @@ function createUpgradeableItemCard(itemData, type) {
     nameEl.textContent = itemData.name;
     const valueEl = document.createElement('div');
     valueEl.className = 'inventory-item-value';
-    valueEl.textContent = `${(type === 'inventory' ? itemData.currentValue : itemData.floorPrice).toFixed(2)} TON`;
+
+    // CORRECTED: Show value in Stars
+    const valueInStars = Math.floor((type === 'inventory' ? itemData.currentValue : itemData.floorPrice) * TON_TO_STARS_RATE);
+    valueEl.innerHTML = `${valueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px; vertical-align: middle;">`;
+
     const actionsEl = document.createElement('div');
     actionsEl.className = 'inventory-item-actions';
     const selectBtn = document.createElement('button');
@@ -2341,7 +2359,11 @@ function updateSlotDisplay(slotElement, itemData, type) {
         display.querySelector('img').src = itemData.imageFilename || generateImageFilename(itemData.name);
         display.querySelector('img').alt = itemData.name;
         display.querySelector('.slot-item-name').textContent = itemData.name;
-        display.querySelector('.slot-item-value').textContent = `${(type === 'inventory' ? itemData.currentValue : itemData.floorPrice).toFixed(2)} TON`;
+        
+        // CORRECTED: Show value in Stars
+        const valueInStars = Math.floor((type === 'inventory' ? itemData.currentValue : itemData.floorPrice) * TON_TO_STARS_RATE);
+        display.querySelector('.slot-item-value').innerHTML = `${valueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 14px; height: 14px; vertical-align: middle;">`;
+
         placeholder.style.display = 'none';
         display.style.display = 'flex';
         display.style.flexDirection = 'column';
