@@ -2845,13 +2845,12 @@ def open_case_api():
         # 7. UPDATE USER'S TOTAL WINNINGS
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
         
-        # 8. UPDATE STATISTICS
+        # Update statistics with the total value won in this specific transaction.
         update_stats(
             db=db,
             cases_opened=multiplier,
             ton_won=float(total_value_this_spin_ton)
         )
-        
         # 9. COMMIT AND RESPOND
         db.commit()
 
