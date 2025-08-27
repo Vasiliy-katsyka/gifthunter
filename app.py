@@ -188,8 +188,6 @@ class NFT(Base):
     floor_price = Column(Float, default=0.0, nullable=False)
     __table_args__ = (UniqueConstraint('name', name='uq_nft_name'),)
 
-# --- In your bot's Python file ---
-
 class InventoryItem(Base):
     __tablename__ = "inventory_items"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -202,7 +200,6 @@ class InventoryItem(Base):
     obtained_at = Column(DateTime(timezone=True), server_default=func.now())
     variant = Column(String, nullable=True)
     is_ton_prize = Column(Boolean, default=False, nullable=False)
-    is_emoji_gift = Column(Boolean, default=False, nullable=False) # ADD THIS LINE
     owner = relationship("User", back_populates="inventory")
     nft = relationship("NFT")
 
@@ -238,15 +235,13 @@ class UserPromoCodeRedemption(Base):
     promo_code = relationship("PromoCode")
     __table_args__ = (UniqueConstraint('user_id', 'promo_code_id', name='uq_user_promo_redemption'),)
 
-# --- In your bot's Python file ---
-
 class DailyStats(Base):
     __tablename__ = "daily_stats"
     id = Column(Integer, primary_key=True, index=True)
     date = Column(DateTime(timezone=True), server_default=func.now(), unique=True)
     new_users = Column(Integer, default=0)
     cases_opened = Column(Integer, default=0)
-    stars_deposited = Column(BigInteger, default=0) # CHANGED from ton_deposited
+    ton_deposited = Column(Float, default=0.0)
     ton_won = Column(Float, default=0.0)
 
 class AllTimeStats(Base):
@@ -254,7 +249,7 @@ class AllTimeStats(Base):
     id = Column(Integer, primary_key=True)
     total_users = Column(Integer, default=0)
     total_cases_opened = Column(Integer, default=0)
-    total_stars_deposited = Column(BigInteger, default=0) # CHANGED from ton_deposited
+    total_ton_deposited = Column(Float, default=0.0)
     total_ton_won = Column(Float, default=0.0)
 
 class MailingListMessage(Base):
@@ -348,43 +343,7 @@ if bot: # Ensure bot instance exists
         markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
         bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
     
-    # --- In your bot's main Python file ---
-    
-    # Make sure this is defined in the global scope, not inside another function
-    @bot.callback_query_handler(func=lambda call: call.data == 'admin_create_mailing')
-    def create_mailing_callback(call):
-        if call.from_user.id not in ADMIN_USER_IDS:
-            bot.answer_callback_query(call.id, "Unauthorized action.")
-            return
-    
-        bot.answer_callback_query(call.id)
-        msg = bot.send_message(call.from_user.id, "Send me the message for the mailing. You can include text and optionally attach one image, video, or GIF.")
-        bot.register_next_step_handler(msg, process_mailing_message)
-    
-    # Make sure this is also defined in the global scope
-    @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_send_mailing_'))
-    def send_mailing_callback(call):
-        if call.from_user.id not in ADMIN_USER_IDS:
-            bot.answer_callback_query(call.id, "Unauthorized action.")
-            return
-    
-        message_id_str = call.data.split('admin_send_mailing_')[-1]
-        try:
-            message_id = int(message_id_str)
-        except (ValueError, IndexError):
-            bot.answer_callback_query(call.id, "Error: Invalid mailing ID.")
-            logger.error(f"Invalid mailing ID in callback data: {call.data}")
-            return
-    
-        bot.answer_callback_query(call.id, f"Sending mailing #{message_id}...")
-        bot.edit_message_text("Sending in the background...", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    
-        import threading
-        threading.Thread(target=send_mailing, args=(message_id, call.from_user.id)).start()
-
-
-    # --- THIS IS THE CORRECTED MAIN ADMIN CALLBACK HANDLER ---
-    # Replace your entire existing admin_callback_handler with this one.
+    # --- Admin Callback Query Handler ---
     @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
     def admin_callback_handler(call):
         user_id = call.from_user.id
@@ -393,119 +352,50 @@ if bot: # Ensure bot instance exists
             return
     
         action = call.data
-        
-        # We handle the specific mailing callbacks in their own dedicated handlers above.
-        # This handler will now manage the menu navigation.
+        bot.answer_callback_query(call.id) # Acknowledge callback early
+    
         if action == "admin_new_promo":
-            bot.answer_callback_query(call.id)
+            # It's better to edit the existing message if possible, or send a new one.
+            # For simplicity with next_step_handler, sending a new message is fine here.
             msg_prompt = bot.send_message(user_id,
                                    "Please enter the new promocode details in the format:\n"
                                    "`promoname activations prize_ton`\n\n"
-                                   "Example: `SUMMER2024 100 0.5`\n"
-                                   "Type /cancel to abort.",
+                                   "Example: `SUMMER2024 100 0.5` (for 0.5 TON)\n"
+                                   "Example: `UNLIMITEDGIFT -1 1.0` (for unlimited activations, 1.0 TON)\n\n"
+                                   "The word 'ton' at the end is optional. Type /cancel to abort.",
                                    parse_mode="Markdown")
             bot.register_next_step_handler(msg_prompt, process_new_promo_creation)
         
-        elif action == "admin_view_promos":
-            bot.answer_callback_query(call.id)
-            handle_view_all_promos(call.message)
+        elif action == "admin_stats":
+            handle_statistics(call.message)
+        elif action == "admin_mailing_list":
+            handle_mailing_list(call.message)
         
+        elif action == "admin_view_promos":
+            handle_view_all_promos(call.message) # Pass message to edit
+    
         elif action.startswith("admin_promo_detail_"):
-            bot.answer_callback_query(call.id)
             promo_code_id_str = action.split("admin_promo_detail_")[1]
             try:
                 promo_code_id = int(promo_code_id_str)
-                handle_view_promo_detail(call.message, promo_code_id)
+                handle_view_promo_detail(call.message, promo_code_id) # Pass message to edit
             except ValueError:
                 logger.error(f"Invalid promo_code_id in callback: {promo_code_id_str}")
+                # Inform the admin via a new message if editing fails or is not appropriate
                 bot.send_message(call.message.chat.id, "Error: Invalid promo code identifier.")
         
-        elif action == "admin_stats":
-            bot.answer_callback_query(call.id)
-            handle_statistics(call.message)
-    
-        elif action == "admin_mailing_list":
-            bot.answer_callback_query(call.id)
-            handle_mailing_list(call.message)
-    
         elif action == "admin_back_to_menu":
-            bot.answer_callback_query(call.id)
             markup = types.InlineKeyboardMarkup(row_width=1)
             new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
             view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-            stats_button = types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
-            mailing_list_button = types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list")
-            markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
+            markup.add(new_promo_button, view_promos_button)
             try:
                 bot.edit_message_text("👑 Admin Panel 👑", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
             except Exception as e:
                 logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
                 bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-        
-        # Acknowledge any other admin_ callbacks that might not be handled above
-        else:
-            bot.answer_callback_query(call.id)
-
-
-    def send_mailing(message_id, admin_user_id):
-        """Sends the mailing and notifies the admin upon completion."""
-        db = SessionLocal()
-        sent_count = 0
-        failed_count = 0
-        try:
-            mailing_message = db.query(MailingListMessage).filter(MailingListMessage.id == message_id).first()
-            if not mailing_message:
-                logger.error(f"Mailing message with id {message_id} not found for sending.")
-                bot.send_message(admin_user_id, f"Error: Could not find Mailing #{message_id} to send.")
-                return
-    
-            # Fetch users who have NOT received this message yet
-            subquery = db.query(MailingListUserStatus.user_id).filter(MailingListUserStatus.message_id == message_id)
-            users_to_send = db.query(User).filter(User.id.notin_(subquery)).all()
-            
-            total_users = len(users_to_send)
-            if total_users == 0:
-                bot.send_message(admin_user_id, f"Mailing #{message_id} has already been sent to all users.")
-                return
-    
-            for i, user in enumerate(users_to_send):
-                try:
-                    if mailing_message.file_type == 'photo':
-                        bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text, parse_mode="Markdown")
-                    elif mailing_message.file_type == 'video':
-                        bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text, parse_mode="Markdown")
-                    elif mailing_message.file_type == 'animation':
-                        bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text, parse_mode="Markdown")
-                    else:
-                        bot.send_message(user.id, mailing_message.message_text, parse_mode="Markdown")
-    
-                    sent_status = MailingListUserStatus(message_id=message_id, user_id=user.id)
-                    db.add(sent_status)
-                    db.commit()
-                    sent_count += 1
-    
-                except Exception as e:
-                    # This often happens if a user has blocked the bot
-                    db.rollback()
-                    failed_count += 1
-                    logger.warning(f"Could not send mailing #{message_id} to user {user.id}: {e}")
-                
-                # To avoid hitting Telegram API limits, sleep a little
-                if (i + 1) % 20 == 0: # every 20 messages
-                    time.sleep(1)
-    
-            bot.send_message(admin_user_id, f"✅ Mailing #{message_id} finished.\n\nSent: {sent_count}\nFailed: {failed_count}")
-    
-        except Exception as e:
-            logger.error(f"Critical error in send_mailing thread for message_id {message_id}: {e}", exc_info=True)
-            bot.send_message(admin_user_id, f"A critical error occurred while sending Mailing #{message_id}. Check the logs.")
-        finally:
-            db.close()
 
     # --- New functions for admin panel ---
-    
-    # This function is correct and does not need changes.
-    # --- In your bot's Python file ---
     
     def handle_statistics(message_to_edit):
         db = SessionLocal()
@@ -519,7 +409,7 @@ if bot: # Ensure bot instance exists
             if daily_stats:
                 stats_text += f"- New Users: {daily_stats.new_users}\n"
                 stats_text += f"- Cases Opened: {daily_stats.cases_opened}\n"
-                stats_text += f"- Stars Deposited: {daily_stats.stars_deposited:,} ⭐\n" # UPDATED
+                stats_text += f"- TON Deposited: {daily_stats.ton_deposited:.2f}\n"
                 stats_text += f"- TON Won: {daily_stats.ton_won:.2f}\n"
             else:
                 stats_text += "- No stats for today yet.\n"
@@ -528,21 +418,27 @@ if bot: # Ensure bot instance exists
             if all_time_stats:
                 stats_text += f"- Total Users: {all_time_stats.total_users}\n"
                 stats_text += f"- Total Cases Opened: {all_time_stats.total_cases_opened}\n"
-                stats_text += f"- Total Stars Deposited: {all_time_stats.total_stars_deposited:,} ⭐\n" # UPDATED
+                stats_text += f"- Total TON Deposited: {all_time_stats.total_ton_deposited:.2f}\n"
                 stats_text += f"- Total TON Won: {all_time_stats.total_ton_won:.2f}\n"
             else:
                 stats_text += "- No all-time stats yet.\n"
     
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
-            bot.edit_message_text(stats_text, chat_id=message_to_edit.chat_id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+            bot.edit_message_text(stats_text, chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
     
         except Exception as e:
             logger.error(f"Error in handle_statistics: {e}")
             bot.send_message(message_to_edit.chat.id, "Error fetching statistics.")
         finally:
             db.close()
-            
+    
+    def handle_mailing_list(message_to_edit):
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Create New Mailing", callback_data="admin_create_mailing"))
+        markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
+        bot.edit_message_text("✉️ *Mailing List*\n\nCreate and send a message to your users.", chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+    
     # --- You will also need a callback handler for "admin_create_mailing" ---
     @bot.callback_query_handler(func=lambda call: call.data == 'admin_create_mailing')
     def create_mailing_callback(call):
@@ -590,49 +486,6 @@ if bot: # Ensure bot instance exists
             bot.send_message(message.from_user.id, "Error creating mailing.")
         finally:
             db.close()
-
-        # --- Add this new helper function to your bot's Python file ---
-        
-    # --- In your bot's Python file ---
-    
-    def update_stats(db: SessionLocal, new_users=0, cases_opened=0, stars_deposited=0, ton_won=0.0):
-        """
-        A helper function to update daily and all-time statistics in the database.
-        Now tracks deposits in Stars.
-        """
-        try:
-            # We need to import Decimal for precise calculations here
-            from decimal import Decimal, ROUND_HALF_UP
-    
-            today_date = dt.now(timezone.utc).date()
-    
-            # --- Daily Stats ---
-            daily_stats = db.query(DailyStats).filter(func.date(DailyStats.date) == today_date).with_for_update().first()
-            if not daily_stats:
-                daily_stats = DailyStats(date=dt.now(timezone.utc))
-                db.add(daily_stats)
-    
-            daily_stats.new_users += new_users
-            daily_stats.cases_opened += cases_opened
-            # Directly add integer stars
-            daily_stats.stars_deposited += stars_deposited
-            daily_stats.ton_won = float(Decimal(str(daily_stats.ton_won)) + Decimal(str(ton_won)))
-    
-            # --- All-Time Stats ---
-            all_time_stats = db.query(AllTimeStats).with_for_update().first()
-            if not all_time_stats:
-                initial_user_count = db.query(User).count()
-                all_time_stats = AllTimeStats(id=1, total_users=initial_user_count)
-                db.add(all_time_stats)
-    
-            all_time_stats.total_users += new_users
-            all_time_stats.total_cases_opened += cases_opened
-            all_time_stats.total_stars_deposited += stars_deposited
-            all_time_stats.total_ton_won = float(Decimal(str(all_time_stats.total_ton_won)) + Decimal(str(ton_won)))
-    
-        except Exception as e:
-            logger.error(f"Error updating statistics: {e}", exc_info=True)
-            db.rollback()
     
     @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_send_mailing_'))
     def send_mailing_callback(call):
@@ -2377,7 +2230,6 @@ def get_user_data_api():
     try:
         user = db.query(User).filter(User.id == uid).first()
         if not user:
-            
             new_referral_code = f"ref_{uid}_{random.randint(1000,9999)}"
             while db.query(User).filter(User.referral_code == new_referral_code).first():
                 new_referral_code = f"ref_{uid}_{random.randint(1000,9999)}"
@@ -2392,7 +2244,6 @@ def get_user_data_api():
             db.add(user)
             db.commit()
             db.refresh(user)
-            update_stats(db=db, new_users=1)
             logger.info(f"New user registered: {uid}")
         
         changed = False
@@ -2733,16 +2584,8 @@ def withdraw_emoji_gift_api():
     finally:
         db.close()
 
-# --- In your bot's Python file ---
-
-# --- In your bot's Python file (e.g., app.py) ---
-
-# In your app.py file
-
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
-    from decimal import Decimal, ROUND_HALF_UP
-
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Auth failed"}), 401
@@ -2752,24 +2595,20 @@ def open_case_api():
     cid = data.get('case_id')
     multiplier = data.get('multiplier', 1)
 
-    if not cid:
-        return jsonify({"error": "case_id required"}), 400
+    if not cid: return jsonify({"error": "case_id required"}), 400
     try:
         multiplier = int(multiplier)
-        if multiplier not in [1, 2, 3]:
-            return jsonify({"error": "Invalid multiplier."}), 400
+        if multiplier not in [1, 2, 3]: return jsonify({"error": "Invalid multiplier."}), 400
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid multiplier format."}), 400
 
     db = next(get_db())
     try:
         user = db.query(User).filter(User.id == uid).with_for_update().first()
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        if not user: return jsonify({"error": "User not found"}), 404
 
         target_case = next((c for c in cases_data_backend if c['id'] == cid), None)
-        if not target_case:
-            return jsonify({"error": "Case not found"}), 404
+        if not target_case: return jsonify({"error": "Case not found"}), 404
 
         cost_per_case_ton = Decimal(str(target_case['priceTON']))
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
@@ -2795,18 +2634,15 @@ def open_case_api():
                     chosen_prize_info = p_info
                     break
             
-            if not chosen_prize_info:
-                chosen_prize_info = prizes_in_case[-1]
+            if not chosen_prize_info: chosen_prize_info = prizes_in_case[-1]
 
             prize_name = chosen_prize_info['name']
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
 
-            is_emoji = prize_name in EMOJI_GIFTS_BACKEND
-            
-            db_nft = None
-            if not is_emoji:
-                db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
+            # --- UNIFIED GIFT HANDLING ---
+            # All items, including emojis, are now added to inventory.
+            db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
             image_url = EMOJI_GIFT_IMAGES.get(prize_name) or (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
 
@@ -2814,10 +2650,9 @@ def open_case_api():
                 user_id=uid,
                 nft_id=db_nft.id if db_nft else None,
                 item_name_override=prize_name,
-                item_image_override=image_url,
+                item_image_override=image_url, # Use the determined URL
                 current_value=float(prize_value_ton),
-                is_ton_prize=False,
-                is_emoji_gift=is_emoji
+                is_ton_prize=False
             )
             db.add(inventory_item)
             db.flush()
@@ -2825,40 +2660,26 @@ def open_case_api():
             won_prizes_response_list.append({
                 "id": inventory_item.id,
                 "name": prize_name,
-                "imageFilename": inventory_item.item_image_override,
+                "imageFilename": inventory_item.item_image_override, # Send correct URL
                 "currentValue": inventory_item.current_value,
-                "is_emoji_gift": is_emoji,
+                "is_emoji_gift": prize_name in EMOJI_GIFT_IMAGES, # Send a helpful flag
             })
 
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
-        update_stats(
-            db=db,
-            cases_opened=multiplier,
-            ton_won=float(total_value_this_spin_ton)
-        )
-        
         db.commit()
-
-        # *** THE DEFINITIVE FIX ***
-        # Instead of refreshing, we perform a fresh query to get the guaranteed final state.
-        final_user_state = db.query(User).filter(User.id == uid).first()
-        if not final_user_state:
-             # This should almost never happen, but it's a safe fallback.
-             return jsonify({"error": "Could not confirm final user state."}), 500
 
         return jsonify({
             "status": "success",
             "won_prizes": won_prizes_response_list,
-            "new_balance_ton": final_user_state.ton_balance # We use the balance from the fresh query.
+            "new_balance_ton": user.ton_balance
         })
-        # *** END OF FIX ***
 
     except Exception as e:
         db.rollback()
         logger.error(f"Critical error in open_case for user {uid}: {e}", exc_info=True)
         return jsonify({"error": "A server error occurred."}), 500
     finally:
-        db.close()                            
+        db.close()
         
 @app.route('/api/spin_slot', methods=['POST'])
 def spin_slot_api():
@@ -3368,18 +3189,12 @@ def initiate_deposit_api():
     finally:
         db.close()
 
-# --- In your bot's Python file ---
-
 async def check_blockchain_for_deposit(pdep: PendingDeposit, db_sess: SessionLocal):
     """
     Asynchronously checks the blockchain for a matching deposit transaction based on comment and amount.
     """
     prov = None
     try:
-        from decimal import Decimal, ROUND_HALF_UP
-        from pytoniq import LiteBalancer
-        from datetime import timezone, timedelta
-
         prov = LiteBalancer.from_mainnet_config(trust_level=2)
         await prov.start_up()
 
@@ -3410,29 +3225,26 @@ async def check_blockchain_for_deposit(pdep: PendingDeposit, db_sess: SessionLoc
                     logger.warning(f"Deposit {pdep.id} found matching comment '{pdep.expected_comment}' but with incorrect amount. Expected: {pdep.final_amount_nano_ton}, Received: {tx.in_msg.info.value_coins}.")
 
         if deposit_found:
+            # Credit user logic (same as before)
             usr = db_sess.query(User).filter(User.id == pdep.user_id).with_for_update().first()
             if not usr:
                 pdep.status = 'failed_user_not_found'
                 db_sess.commit()
                 return {"status":"error","message":"User for deposit not found."}
             
-            ton_deposited = Decimal(str(pdep.original_amount_ton))
-            usr.ton_balance = float(Decimal(str(usr.ton_balance)) + ton_deposited)
+            usr.ton_balance = float(Decimal(str(usr.ton_balance)) + Decimal(str(pdep.original_amount_ton)))
             
             if usr.referred_by_id:
                 referrer = db_sess.query(User).filter(User.id == usr.referred_by_id).with_for_update().first()
                 if referrer:
-                    referral_bonus = (ton_deposited * Decimal('0.10')).quantize(Decimal('0.01'),ROUND_HALF_UP)
+                    referral_bonus = (Decimal(str(pdep.original_amount_ton)) * Decimal('0.10')).quantize(Decimal('0.01'),ROUND_HALF_UP)
                     referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + referral_bonus)
             
-            # Convert deposited TON to Stars for statistics
-            stars_to_add_for_stats = int(ton_deposited * TON_TO_STARS_RATE_BACKEND)
-            update_stats(db=db_sess, stars_deposited=stars_to_add_for_stats)
-
             pdep.status = 'completed'
             db_sess.commit()
             return {"status":"success","message":"Deposit confirmed and credited!","new_balance_ton":usr.ton_balance}
         else:
+            # Pending/expired logic (same as before)
             if pdep.expires_at <= dt.now(timezone.utc) and pdep.status == 'pending':
                 pdep.status = 'expired'
                 db_sess.commit()
@@ -3445,7 +3257,7 @@ async def check_blockchain_for_deposit(pdep: PendingDeposit, db_sess: SessionLoc
     finally:
         if prov:
             await prov.close_all()
-            
+
 @app.route('/api/verify_deposit', methods=['POST'])
 def verify_deposit_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3495,12 +3307,6 @@ def verify_deposit_api():
     finally:
         db.close()
 
-# --- In your bot's Python file ---
-# Replace the entire request_manual_withdrawal_api function with this one.
-
-# --- In your bot's Python file ---
-# Replace the entire request_manual_withdrawal_api function with this one.
-
 @app.route('/api/request_manual_withdrawal', methods=['POST'])
 def request_manual_withdrawal_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3516,7 +3322,7 @@ def request_manual_withdrawal_api():
 
     db = next(get_db())
     try:
-        item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).with_for_update().first()
+        item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).first()
 
         if not item:
             return jsonify({"error": "Item not found in your inventory."}), 404
@@ -3528,55 +3334,22 @@ def request_manual_withdrawal_api():
             return jsonify({"error": "User not found."}), 404
 
         item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown Item")
-        
-        # --- NEW LOGIC BRANCH ---
-        if item.is_emoji_gift:
-            # This is an emoji, send it directly
-            if item_name not in EMOJI_GIFTS_BACKEND:
-                # Data consistency check
-                return jsonify({"error": "Item is marked as an emoji, but its name is not in the emoji gift list."}), 500
+        model = item.variant if item.variant else ""
 
-            gift_data = EMOJI_GIFTS_BACKEND[item_name]
-            comment_text = "Congratulations on your win!"
+        message = f"Send {item_name} {model} to user {user.first_name} (@{user.username} - {user.id})"
 
-            if bot:
-                try:
-                    bot.send_gift(
-                        user_id=uid,
-                        gift_id=gift_data['id'],
-                        text=comment_text
-                    )
-                    logger.info(f"Sent emoji gift '{item_name}' (Gift ID: {gift_data['id']}) directly to user {uid}")
-                    
-                    # Remove from inventory after successful send
-                    db.delete(item)
-                    db.commit()
-                    return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent to your chat!"})
-                except Exception as e:
-                    db.rollback()
-                    logger.error(f"Failed to send emoji gift to user {uid}: {e}")
-                    return jsonify({"error": "Failed to send the gift. The bot might be blocked."}), 500
-            else:
-                return jsonify({"error": "Bot is not configured to send gifts."}), 500
-        
+        if bot and TARGET_WITHDRAWER_ID:
+            try:
+                bot.send_message(TARGET_WITHDRAWER_ID, message)
+                # After successfully sending the message, remove the item from inventory
+                db.delete(item)
+                db.commit()
+                return jsonify({"status": "success"})
+            except Exception as e:
+                logger.error(f"Failed to send withdrawal message: {e}")
+                return jsonify({"error": "Failed to notify for withdrawal."}), 500
         else:
-            # This is a regular NFT, proceed with manual withdrawal notification
-            model = item.variant if item.variant else ""
-            message = f"Send {item_name} {model} to user {user.first_name} (@{user.username} - {user.id})"
-
-            if bot and TARGET_WITHDRAWER_ID:
-                try:
-                    bot.send_message(TARGET_WITHDRAWER_ID, message)
-                    # After successfully sending the message, remove the item from inventory
-                    db.delete(item)
-                    db.commit()
-                    return jsonify({"status": "success", "message": "Withdrawal request sent!"})
-                except Exception as e:
-                    db.rollback()
-                    logger.error(f"Failed to send manual withdrawal message: {e}")
-                    return jsonify({"error": "Failed to notify for withdrawal."}), 500
-            else:
-                return jsonify({"error": "Bot or target user for withdrawal not configured."}), 500
+            return jsonify({"error": "Bot or target user for withdrawal not configured."}), 500
 
     except Exception as e:
         db.rollback()
@@ -3584,7 +3357,8 @@ def request_manual_withdrawal_api():
         return jsonify({"error": "Database error or unexpected issue during withdrawal request."}), 500
     finally:
         db.close()
-        
+
+
 @app.route('/api/get_leaderboard', methods=['GET'])
 def get_leaderboard_api():
     db = next(get_db())
