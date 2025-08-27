@@ -38,7 +38,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 AUTH_DATE_MAX_AGE_SECONDS = 3600 * 24 # 24 hours for Telegram Mini App auth data
 TONNEL_SENDER_INIT_DATA = os.environ.get("TONNEL_SENDER_INIT_DATA")
 TONNEL_GIFT_SECRET = os.environ.get("TONNEL_GIFT_SECRET", "yowtfisthispieceofshitiiit")
-ADMIN_USER_ID = 6529588448
+ADMIN_USER_IDS = [6529588448, 5146625949]
 TARGET_WITHDRAWER_ID = os.environ.get("TARGET_WITHDRAWER_ID") # Add this line
 
 DEPOSIT_RECIPIENT_ADDRESS_RAW = os.environ.get("DEPOSIT_WALLET_ADDRESS")
@@ -235,6 +235,40 @@ class UserPromoCodeRedemption(Base):
     promo_code = relationship("PromoCode")
     __table_args__ = (UniqueConstraint('user_id', 'promo_code_id', name='uq_user_promo_redemption'),)
 
+class DailyStats(Base):
+    __tablename__ = "daily_stats"
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(DateTime(timezone=True), server_default=func.now(), unique=True)
+    new_users = Column(Integer, default=0)
+    cases_opened = Column(Integer, default=0)
+    ton_deposited = Column(Float, default=0.0)
+    ton_won = Column(Float, default=0.0)
+
+class AllTimeStats(Base):
+    __tablename__ = "all_time_stats"
+    id = Column(Integer, primary_key=True)
+    total_users = Column(Integer, default=0)
+    total_cases_opened = Column(Integer, default=0)
+    total_ton_deposited = Column(Float, default=0.0)
+    total_ton_won = Column(Float, default=0.0)
+
+class MailingListMessage(Base):
+    __tablename__ = "mailing_list_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    message_text = Column(String)
+    file_id = Column(String, nullable=True)
+    file_type = Column(String, nullable=True)  # 'photo', 'video', 'animation'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    sent_by = Column(BigInteger, ForeignKey("users.id"))
+
+class MailingListUserStatus(Base):
+    __tablename__ = "mailing_list_user_status"
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("mailing_list_messages.id"))
+    user_id = Column(BigInteger, ForeignKey("users.id"))
+    sent_at = Column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (UniqueConstraint('message_id', 'user_id', name='_message_user_uc'),)
+
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -296,7 +330,7 @@ if bot: # Ensure bot instance exists
 
     @bot.message_handler(commands=['admin'])
     def admin_panel_command(message):
-        if message.chat.id != ADMIN_USER_ID:
+        if message.chat.id not in ADMIN_USER_IDS:
             bot.reply_to(message, "You are not authorized to use this command.")
             logger.warning(f"Unauthorized /admin attempt by user {message.chat.id}")
             return
@@ -304,7 +338,9 @@ if bot: # Ensure bot instance exists
         markup = types.InlineKeyboardMarkup(row_width=1)
         new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
         view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-        markup.add(new_promo_button, view_promos_button)
+        stats_button = types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
+        mailing_list_button = types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list")
+        markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
         bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
     
     # --- Admin Callback Query Handler ---
@@ -330,6 +366,11 @@ if bot: # Ensure bot instance exists
                                    parse_mode="Markdown")
             bot.register_next_step_handler(msg_prompt, process_new_promo_creation)
         
+        elif action == "admin_stats":
+            handle_statistics(call.message)
+        elif action == "admin_mailing_list":
+            handle_mailing_list(call.message)
+        
         elif action == "admin_view_promos":
             handle_view_all_promos(call.message) # Pass message to edit
     
@@ -354,6 +395,144 @@ if bot: # Ensure bot instance exists
                 logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
                 bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
 
+    # --- New functions for admin panel ---
+    
+    def handle_statistics(message_to_edit):
+        db = SessionLocal()
+        try:
+            today = dt.now(timezone.utc).date()
+            daily_stats = db.query(DailyStats).filter(func.date(DailyStats.date) == today).first()
+            all_time_stats = db.query(AllTimeStats).first()
+    
+            stats_text = "📊 *Statistics*\n\n"
+            stats_text += "*Today's Stats:*\n"
+            if daily_stats:
+                stats_text += f"- New Users: {daily_stats.new_users}\n"
+                stats_text += f"- Cases Opened: {daily_stats.cases_opened}\n"
+                stats_text += f"- TON Deposited: {daily_stats.ton_deposited:.2f}\n"
+                stats_text += f"- TON Won: {daily_stats.ton_won:.2f}\n"
+            else:
+                stats_text += "- No stats for today yet.\n"
+    
+            stats_text += "\n*All-Time Stats:*\n"
+            if all_time_stats:
+                stats_text += f"- Total Users: {all_time_stats.total_users}\n"
+                stats_text += f"- Total Cases Opened: {all_time_stats.total_cases_opened}\n"
+                stats_text += f"- Total TON Deposited: {all_time_stats.total_ton_deposited:.2f}\n"
+                stats_text += f"- Total TON Won: {all_time_stats.total_ton_won:.2f}\n"
+            else:
+                stats_text += "- No all-time stats yet.\n"
+    
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
+            bot.edit_message_text(stats_text, chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+    
+        except Exception as e:
+            logger.error(f"Error in handle_statistics: {e}")
+            bot.send_message(message_to_edit.chat.id, "Error fetching statistics.")
+        finally:
+            db.close()
+    
+    def handle_mailing_list(message_to_edit):
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Create New Mailing", callback_data="admin_create_mailing"))
+        markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
+        bot.edit_message_text("✉️ *Mailing List*\n\nCreate and send a message to your users.", chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+    
+    # --- You will also need a callback handler for "admin_create_mailing" ---
+    @bot.callback_query_handler(func=lambda call: call.data == 'admin_create_mailing')
+    def create_mailing_callback(call):
+        if call.from_user.id not in ADMIN_USER_IDS:
+            bot.answer_callback_query(call.id, "Unauthorized action.")
+            return
+    
+        bot.answer_callback_query(call.id)
+        msg = bot.send_message(call.from_user.id, "Send me the message for the mailing. You can include text, an image, a video, or a GIF.")
+        bot.register_next_step_handler(msg, process_mailing_message)
+    
+    def process_mailing_message(message):
+        message_text = message.text or message.caption
+        file_id = None
+        file_type = None
+    
+        if message.photo:
+            file_id = message.photo[-1].file_id
+            file_type = 'photo'
+        elif message.video:
+            file_id = message.video.file_id
+            file_type = 'video'
+        elif message.animation:
+            file_id = message.animation.file_id
+            file_type = 'animation'
+    
+        db = SessionLocal()
+        try:
+            new_mailing = MailingListMessage(
+                message_text=message_text,
+                file_id=file_id,
+                file_type=file_type,
+                sent_by=message.from_user.id
+            )
+            db.add(new_mailing)
+            db.commit()
+            db.refresh(new_mailing)
+    
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton(f"🚀 Send Mailing #{new_mailing.id}", callback_data=f"admin_send_mailing_{new_mailing.id}"))
+            bot.send_message(message.from_user.id, f"Mailing #{new_mailing.id} created. Ready to send.", reply_markup=markup)
+    
+        except Exception as e:
+            logger.error(f"Error creating mailing: {e}")
+            bot.send_message(message.from_user.id, "Error creating mailing.")
+        finally:
+            db.close()
+    
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_send_mailing_'))
+    def send_mailing_callback(call):
+        if call.from_user.id not in ADMIN_USER_IDS:
+            bot.answer_callback_query(call.id, "Unauthorized action.")
+            return
+    
+        message_id = int(call.data.split('_')[-1])
+        bot.answer_callback_query(call.id, f"Sending mailing #{message_id}...")
+    
+        import threading
+        threading.Thread(target=send_mailing, args=(message_id,)).start()
+    
+    def send_mailing(message_id):
+        db = SessionLocal()
+        try:
+            mailing_message = db.query(MailingListMessage).filter(MailingListMessage.id == message_id).first()
+            if not mailing_message:
+                logger.error(f"Mailing message with id {message_id} not found.")
+                return
+    
+            users_to_send = db.query(User).all()
+            for user in users_to_send:
+                try:
+                    if mailing_message.file_type == 'photo':
+                        bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                    elif mailing_message.file_type == 'video':
+                        bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                    elif mailing_message.file_type == 'animation':
+                        bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                    else:
+                        bot.send_message(user.id, mailing_message.message_text)
+    
+                    # Log that the message was sent to this user
+                    sent_status = MailingListUserStatus(message_id=message_id, user_id=user.id)
+                    db.add(sent_status)
+                    db.commit()
+    
+                except Exception as e:
+                    logger.error(f"Could not send mailing to user {user.id}: {e}")
+                    db.rollback()
+    
+        except Exception as e:
+            logger.error(f"Error in send_mailing: {e}")
+        finally:
+            db.close()
+    
     @bot.pre_checkout_query_handler(func=lambda query: True)
     def pre_checkout_process(pre_checkout_query: types.PreCheckoutQuery):
         """
