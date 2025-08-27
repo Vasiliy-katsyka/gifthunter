@@ -43,7 +43,14 @@
         #app-header .app-title-container { display: flex; align-items: center; gap: 8px; }
         #app-header .app-logo { width: 32px; height: 32px; border-radius: 6px; }
         #app-header .app-title { font-size: 1.5em; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; flex-shrink: 0; margin-right: 10px; }
-        #app-header .wallet-info { display: flex; align-items: center; gap: 8px; flex-shrink: 1; min-width: 0; }
+        #app-header .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 1;
+            min-width: 0;
+            flex-basis: 50%; /* Each side takes up half the space */
+        }
         #ton-connect-button { display: inline-block; flex-shrink: 0; }
         #wallet-address-display, #balance { background-color: var(--surface-hover-color); padding: 8px 12px; border-radius: var(--button-border-radius); font-size: 0.875em; font-weight: 600; border: 1px solid var(--border-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; display: none; transition: background-color 0.2s; }
         #wallet-address-display:hover, #balance:hover { background-color: var(--surface-color); }
@@ -432,13 +439,14 @@
     </div>
     <div id="app-container">
         <header id="app-header">
-            <div class="app-title-container"><img src="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/black%20(3).png?raw=true" alt="Pusik Gifts Logo" class="app-logo"><div class="app-title">Case Hunter</div></div>
             <div class="wallet-info">
-                <div id="wallet-address-display">Connected: ...</div>
                 <div id="balance">
                     <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
                     <span id="star-balance">0</span>
                 </div>
+            </div>
+            <div class="wallet-info" style="justify-content: flex-end;">
+                <div id="wallet-address-display">Connected: ...</div>
                 <div id="ton-connect-button"></div>
             </div>
         </header>
@@ -505,7 +513,34 @@
             </div>
             <!-- END UPGRADE PAGE -->
 
-            <div id="invite-page" class="page"><h2>Referrals</h2><div class="content-card"><p>Invite friends & earn <strong>10%</strong> of deposits!</p><input type="text" id="referral-link" value="Loading..." readonly><button id="copy-ref-link-button" class="button">Copy Code</button><div class="stats-box"><div class="stat-item"><div id="referral-balance" class="value">0.00 TON</div><div class="label">Earnings</div></div><div class="stat-item"><div id="invited-count" class="value">0</div><div class="label">Invited</div></div></div><button id="withdraw-referral-button" class="button button-secondary">Withdraw</button></div><div class="content-card"><h3>Invited Friends</h3><div id="invited-users-list-display" class="invited-users-list"><p>No friends invited yet.</p></div></div></div>
+            <div id="invite-page" class="page">
+                <h2>Referrals</h2>
+                <div class="content-card">
+                    <p>Invite friends & earn <strong>10%</strong> of their deposits in Stars!</p>
+                    <input type="text" id="referral-link" value="Loading..." readonly>
+                    <button id="copy-ref-link-button" class="button">Copy Code</button>
+                    <div class="stats-box">
+                        <div class="stat-item">
+                            <div id="referral-balance" class="value" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                <span>0</span>
+                                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 24px; height: 24px;">
+                            </div>
+                            <div class="label">Earnings</div>
+                        </div>
+                        <div class="stat-item">
+                            <div id="invited-count" class="value">0</div>
+                            <div class="label">Invited</div>
+                        </div>
+                    </div>
+                    <button id="withdraw-referral-button" class="button button-secondary">Withdraw to Balance</button>
+                </div>
+                <div class="content-card">
+                    <h3>Invited Friends</h3>
+                    <div id="invited-users-list-display" class="invited-users-list">
+                        <p>No friends invited yet.</p>
+                    </div>
+                </div>
+            </div>
             <div id="leaderboard-page" class="page"><h2>Leaderboard</h2><div id="leaderboard-list" class="leaderboard-list content-card" style="padding-top:0; padding-bottom:0;"></div></div>
             <div id="profile-page" class="page">
                 <div class="profile-header">
@@ -1602,10 +1637,18 @@ async function renderLeaderboard() {
         leaderboardList.innerHTML = '<p style="text-align:center;color:var(--text-placeholder);padding:20px;">Could not load leaders.</p>';
     }
 }
+// Find the renderInvitePage function and replace it with this
 function renderInvitePage() {
     inviteElements.referralLink.value = currentUser.referralCode ? `https://t.me/${BOT_USERNAME}?start=${currentUser.referralCode}` : 'Loading...';
-    inviteElements.referralBalance.innerHTML = `${currentUser.referralEarningsPending.toFixed(2)} TON`;
+    
+    // Convert TON earnings to Stars for display
+    const referralEarningsInStars = Math.floor(currentUser.referralEarningsPending * TON_TO_STARS_RATE);
+    inviteElements.referralBalance.querySelector('span').textContent = referralEarningsInStars;
+
     inviteElements.invitedCount.textContent = currentUser.invited_friends_count || 0;
+
+    // Disable withdrawal button if there are no earnings
+    inviteElements.withdrawReferralButton.disabled = currentUser.referralEarningsPending <= 0;
 }
 async function renderInvitedFriendsList() {
     const listContainer = inviteElements.invitedUsersListDisplay;
