@@ -1561,6 +1561,7 @@ function renderProfile() {
     profileElements.disconnectWalletButton.style.display = currentUser.walletAddress ? 'block' : 'none';
     renderInventory();
 }
+
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
@@ -1622,6 +1623,7 @@ function renderInventory() {
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
+    
 async function renderLeaderboard() {
     try {
         const leaders = await apiRequest('/api/get_leaderboard');
@@ -1847,6 +1849,9 @@ function getItemValue(prizeObject) {
     }
     return prizeObject.floorPrice || prizeObject.currentValue || 0; 
 }
+// --- In your <script> tag in index.html ---
+
+
 // --- In your <script> tag in index.html ---
 
 async function spinRoulette() {
