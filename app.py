@@ -347,7 +347,7 @@ if bot: # Ensure bot instance exists
     @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
     def admin_callback_handler(call):
         user_id = call.from_user.id
-        if user_id != ADMIN_USER_ID:
+        if user_id not in ADMIN_USER_IDS:
             bot.answer_callback_query(call.id, "Unauthorized action.")
             return
     
@@ -588,7 +588,7 @@ if bot: # Ensure bot instance exists
     
     # --- Process New Promocode Creation (Next Step Handler) ---
     def process_new_promo_creation(message):
-        if message.chat.id != ADMIN_USER_ID: # Security check
+        if message.chat.id not in ADMIN_USER_IDS: # Security check
             return
     
         # Allow cancellation via /cancel command during this step
@@ -675,7 +675,7 @@ if bot: # Ensure bot instance exists
     # --- /cancel command for admin flows ---
     @bot.message_handler(commands=['cancel'])
     def cancel_operation(message):
-        if message.chat.id == ADMIN_USER_ID:
+        if message.chat.id in ADMIN_USER_IDS:
             # Check if there's an active next_step_handler for this user
             # telebot doesn't have a direct way to check if a handler is registered for a specific chat_id.
             # Clearing it is generally safe if you are sure it's only used in this admin context for this user.
