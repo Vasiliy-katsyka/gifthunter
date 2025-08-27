@@ -3508,9 +3508,6 @@ def verify_deposit_api():
 # --- In your bot's Python file ---
 # Replace the entire request_manual_withdrawal_api function with this one.
 
-# --- In your bot's Python file (e.g., app.py) ---
-# Replace your entire existing function with this one.
-
 @app.route('/api/request_manual_withdrawal', methods=['POST'])
 def request_manual_withdrawal_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3526,7 +3523,6 @@ def request_manual_withdrawal_api():
 
     db = next(get_db())
     try:
-        # Use with_for_update() to lock the item during the transaction
         item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).with_for_update().first()
 
         if not item:
@@ -3536,66 +3532,63 @@ def request_manual_withdrawal_api():
 
         user = db.query(User).filter(User.id == uid).first()
         if not user:
-            # This case is unlikely if an item exists, but it's a good safeguard
             return jsonify({"error": "User not found."}), 404
 
         item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown Item")
         
-        # --- THIS IS THE CRITICAL LOGIC BRANCH ---
+        # --- NEW LOGIC BRANCH ---
         if item.is_emoji_gift:
-            # This is an emoji, send it directly using bot.send_gift()
+            # This is an emoji, send it directly
             if item_name not in EMOJI_GIFTS_BACKEND:
-                logger.error(f"Data inconsistency: Item ID {item.id} is an emoji but name '{item_name}' is not in EMOJI_GIFTS_BACKEND.")
-                return jsonify({"error": "Item data is inconsistent. Please contact support."}), 500
+                # Data consistency check
+                return jsonify({"error": "Item is marked as an emoji, but its name is not in the emoji gift list."}), 500
 
             gift_data = EMOJI_GIFTS_BACKEND[item_name]
             comment_text = "Поздравляем с выигрышем!"
 
             if bot:
                 try:
-                    # Send the gift to the user
                     bot.send_gift(
                         user_id=uid,
                         gift_id=gift_data['id'],
                         text=comment_text
                     )
-                    logger.info(f"Sent emoji gift '{item_name}' directly to user {uid}")
+                    logger.info(f"Sent emoji gift '{item_name}' (Gift ID: {gift_data['id']}) directly to user {uid}")
                     
-                    # If sending was successful, remove item from inventory
+                    # Remove from inventory after successful send
                     db.delete(item)
                     db.commit()
                     return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent to your chat!"})
                 except Exception as e:
-                    db.rollback() # Important: Do not delete the item if sending failed
+                    db.rollback()
                     logger.error(f"Failed to send emoji gift to user {uid}: {e}")
-                    return jsonify({"error": "Failed to send the gift. The bot might be blocked by you."}), 500
+                    return jsonify({"error": "Failed to send the gift. The bot might be blocked."}), 500
             else:
                 return jsonify({"error": "Bot is not configured to send gifts."}), 500
         
         else:
-            # This is a regular NFT, proceed with the manual withdrawal notification to the admin
+            # This is a regular NFT, proceed with manual withdrawal notification
             model = item.variant if item.variant else ""
-            message_to_admin = f"Withdrawal Request:\nSend {item_name} {model} to user {user.first_name or ''} (@{user.username or 'N/A'} - ID: {user.id})"
+            message = f"Send {item_name} {model} to user {user.first_name} (@{user.username} - {user.id})"
 
             if bot and TARGET_WITHDRAWER_ID:
                 try:
-                    bot.send_message(TARGET_WITHDRAWER_ID, message_to_admin)
-                    
-                    # If notifying admin was successful, remove item from inventory
+                    bot.send_message(TARGET_WITHDRAWER_ID, message)
+                    # After successfully sending the message, remove the item from inventory
                     db.delete(item)
                     db.commit()
                     return jsonify({"status": "success", "message": "Withdrawal request sent!"})
                 except Exception as e:
-                    db.rollback() # Do not delete the item if notifying failed
-                    logger.error(f"Failed to send manual withdrawal message to admin: {e}")
-                    return jsonify({"error": "Failed to notify admin for withdrawal."}), 500
+                    db.rollback()
+                    logger.error(f"Failed to send manual withdrawal message: {e}")
+                    return jsonify({"error": "Failed to notify for withdrawal."}), 500
             else:
-                return jsonify({"error": "Withdrawal service is not configured correctly."}), 500
+                return jsonify({"error": "Bot or target user for withdrawal not configured."}), 500
 
     except Exception as e:
         db.rollback()
         logger.error(f"Error in request_manual_withdrawal for user {uid}: {e}", exc_info=True)
-        return jsonify({"error": "Database error during withdrawal request."}), 500
+        return jsonify({"error": "Database error or unexpected issue during withdrawal request."}), 500
     finally:
         db.close()
 
