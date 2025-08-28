@@ -599,7 +599,15 @@
                         <button id="redeem-promocode-button" class="button button-secondary">Redeem</button>
                     </div>
                 </div>
-            
+
+                <div class="content-card">
+                    <h3>Support</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.9em;">
+                        Have questions or need help? Contact our support team on Telegram.
+                    </p>
+                    <button id="support-button" class="button">Contact Support</button>
+                </div>
+                
                 <div class="content-card">
                     <h3>Wallet</h3>
                     <div id="profile-wallet-address">Not Connected</div>
@@ -2771,6 +2779,13 @@ function calculateAndDisplayUpgradeStats() {
     upgradePageElements.chancePointer.classList.remove('spinning');
     upgradePageElements.chancePointer.style.transform = `translateX(-50%) rotate(0deg)`;
 }
+
+// --- Add this event listener to your JavaScript, near your other listeners ---
+
+document.getElementById('support-button').addEventListener('click', () => {
+    // This uses the Telegram WebApp API to open a link to the support chat
+    Telegram.WebApp.openTelegramLink('https://t.me/sellerframent');
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     // Now that the document is loaded, we can safely find our buttons.
