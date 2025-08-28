@@ -823,6 +823,11 @@ const bannersData = [
         url: 'https://t.me/CaseHunterNews'
     },
     {
+        name: 'Invite',
+        image: 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250828_212042_037.jpg?raw=true',
+        url: null
+    },
+    {
         name: 'Case Promo',
         image: 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250828_153346_408.jpg?raw=true',
         url: null // No link for this banner
@@ -851,7 +856,7 @@ const GIFT_NAME_TO_ID_MAP = {
   "Snow Globe": "5981132629905245483","Electric Skull": "5846192273657692751","Tama Gadget": "6023752243218481939","Candy Cane": "6003373314888696650",
   "Neko Helmet": "5933793770951673155","Jack-in-the-Box": "6005659564635063386","Easter Egg": "5773668482394620318",
   "Bonded Ring": "5870661333703197240", "Pet Snake": "6023917088358269866", "Snake Box": "6023679164349940429",
-  "Xmas Stocking": "6003767644426076664", "Big Year": "6028283532500009446",    
+  "Xmas Stocking": "6003767644426076664", "Big Year": "6028283532500009446",
     "Holiday Drink": "6003735372041814769",
     "Gem Signet": "5859442703032386168",
     "Light Sword": "5897581235231785485",
@@ -1249,7 +1254,6 @@ const casesData = [
         {'name':'Astral Shard','probability': 0.149994},
     ]}
 ];
-
 // --- CRUCIAL PROCESSING STEP ---
 // This loop MUST run after the casesData array is defined.
 // It adds the necessary floorPrice and imageFilename properties to each prize.
@@ -1699,8 +1703,6 @@ function renderProfile() {
     profileElements.disconnectWalletButton.style.display = currentUser.walletAddress ? 'block' : 'none';
     renderInventory();
 }
-// --- In index.html, replace the existing renderInventory function ---
-
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
@@ -1713,9 +1715,7 @@ function renderInventory() {
 
         currentUser.inventory.forEach(item => {
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
-            if (!item.is_ton_prize) {
-                 totalValueInStars += itemValueInStars;
-            }
+            totalValueInStars += itemValueInStars;
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
@@ -1723,14 +1723,15 @@ function renderInventory() {
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
+            // Simplified image logic
             const img = document.createElement('img');
-            // --- THIS LINE IS THE FIX ---
-            img.src = item.imageFilename || generateImageFilename(item.name);
+            img.src = generateImageFilename(item.imageFilename || item.name);
             img.alt = item.name;
             img.loading = 'lazy';
             imgCont.appendChild(img);
             
-            const withdrawAction = `startWithdrawalProcess(${item.id})`;
+            // Note: item.is_emoji_gift might need adjustment depending on your backend response now
+            const withdrawAction = `startWithdrawalProcess(${item.id}, ${!!EMOJI_GIFTS[item.name]})`;
 
             const valueHTML = `<div class="inventory-item-value">${itemValueInStars} ⭐</div>`;
             const actionsHTML = `<div class="inventory-item-actions">
@@ -1743,12 +1744,8 @@ function renderInventory() {
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
 
-        if (totalValueInStars > 0) {
-            profileElements.sellAllButton.style.display = 'block';
-            profileElements.sellAllValueSpan.textContent = totalValueInStars;
-        } else {
-            profileElements.sellAllButton.style.display = 'none';
-        }
+        profileElements.sellAllButton.style.display = 'block';
+        profileElements.sellAllValueSpan.textContent = totalValueInStars;
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
@@ -1801,8 +1798,6 @@ async function renderInvitedFriendsList() {
         listContainer.innerHTML = '<p style="color: var(--danger-color);">Could not load friends list.</p>';
     }
 }
-// --- In index.html, replace the existing showWinOverlay function ---
-
 function showWinOverlay(wonPrizesArray) {
     lastWonPrizesForOverlay = wonPrizesArray;
     winOverlayPrizeImageContainer.innerHTML = '';
@@ -1823,11 +1818,11 @@ function showWinOverlay(wonPrizesArray) {
     let prizeDetailsHTML = '';
     wonPrizesArray.forEach(prizeItem => {
         const img = document.createElement('img');
-        // --- THIS LINE IS THE FIX ---
-        img.src = prizeItem.imageFilename || generateImageFilename(prizeItem.name);
+        img.src = generateImageFilename(prizeItem.imageFilename || prizeItem.name);
         img.alt = prizeItem.name;
         winOverlayPrizeImageContainer.appendChild(img);
 
+        // CORRECTED: Display prize value in Stars with the star icon
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
         prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px; vertical-align: middle;">)</div>`;
 
@@ -1838,8 +1833,9 @@ function showWinOverlay(wonPrizesArray) {
     winOverlayPrizeDetailsEl.innerHTML = prizeDetailsHTML;
 
     if (convertiblePrizes.length > 0) {
+        // CORRECTED: Calculate and display total conversion value in Stars
         const totalConvertValueInStars = Math.floor(totalConvertValueInTon * TON_TO_STARS_RATE);
-        winOverlayConvertValue.textContent = totalConvertValueInStars;
+        winOverlayConvertValue.textContent = totalConvertValueInStars; // Just the number
         winOverlayConvertBtn.style.display = 'block';
     } else {
         winOverlayConvertBtn.style.display = 'none';
@@ -2648,15 +2644,12 @@ function closeUpgradeItemPicker() {
     upgradePageElements.upgradePickerContainer.style.display = 'none';
     currentUpgradePickerType = null;
 }
-// --- In index.html, replace the existing createUpgradeableItemCard function ---
-
 function createUpgradeableItemCard(itemData, type) {
     const card = document.createElement('div');
     card.className = 'inventory-item';
     const imgCont = document.createElement('div');
     imgCont.className = 'item-image-display';
     const img = document.createElement('img');
-    // --- THIS LINE IS THE FIX ---
     img.src = itemData.imageFilename || generateImageFilename(itemData.name);
     img.alt = itemData.name;
     imgCont.appendChild(img);
@@ -2666,6 +2659,7 @@ function createUpgradeableItemCard(itemData, type) {
     const valueEl = document.createElement('div');
     valueEl.className = 'inventory-item-value';
 
+    // CORRECTED: Show value in Stars
     const valueInStars = Math.floor((type === 'inventory' ? itemData.currentValue : itemData.floorPrice) * TON_TO_STARS_RATE);
     valueEl.innerHTML = `${valueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px; vertical-align: middle;">`;
 
@@ -2686,17 +2680,15 @@ function createUpgradeableItemCard(itemData, type) {
     card.appendChild(actionsEl);
     return card;
 }
-// --- In index.html, replace the existing updateSlotDisplay function ---
-
 function updateSlotDisplay(slotElement, itemData, type) {
     const placeholder = slotElement.querySelector('.slot-placeholder');
     const display = slotElement.querySelector('.slot-item-display');
     if (itemData) {
-        // --- THIS LINE IS THE FIX ---
         display.querySelector('img').src = itemData.imageFilename || generateImageFilename(itemData.name);
         display.querySelector('img').alt = itemData.name;
         display.querySelector('.slot-item-name').textContent = itemData.name;
         
+        // CORRECTED: Show value in Stars
         const valueInStars = Math.floor((type === 'inventory' ? itemData.currentValue : itemData.floorPrice) * TON_TO_STARS_RATE);
         display.querySelector('.slot-item-value').innerHTML = `${valueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 14px; height: 14px; vertical-align: middle;">`;
 
