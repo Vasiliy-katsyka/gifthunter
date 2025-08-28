@@ -252,12 +252,16 @@ class AllTimeStats(Base):
     total_ton_deposited = Column(Float, default=0.0)
     total_ton_won = Column(Float, default=0.0)
 
+# --- In the --- Database Models --- section, update the MailingListMessage class ---
+
 class MailingListMessage(Base):
     __tablename__ = "mailing_list_messages"
     id = Column(Integer, primary_key=True, index=True)
     message_text = Column(String)
     file_id = Column(String, nullable=True)
     file_type = Column(String, nullable=True)  # 'photo', 'video', 'animation'
+    button_text = Column(String, nullable=True) # ADD THIS LINE
+    button_url = Column(String, nullable=True)  # ADD THIS LINE
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     sent_by = Column(BigInteger, ForeignKey("users.id"))
 
@@ -344,6 +348,8 @@ if bot: # Ensure bot instance exists
         bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
     
     # --- Admin Callback Query Handler ---
+    # --- Replace the entire admin_callback_handler function ---
+    
     @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
     def admin_callback_handler(call):
         user_id = call.from_user.id
@@ -355,8 +361,6 @@ if bot: # Ensure bot instance exists
         bot.answer_callback_query(call.id) # Acknowledge callback early
     
         if action == "admin_new_promo":
-            # It's better to edit the existing message if possible, or send a new one.
-            # For simplicity with next_step_handler, sending a new message is fine here.
             msg_prompt = bot.send_message(user_id,
                                    "Please enter the new promocode details in the format:\n"
                                    "`promoname activations prize_ton`\n\n"
@@ -368,33 +372,55 @@ if bot: # Ensure bot instance exists
         
         elif action == "admin_stats":
             handle_statistics(call.message)
+    
         elif action == "admin_mailing_list":
             handle_mailing_list(call.message)
-        
+    
+        # --- NEW: Logic for creating a mailing is now handled here ---
+        elif action == "admin_create_mailing":
+            prompt_text = (
+                "Send me the message for the mailing. You can include text, an image, a video, or a GIF.\n\n"
+                "To add an inline button, add this on a *new line* at the end:\n"
+                "`button: Button Text | https://your-url.com`"
+            )
+            msg = bot.send_message(call.from_user.id, prompt_text, parse_mode="Markdown")
+            bot.register_next_step_handler(msg, process_mailing_message)
+    
         elif action == "admin_view_promos":
-            handle_view_all_promos(call.message) # Pass message to edit
+            handle_view_all_promos(call.message)
     
         elif action.startswith("admin_promo_detail_"):
             promo_code_id_str = action.split("admin_promo_detail_")[1]
             try:
                 promo_code_id = int(promo_code_id_str)
-                handle_view_promo_detail(call.message, promo_code_id) # Pass message to edit
+                handle_view_promo_detail(call.message, promo_code_id)
             except ValueError:
                 logger.error(f"Invalid promo_code_id in callback: {promo_code_id_str}")
-                # Inform the admin via a new message if editing fails or is not appropriate
                 bot.send_message(call.message.chat.id, "Error: Invalid promo code identifier.")
         
+        elif action.startswith("admin_send_mailing_"):
+            if call.from_user.id not in ADMIN_USER_IDS:
+                bot.answer_callback_query(call.id, "Unauthorized action.")
+                return
+    
+            message_id = int(call.data.split('_')[-1])
+            bot.answer_callback_query(call.id, f"Sending mailing #{message_id}...")
+    
+            import threading
+            threading.Thread(target=send_mailing, args=(message_id,)).start()
+    
         elif action == "admin_back_to_menu":
             markup = types.InlineKeyboardMarkup(row_width=1)
             new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
             view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-            markup.add(new_promo_button, view_promos_button)
+            stats_button = types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
+            mailing_list_button = types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list")
+            markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
             try:
                 bot.edit_message_text("👑 Admin Panel 👑", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
             except Exception as e:
                 logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
                 bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-
     # --- New functions for admin panel ---
     
     def handle_statistics(message_to_edit):
@@ -450,10 +476,25 @@ if bot: # Ensure bot instance exists
         msg = bot.send_message(call.from_user.id, "Send me the message for the mailing. You can include text, an image, a video, or a GIF.")
         bot.register_next_step_handler(msg, process_mailing_message)
     
+    # --- Replace the process_mailing_message function ---
+    
     def process_mailing_message(message):
         message_text = message.text or message.caption
         file_id = None
         file_type = None
+        button_text = None
+        button_url = None
+    
+        # Regex to find the button definition line, e.g., "button: Visit Us | https://google.com"
+        button_regex = re.compile(r'^\s*button:\s*(.+?)\s*\|\s*(https?://\S+)\s*$', re.MULTILINE | re.IGNORECASE)
+    
+        if message_text:
+            match = button_regex.search(message_text)
+            if match:
+                button_text = match.group(1).strip()
+                button_url = match.group(2).strip()
+                # Remove the button definition line from the final message text
+                message_text = button_regex.sub('', message_text).strip()
     
         if message.photo:
             file_id = message.photo[-1].file_id
@@ -471,6 +512,8 @@ if bot: # Ensure bot instance exists
                 message_text=message_text,
                 file_id=file_id,
                 file_type=file_type,
+                button_text=button_text,   # Save button text
+                button_url=button_url,     # Save button URL
                 sent_by=message.from_user.id
             )
             db.add(new_mailing)
@@ -499,6 +542,8 @@ if bot: # Ensure bot instance exists
         import threading
         threading.Thread(target=send_mailing, args=(message_id,)).start()
     
+    # --- Replace the send_mailing function ---
+    
     def send_mailing(message_id):
         db = SessionLocal()
         try:
@@ -510,14 +555,24 @@ if bot: # Ensure bot instance exists
             users_to_send = db.query(User).all()
             for user in users_to_send:
                 try:
+                    # --- NEW: Construct the inline button if it exists ---
+                    reply_markup = None
+                    if mailing_message.button_text and mailing_message.button_url:
+                        markup = types.InlineKeyboardMarkup()
+                        button = types.InlineKeyboardButton(text=mailing_message.button_text, url=mailing_message.button_url)
+                        markup.add(button)
+                        reply_markup = markup
+                    # --- END NEW LOGIC ---
+    
+                    # Pass the reply_markup to the send methods
                     if mailing_message.file_type == 'photo':
-                        bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                        bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
                     elif mailing_message.file_type == 'video':
-                        bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                        bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
                     elif mailing_message.file_type == 'animation':
-                        bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text)
+                        bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
                     else:
-                        bot.send_message(user.id, mailing_message.message_text)
+                        bot.send_message(user.id, mailing_message.message_text, reply_markup=reply_markup)
     
                     # Log that the message was sent to this user
                     sent_status = MailingListUserStatus(message_id=message_id, user_id=user.id)
