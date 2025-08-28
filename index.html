@@ -1767,6 +1767,8 @@ function renderInventory() {
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
+// --- Replace your existing renderLeaderboard function ---
+
 async function renderLeaderboard() {
     try {
         const leaders = await apiRequest('/api/get_leaderboard');
@@ -1775,16 +1777,23 @@ async function renderLeaderboard() {
             const entry = document.createElement('div');
             entry.className = 'leader-entry';
             if (l.user_id === currentUser.id) entry.classList.add('current-user-entry');
-            entry.innerHTML = `<div class="rank">${l.rank}</div><div class="avatar-placeholder">${l.avatarChar}</div><div class="info"><div class="name">${l.name}</div><div class="details">User ID: ${String(l.user_id).slice(0, 6)}...</div></div><div class="score">${l.income.toFixed(2)} TON</div>`;
+            
+            // The 'income' value from the API is now in Stars
+            const scoreHtml = `<div class="score">${formatLargeNumber(l.income)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 16px; height: 16px; vertical-align: text-bottom;"></div>`;
+            
+            entry.innerHTML = `<div class="rank">${l.rank}</div><div class="avatar-placeholder">${l.avatarChar}</div><div class="info"><div class="name">${l.name}</div><div class="details">User ID: ${String(l.user_id).slice(0, 6)}...</div></div>${scoreHtml}`;
             leaderboardList.appendChild(entry);
         });
     } catch (e) {
         leaderboardList.innerHTML = '<p style="text-align:center;color:var(--text-placeholder);padding:20px;">Could not load leaders.</p>';
     }
 }
+// --- Replace your existing renderInvitePage function ---
+
 function renderInvitePage() {
     inviteElements.referralLink.value = currentUser.referralCode ? `https://t.me/${BOT_USERNAME}?start=${currentUser.referralCode}` : 'Loading...';
-    inviteElements.referralBalance.innerHTML = `${currentUser.referralEarningsPending.toFixed(2)} TON`;
+    // The value from the API is now in Stars, so no conversion is needed.
+    inviteElements.referralBalance.innerHTML = `${currentUser.referralEarningsPending} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;">`;
     inviteElements.invitedCount.textContent = currentUser.invited_friends_count || 0;
 }
 async function renderInvitedFriendsList() {
@@ -2925,16 +2934,23 @@ copyDepositCommentBtn.addEventListener('click', () => {
 inviteElements.copyRefLinkButton.addEventListener('click', () => {
     navigator.clipboard.writeText(inviteElements.referralLink.value).then(() => showTGNotification("Copied!", 'success')).catch(() => showTGNotification("Failed.", 'error'));
 });
+// --- Replace your existing 'withdrawReferralButton' event listener ---
+
 inviteElements.withdrawReferralButton.addEventListener('click', async () => {
     try {
         const res = await apiRequest('/api/withdraw_referral_earnings', 'POST');
         if (res.status === 'success') {
+            // Update balances from the API response
             currentUser.tonBalance = res.new_balance_ton;
-            currentUser.referralEarningsPending = res.new_referral_earnings_pending;
+            currentUser.referralEarningsPending = res.new_referral_earnings_pending; // This will be 0
+            
+            // Re-render UI elements
             updateBalances();
             renderInvitePage();
             showTGNotification(res.message, 'success');
-        } else showTGNotification(res.message || "Failed.", "error");
+        } else {
+            showTGNotification(res.message || "Failed.", "error");
+        }
     } catch (e) {
         showTGNotification("Withdrawal request failed.", "error");
     }
