@@ -1911,7 +1911,7 @@ cases_data_backend_with_fixed_prices_raw = [
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'kissedfrog','name':'Kissed Frog Pond','priceTON':20.0,'imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Kissed-Frog.jpg',
-     'prizes': finalKissedFrogPrizesWithConsolation # Keeping this case pure to its theme
+     'prizes': finalKissedFrogPrizesWithConsolation_Python # Keeping this case pure to its theme
     },
 
     {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 20.0,'prizes': sorted([
@@ -2302,6 +2302,10 @@ def check_subscription_api():
         # User is missing one or more subscriptions
         return jsonify({"is_subscribed": False, "missing": missing_subscriptions})
 
+# --- In app.py ---
+
+# ... (keep all existing code before this route) ...
+
 @app.route('/api/get_user_data', methods=['POST'])
 def get_user_data_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2346,17 +2350,30 @@ def get_user_data_api():
         inv = []
         for i in user.inventory:
             item_name = i.nft.name if i.nft else i.item_name_override
-            item_image = i.nft.image_filename if i.nft else i.item_image_override or generate_image_filename_from_name(item_name)
             
+            # --- START OF THE FIX ---
+            # Prioritize the canonical emoji image URL if the item is an emoji gift.
+            # This corrects any old/incorrect image paths stored in the database.
+            item_image = ""
+            is_emoji = item_name in EMOJI_GIFT_IMAGES
+
+            if is_emoji:
+                item_image = EMOJI_GIFT_IMAGES[item_name]
+            else:
+                # Fallback to existing logic for all other items (NFTs, etc.)
+                item_image = i.nft.image_filename if i.nft else i.item_image_override or generate_image_filename_from_name(item_name)
+            # --- END OF THE FIX ---
+
             inv.append({
                 "id":i.id,
                 "name":item_name,
-                "imageFilename":item_image,
+                "imageFilename":item_image, # This will now always be correct for emojis
                 "floorPrice":i.nft.floor_price if i.nft else i.current_value,
                 "currentValue":i.current_value,
                 "upgradeMultiplier":i.upgrade_multiplier,
                 "variant":i.variant,
                 "is_ton_prize":i.is_ton_prize,
+                "is_emoji_gift": is_emoji, # Add this flag for consistency
                 "obtained_at":i.obtained_at.isoformat() if i.obtained_at else None
             })
 
@@ -2380,6 +2397,8 @@ def get_user_data_api():
         return jsonify({"error": "Database error or unexpected issue."}), 500
     finally:
         db.close()
+
+# ... (keep all existing code after this route) ...
 
 @app.route('/api/get_invited_friends', methods=['GET'])
 def get_invited_friends_api():
