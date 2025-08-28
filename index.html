@@ -587,8 +587,8 @@
                     </div>
                     <input type="number" id="deposit-amount-input" placeholder="Amount">
                     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <button id="initiate-deposit-stars-button" class="button">Deposit Stars</button>
-                        <button id="initiate-deposit-ton-button" class="button button-secondary">Deposit TON</button>
+                        <button id="initiate-deposit-stars-button" class="button">Депозит Stars</button>
+                        <button id="initiate-deposit-ton-button" class="button button-secondary">Депозит TON</button>
                     </div>
                 </div>
             
@@ -2005,7 +2005,7 @@ async function spinRoulette() {
 
         Telegram.WebApp.showPopup({
             title: 'Subscription Required',
-            message: 'Please subscribe to our channels to spin the case and receive news!',
+            message: 'Пожалуйста, подпишись на каналы чтобы получать новости и крутить кейсы!',
             buttons: popupButtons
         }, (buttonId) => {
             // If a channel button was clicked (not cancel)
@@ -2745,7 +2745,7 @@ function calculateAndDisplayUpgradeStats() {
             calculatedUpgradeChance = Math.min(maxChance, Math.max(minChance, chance));
         }
         upgradePageElements.calculatedMultiplierText.textContent = `${calculatedUpgradeMultiplier.toFixed(2)}x`;
-        upgradePageElements.calculatedChanceText.textContent = `${calculatedUpgradeChance.toFixed(1)}% Chance`;
+        upgradePageElements.calculatedChanceText.textContent = `${calculatedUpgradeChance.toFixed(1)}% Шанс`;
         upgradePageElements.doUpgradeButton.disabled = false;
         upgradePageElements.doUpgradeButton.textContent = "Attempt Upgrade";
         const winAngle = (calculatedUpgradeChance / 100) * 360;
@@ -2754,7 +2754,7 @@ function calculateAndDisplayUpgradeStats() {
         calculatedUpgradeMultiplier = 0;
         calculatedUpgradeChance = 0;
         upgradePageElements.calculatedMultiplierText.textContent = "--x";
-        upgradePageElements.calculatedChanceText.textContent = "--% Chance";
+        upgradePageElements.calculatedChanceText.textContent = "--% Шанс";
         upgradePageElements.doUpgradeButton.disabled = true;
         upgradePageElements.doUpgradeButton.textContent = "Select Items to Upgrade";
         document.documentElement.style.setProperty('--upgrade-win-segment-angle', `0deg`);
