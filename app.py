@@ -585,45 +585,70 @@ if bot: # Ensure bot instance exists
         logger.info(f"Answered pre-checkout query {pre_checkout_query.id} with OK.")
 
 
-    @bot.message_handler(content_types=['successful_payment'])
-    def successful_payment_process(message: types.Message):
-        """
-        Handles the successful payment message from Telegram.
-        This function credits the user's account with the purchased Stars.
-        """
-        payment_info = message.successful_payment
-        currency = payment_info.currency
-        total_amount = payment_info.total_amount
-        invoice_payload = payment_info.invoice_payload
-        user_id = message.from_user.id
+# --- Replace the existing successful_payment_process function in your Python backend ---
 
-        logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}. Payload: {invoice_payload}")
+@bot.message_handler(content_types=['successful_payment'])
+def successful_payment_process(message: types.Message):
+    """
+    Handles the successful payment message from Telegram.
+    This function credits the user's account with the purchased Stars
+    and applies the referral bonus to the referrer if applicable.
+    """
+    payment_info = message.successful_payment
+    currency = payment_info.currency
+    total_amount = payment_info.total_amount
+    invoice_payload = payment_info.invoice_payload
+    user_id = message.from_user.id
 
-        if currency == "XTR":
-            # This is a Telegram Stars payment.
-            # The 'total_amount' is the number of Stars.
-            stars_purchased = total_amount
+    logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}. Payload: {invoice_payload}")
 
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.id == user_id).with_for_update().first()
-                if user:
-                    # Convert Stars to internal TON balance
-                    ton_to_add = stars_purchased / TON_TO_STARS_RATE_BACKEND
-                    user.ton_balance += ton_to_add
-                    db.commit()
-                    logger.info(f"Credited {user_id} with {ton_to_add:.4f} TON for {stars_purchased} Stars.")
+    if currency == "XTR":
+        # This is a Telegram Stars payment.
+        # The 'total_amount' is the number of Stars purchased.
+        stars_purchased = total_amount
+        
+        # Calculate the equivalent TON value of this deposit for referral purposes
+        ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+
+        db = SessionLocal()
+        try:
+            # Use with_for_update to lock the user's row during the transaction
+            user = db.query(User).filter(User.id == user_id).with_for_update().first()
+            if not user:
+                logger.error(f"Could not find user {user_id} in DB after successful payment!")
+                # Even if user not found, we must exit cleanly
+                return
+
+            # Credit the depositor's account with the equivalent TON balance
+            user.ton_balance += float(ton_equivalent_deposit)
+            
+            # --- NEW REFERRAL LOGIC FOR STARS ---
+            if user.referred_by_id:
+                # Find the referrer and lock their row as well to prevent race conditions
+                referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
+                if referrer:
+                    # Calculate the 10% bonus based on the TON equivalent of the deposit
+                    referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10')).quantize(Decimal('0.01'), ROUND_HALF_UP)
                     
-                    # Send a confirmation message back to the user
-                    bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
+                    # Add the bonus to the referrer's pending earnings
+                    referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + referral_bonus_ton)
+                    
+                    logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
                 else:
-                    logger.error(f"Could not find user {user_id} in DB after successful payment!")
-            except Exception as e:
-                db.rollback()
-                logger.error(f"DATABASE ERROR while processing successful payment for user {user_id}: {e}", exc_info=True)
-                bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
-            finally:
-                db.close()
+                    logger.warning(f"Referrer with ID {user.referred_by_id} not found for user {user.id}. No bonus applied.")
+            # --- END OF NEW REFERRAL LOGIC ---
+
+            db.commit()
+            logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
+            
+            bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"DATABASE ERROR while processing successful Stars payment for user {user_id}: {e}", exc_info=True)
+            bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
+        finally:
+            db.close()
     
     # --- Process New Promocode Creation (Next Step Handler) ---
     def process_new_promo_creation(message):
