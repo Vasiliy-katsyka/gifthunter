@@ -2229,62 +2229,6 @@ def validate_init_data(init_data_str: str, bot_token_for_validation: str) -> dic
 def index_route():
     return "Case Hunter API Backend is Running!"
 
-@app.route('/api/withdraw_emoji_gift', methods=['POST'])
-def withdraw_emoji_gift_api():
-    auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
-    if not auth:
-        return jsonify({"error": "Auth failed"}), 401
-
-    uid = auth["id"]
-    data = flask_request.get_json()
-    inventory_item_id = data.get('inventory_item_id')
-
-    if not inventory_item_id:
-        return jsonify({"error": "inventory_item_id is required"}), 400
-
-    db = next(get_db())
-    try:
-        # Lock the item row to prevent race conditions
-        item = db.query(InventoryItem).filter(
-            InventoryItem.id == inventory_item_id, 
-            InventoryItem.user_id == uid
-        ).with_for_update().first()
-
-        if not item:
-            return jsonify({"error": "Item not found in your inventory."}), 404
-        
-        item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown")
-
-        # Check if the item is a valid, withdrawable emoji gift
-        if item_name not in EMOJI_GIFTS_BACKEND:
-            return jsonify({"error": "This item is not an automatically withdrawable emoji gift."}), 400
-
-        gift_data = EMOJI_GIFTS_BACKEND[item_name]
-        
-        if bot:
-            # Send the gift directly to the user
-            bot.send_gift(
-                chat_id=uid, 
-                gift_id=gift_data['id'],
-                text="Поздравляем с выигрышем!"
-            )
-            logger.info(f"Successfully sent emoji gift '{item_name}' (ID: {gift_data['id']}) to user {uid}")
-            
-            # If sending was successful, remove the item from inventory
-            db.delete(item)
-            db.commit()
-            return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent to your chat!"})
-        else:
-            # This case happens if the bot isn't configured on the server
-            return jsonify({"error": "The gift sending service is currently unavailable."}), 503
-
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error withdrawing emoji gift for user {uid}, item {inventory_item_id}: {e}", exc_info=True)
-        return jsonify({"error": "A server error occurred during withdrawal."}), 500
-    finally:
-        db.close()
-
 # --- Replace the existing check_subscription_api function ---
 
 # Define your required channels at the top, near your other constants
@@ -2647,46 +2591,61 @@ def get_tonnel_gift_listings_api(inventory_item_id):
         
         db.close()
 
-# --- NEW BACKEND ENDPOINT for withdrawing emoji gifts ---
+# --- NEW BACKEND ENDPOINT for withdrawing emoji gifts RIGHT---
 
 @app.route('/api/withdraw_emoji_gift', methods=['POST'])
 def withdraw_emoji_gift_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
-    if not auth: return jsonify({"error": "Auth failed"}), 401
+    if not auth:
+        return jsonify({"error": "Auth failed"}), 401
 
     uid = auth["id"]
     data = flask_request.get_json()
     inventory_item_id = data.get('inventory_item_id')
 
-    if not inventory_item_id: return jsonify({"error": "inventory_item_id required"}), 400
+    if not inventory_item_id:
+        return jsonify({"error": "inventory_item_id is required"}), 400
 
     db = next(get_db())
     try:
-        item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).first()
+        # Lock the item row to prevent race conditions
+        item = db.query(InventoryItem).filter(
+            InventoryItem.id == inventory_item_id, 
+            InventoryItem.user_id == uid
+        ).with_for_update().first()
 
-        if not item: return jsonify({"error": "Item not found in your inventory."}), 404
+        if not item:
+            return jsonify({"error": "Item not found in your inventory."}), 404
         
-        item_name = item.item_name_override
+        item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown")
+
+        # Check if the item is a valid, withdrawable emoji gift
         if item_name not in EMOJI_GIFTS_BACKEND:
-            return jsonify({"error": "This item is not a withdrawable emoji gift."}), 400
+            return jsonify({"error": "This item is not an automatically withdrawable emoji gift."}), 400
 
         gift_data = EMOJI_GIFTS_BACKEND[item_name]
         
         if bot:
-            bot.send_gift(chat_id=uid, gift_id=gift_data['id'])
-            logger.info(f"Withdrew and sent emoji gift '{item_name}' to user {uid}")
+            # Send the gift directly to the user
+            bot.send_gift(
+                chat_id=uid, 
+                gift_id=gift_data['id'],
+                text="🎉 Поздравляем с выигрышем!"
+            )
+            logger.info(f"Successfully sent emoji gift '{item_name}' (ID: {gift_data['id']}) to user {uid}")
             
-            # Remove from inventory after successful send
+            # If sending was successful, remove the item from inventory
             db.delete(item)
             db.commit()
-            return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent!"})
+            return jsonify({"status": "success", "message": f"Your {item_name} gift has been sent to your chat!"})
         else:
-            return jsonify({"error": "Bot is not configured to send gifts."}), 500
+            # This case happens if the bot isn't configured on the server
+            return jsonify({"error": "The gift sending service is currently unavailable."}), 503
 
     except Exception as e:
         db.rollback()
-        logger.error(f"Error withdrawing emoji gift for user {uid}: {e}", exc_info=True)
-        return jsonify({"error": "Server error during withdrawal."}), 500
+        logger.error(f"Error withdrawing emoji gift for user {uid}, item {inventory_item_id}: {e}", exc_info=True)
+        return jsonify({"error": "A server error occurred during withdrawal."}), 500
     finally:
         db.close()
 
