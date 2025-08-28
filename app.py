@@ -2400,6 +2400,8 @@ def get_invited_friends_api():
 
 # --- Replace the existing register_referral_api function in your Python backend ---
 
+# --- Replace the existing register_referral_api function ---
+
 @app.route('/api/register_referral', methods=['POST'])
 def register_referral_api():
     data = flask_request.get_json()
@@ -2414,13 +2416,12 @@ def register_referral_api():
     
     db = next(get_db())
     try:
-        # Use with_for_update() on the referrer to prevent race conditions
         referrer = db.query(User).filter(User.referral_code == referral_code_used).with_for_update().first()
         if not referrer:
-            db.commit() # Commit any potential session changes before returning
+            db.commit()
             return jsonify({"error": "Referrer not found with this code."}), 404
 
-        # Find or create the user who clicked the link
+        # ... (user creation/finding logic remains the same) ...
         referred_user = db.query(User).filter(User.id == user_id).first()
         if not referred_user:
             new_referral_code_for_user = f"ref_{user_id}_{random.randint(1000,9999)}"
@@ -2441,61 +2442,47 @@ def register_referral_api():
             if referred_user.first_name != first_name: referred_user.first_name = first_name
             if referred_user.last_name != last_name: referred_user.last_name = last_name
         
-        # Check if the user was already referred
         if referred_user.referred_by_id:
             db.commit()
             return jsonify({"status": "already_referred", "message": "User was already referred."}), 200
         
-        # Prevent self-referral
         if referrer.id == referred_user.id:
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
 
-        # --- CORRECTED LOGIC: Add bonus to PENDING EARNINGS ---
+        # --- CORRECTED CALCULATION ---
         star_bonus = 5
         ton_equivalent_bonus = Decimal(str(star_bonus)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
 
-        # Add the bonus to the referrer's PENDING earnings pool
-        referrer.referral_earnings_pending += float(ton_equivalent_bonus)
+        # Add the precise Decimal value to the referrer's pending earnings
+        current_pending = Decimal(str(referrer.referral_earnings_pending))
+        referrer.referral_earnings_pending = float(current_pending + ton_equivalent_bonus)
+        # --- END CORRECTION ---
         
-        # Establish the referral link
         referred_user.referred_by_id = referrer.id
         
         if bot:
             try:
+                # ... (notification logic remains the same) ...
                 new_user_display_name = referred_user.first_name or referred_user.username or f"User #{str(referred_user.id)[:6]}"
-                
-                # The notification message remains the same, as it implies an immediate bonus.
-                # The user will see their pending earnings increase in the app.
                 notification_message = (
                     f"🎉 *New Referral!* 🎉\n\n"
                     f"Your friend *{new_user_display_name}* has joined using your link. "
                     f"You've earned a *+{star_bonus} Stars* bonus!\n\n"
                     f"You will also earn *10%* from their future deposits."
                 )
-                
-                bot.send_message(
-                    chat_id=referrer.id,
-                    text=notification_message,
-                    parse_mode="Markdown"
-                )
-                logger.info(f"Sent referral notification. Added +{ton_equivalent_bonus} TON to PENDING earnings for referrer {referrer.id} for new user {referred_user.id}.")
-
+                bot.send_message(chat_id=referrer.id, text=notification_message, parse_mode="Markdown")
+                logger.info(f"Sent referral notification. Added +{ton_equivalent_bonus:.4f} TON to PENDING for referrer {referrer.id}.")
             except Exception as e_notify:
                 logger.error(f"Failed to send referral notification to user {referrer.id}. Reason: {e_notify}")
-        # --- END OF CORRECTED LOGIC ---
 
         db.commit()
-        logger.info(f"User {user_id} successfully referred by {referrer.id}. Referrer received +{ton_equivalent_bonus} TON ({star_bonus} Stars) in pending earnings.")
+        logger.info(f"User {user_id} referred by {referrer.id}. Referrer received +{ton_equivalent_bonus:.4f} TON in pending.")
+        return jsonify({"status": "success", "message": "Referral registered successfully."})
         
-        return jsonify({"status": "success", "message": "Referral registered successfully."}), 200
-    except IntegrityError as ie:
-        db.rollback()
-        logger.error(f"Integrity error registering referral for {user_id} with code {referral_code_used}: {ie}", exc_info=True)
-        return jsonify({"error": "Database integrity error, possibly concurrent registration."}), 409
     except Exception as e:
         db.rollback()
-        logger.error(f"Error registering referral for {user_id} with code {referral_code_used}: {e}", exc_info=True)
+        logger.error(f"Error in register_referral for user {user_id}: {e}", exc_info=True)
         return jsonify({"error": "Server error during referral registration."}), 500
     finally:
         db.close()
