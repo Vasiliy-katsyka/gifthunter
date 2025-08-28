@@ -2398,6 +2398,8 @@ def get_invited_friends_api():
 
 # --- Replace the existing register_referral_api function in your Python backend ---
 
+# --- Replace the existing register_referral_api function in your Python backend ---
+
 @app.route('/api/register_referral', methods=['POST'])
 def register_referral_api():
     data = flask_request.get_json()
@@ -2449,12 +2451,12 @@ def register_referral_api():
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
 
-        # --- NEW LOGIC: Add bonus and send notification ---
+        # --- CORRECTED LOGIC: Add bonus to PENDING EARNINGS ---
         star_bonus = 5
-        ton_equivalent_bonus = star_bonus / TON_TO_STARS_RATE_BACKEND
+        ton_equivalent_bonus = Decimal(str(star_bonus)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
 
-        # Add the bonus to the referrer's main TON balance
-        referrer.ton_balance += ton_equivalent_bonus
+        # Add the bonus to the referrer's PENDING earnings pool
+        referrer.referral_earnings_pending += float(ton_equivalent_bonus)
         
         # Establish the referral link
         referred_user.referred_by_id = referrer.id
@@ -2463,11 +2465,12 @@ def register_referral_api():
             try:
                 new_user_display_name = referred_user.first_name or referred_user.username or f"User #{str(referred_user.id)[:6]}"
                 
-                # Update the notification message to include the star bonus
+                # The notification message remains the same, as it implies an immediate bonus.
+                # The user will see their pending earnings increase in the app.
                 notification_message = (
                     f"🎉 *New Referral!* 🎉\n\n"
                     f"Your friend *{new_user_display_name}* has joined using your link. "
-                    f"You've received a *+{star_bonus} Stars* bonus!\n\n"
+                    f"You've earned a *+{star_bonus} Stars* bonus!\n\n"
                     f"You will also earn *10%* from their future deposits."
                 )
                 
@@ -2476,14 +2479,14 @@ def register_referral_api():
                     text=notification_message,
                     parse_mode="Markdown"
                 )
-                logger.info(f"Sent referral notification and +{star_bonus} Stars bonus to referrer {referrer.id} for new user {referred_user.id}.")
+                logger.info(f"Sent referral notification. Added +{ton_equivalent_bonus} TON to PENDING earnings for referrer {referrer.id} for new user {referred_user.id}.")
 
             except Exception as e_notify:
                 logger.error(f"Failed to send referral notification to user {referrer.id}. Reason: {e_notify}")
-        # --- END OF NEW LOGIC ---
+        # --- END OF CORRECTED LOGIC ---
 
         db.commit()
-        logger.info(f"User {user_id} successfully referred by {referrer.id}. Referrer received +{ton_equivalent_bonus} TON ({star_bonus} Stars).")
+        logger.info(f"User {user_id} successfully referred by {referrer.id}. Referrer received +{ton_equivalent_bonus} TON ({star_bonus} Stars) in pending earnings.")
         
         return jsonify({"status": "success", "message": "Referral registered successfully."}), 200
     except IntegrityError as ie:
