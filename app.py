@@ -2333,7 +2333,7 @@ def get_user_data_api():
             "starBalance":user.star_balance,
             "inventory":inv,
             "referralCode":user.referral_code,
-            "referralEarningsPending":user.referral_earnings_pending,
+            "referralEarningsPending": int(user.referral_earnings_pending * TON_TO_STARS_RATE_BACKEND),
             "total_won_ton":user.total_won_ton,
             "invited_friends_count":refs_count
         })
@@ -3439,7 +3439,7 @@ def get_leaderboard_api():
                 "rank": r_idx + 1,
                 "name": display_name,
                 "avatarChar": avatar_char,
-                "income": u_leader.total_won_ton,
+                "income": int(u_leader.total_won_ton * TON_TO_STARS_RATE_BACKEND),
                 "user_id": u_leader.id
             })
         return jsonify(leaderboard_data)
@@ -3464,13 +3464,14 @@ def withdraw_referral_earnings_api():
         
         if user.referral_earnings_pending > 0:
             withdrawn_amount = Decimal(str(user.referral_earnings_pending))
+            withdrawn_stars = int(withdrawn_amount * Decimal(TON_TO_STARS_RATE_BACKEND))
             user.ton_balance = float(Decimal(str(user.ton_balance)) + withdrawn_amount)
             user.referral_earnings_pending = 0.0
             
             db.commit()
             return jsonify({
                 "status":"success",
-                "message":f"{withdrawn_amount:.2f} TON referral earnings withdrawn to your main balance.",
+                "message":f"{withdrawn_stars} Stars in referral earnings have been added to your main balance.",
                 "new_balance_ton":user.ton_balance,
                 "new_referral_earnings_pending":0.0
             })
