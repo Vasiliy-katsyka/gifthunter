@@ -350,6 +350,8 @@ if bot: # Ensure bot instance exists
     # --- Admin Callback Query Handler ---
     # --- Replace the entire admin_callback_handler function ---
     
+    # --- Replace your existing admin callback handler(s) with this single function ---
+    
     @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
     def admin_callback_handler(call):
         user_id = call.from_user.id
@@ -358,58 +360,22 @@ if bot: # Ensure bot instance exists
             return
     
         action = call.data
-        bot.answer_callback_query(call.id) # Acknowledge callback early
+        bot.answer_callback_query(call.id)  # Acknowledge callback early
     
-        if action == "admin_new_promo":
-            msg_prompt = bot.send_message(user_id,
-                                   "Please enter the new promocode details in the format:\n"
-                                   "`promoname activations prize_ton`\n\n"
-                                   "Example: `SUMMER2024 100 0.5` (for 0.5 TON)\n"
-                                   "Example: `UNLIMITEDGIFT -1 1.0` (for unlimited activations, 1.0 TON)\n\n"
-                                   "The word 'ton' at the end is optional. Type /cancel to abort.",
-                                   parse_mode="Markdown")
-            bot.register_next_step_handler(msg_prompt, process_new_promo_creation)
-        
-        elif action == "admin_stats":
-            handle_statistics(call.message)
-    
-        elif action == "admin_mailing_list":
+        # --- Main Menu Navigation ---
+        if action == "admin_mailing_list":
             handle_mailing_list(call.message)
+            return # Stop further processing
     
-        # --- NEW: Logic for creating a mailing is now handled here ---
-        elif action == "admin_create_mailing":
-            prompt_text = (
-                "Send me the message for the mailing. You can include text, an image, a video, or a GIF.\n\n"
-                "To add an inline button, add this on a *new line* at the end:\n"
-                "`button: Button Text | https://your-url.com`"
-            )
-            msg = bot.send_message(call.from_user.id, prompt_text, parse_mode="Markdown")
-            bot.register_next_step_handler(msg, process_mailing_message)
+        if action == "admin_stats":
+            handle_statistics(call.message)
+            return
     
-        elif action == "admin_view_promos":
+        if action == "admin_view_promos":
             handle_view_all_promos(call.message)
+            return
     
-        elif action.startswith("admin_promo_detail_"):
-            promo_code_id_str = action.split("admin_promo_detail_")[1]
-            try:
-                promo_code_id = int(promo_code_id_str)
-                handle_view_promo_detail(call.message, promo_code_id)
-            except ValueError:
-                logger.error(f"Invalid promo_code_id in callback: {promo_code_id_str}")
-                bot.send_message(call.message.chat.id, "Error: Invalid promo code identifier.")
-        
-        elif action.startswith("admin_send_mailing_"):
-            if call.from_user.id not in ADMIN_USER_IDS:
-                bot.answer_callback_query(call.id, "Unauthorized action.")
-                return
-    
-            message_id = int(call.data.split('_')[-1])
-            bot.answer_callback_query(call.id, f"Sending mailing #{message_id}...")
-    
-            import threading
-            threading.Thread(target=send_mailing, args=(message_id,)).start()
-    
-        elif action == "admin_back_to_menu":
+        if action == "admin_back_to_menu":
             markup = types.InlineKeyboardMarkup(row_width=1)
             new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
             view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
@@ -421,6 +387,47 @@ if bot: # Ensure bot instance exists
             except Exception as e:
                 logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
                 bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
+            return
+            
+        # --- Actions that start a 'next_step_handler' ---
+        if action == "admin_new_promo":
+            msg_prompt = bot.send_message(user_id,
+                                   "Please enter the new promocode details in the format:\n"
+                                   "`promoname activations prize_ton`\n\n"
+                                   "Type /cancel to abort.",
+                                   parse_mode="Markdown")
+            bot.register_next_step_handler(msg_prompt, process_new_promo_creation)
+            return
+            
+        if action == "admin_create_mailing":
+            prompt_text = (
+                "Send me the message for the mailing. You can include text, an image, a video, or a GIF.\n\n"
+                "To add an inline button, add this on a *new line* at the end:\n"
+                "`button: Button Text | https://your-url.com`"
+            )
+            msg = bot.send_message(call.from_user.id, prompt_text, parse_mode="Markdown")
+            bot.register_next_step_handler(msg, process_mailing_message)
+            return
+    
+        # --- Actions with dynamic parts (like IDs) ---
+        if action.startswith("admin_promo_detail_"):
+            promo_code_id_str = action.split("admin_promo_detail_")[1]
+            try:
+                promo_code_id = int(promo_code_id_str)
+                handle_view_promo_detail(call.message, promo_code_id)
+            except ValueError:
+                logger.error(f"Invalid promo_code_id in callback: {promo_code_id_str}")
+                bot.send_message(call.message.chat.id, "Error: Invalid promo code identifier.")
+            return
+    
+        if action.startswith("admin_send_mailing_"):
+            message_id = int(call.data.split('_')[-1])
+            bot.edit_message_text(f"Mailing #{message_id} is now being sent...", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            
+            import threading
+            threading.Thread(target=send_mailing, args=(message_id,)).start()
+            return
+        
     # --- New functions for admin panel ---
     
     def handle_statistics(message_to_edit):
@@ -464,17 +471,6 @@ if bot: # Ensure bot instance exists
         markup.add(types.InlineKeyboardButton("Create New Mailing", callback_data="admin_create_mailing"))
         markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
         bot.edit_message_text("✉️ *Mailing List*\n\nCreate and send a message to your users.", chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
-    
-    # --- You will also need a callback handler for "admin_create_mailing" ---
-    @bot.callback_query_handler(func=lambda call: call.data == 'admin_create_mailing')
-    def create_mailing_callback(call):
-        if call.from_user.id not in ADMIN_USER_IDS:
-            bot.answer_callback_query(call.id, "Unauthorized action.")
-            return
-    
-        bot.answer_callback_query(call.id)
-        msg = bot.send_message(call.from_user.id, "Send me the message for the mailing. You can include text, an image, a video, or a GIF.")
-        bot.register_next_step_handler(msg, process_mailing_message)
     
     # --- Replace the process_mailing_message function ---
     
@@ -529,18 +525,6 @@ if bot: # Ensure bot instance exists
             bot.send_message(message.from_user.id, "Error creating mailing.")
         finally:
             db.close()
-    
-    @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_send_mailing_'))
-    def send_mailing_callback(call):
-        if call.from_user.id not in ADMIN_USER_IDS:
-            bot.answer_callback_query(call.id, "Unauthorized action.")
-            return
-    
-        message_id = int(call.data.split('_')[-1])
-        bot.answer_callback_query(call.id, f"Sending mailing #{message_id}...")
-    
-        import threading
-        threading.Thread(target=send_mailing, args=(message_id,)).start()
     
     # --- Replace the send_mailing function ---
     
