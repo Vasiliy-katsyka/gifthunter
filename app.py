@@ -2232,7 +2232,7 @@ def index_route():
 # --- Replace the existing check_subscription_api function ---
 
 # Define your required channels at the top, near your other constants
-REQUIRED_CHANNELS = ['@CompactTelegram', '@GiftHunterNews']
+REQUIRED_CHANNELS = ['@CompactTelegram', '@CaseHunterNews']
 
 @app.route('/api/check_subscription', methods=['GET'])
 def check_subscription_api():
