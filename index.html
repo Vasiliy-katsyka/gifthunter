@@ -418,6 +418,61 @@
             width: 20px;
             height: 20px;
         }
+
+        /* Add these styles to your main <style> block */
+        
+        .banner-carousel {
+            position: relative;
+            width: 100%;
+            margin-bottom: 28px;
+            overflow: hidden;
+            border-radius: var(--main-border-radius);
+            box-shadow: var(--soft-shadow);
+            /* Ensures touch events are smooth on iOS */
+            -webkit-transform: translate3d(0, 0, 0);
+        }
+        
+        .banner-slides {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .banner-slide {
+            flex-shrink: 0;
+            width: 100%;
+            position: relative;
+        }
+        
+        .banner-slide a, .banner-slide img {
+            display: block;
+            width: 100%;
+            height: auto; /* Maintain aspect ratio of the image */
+            border-radius: var(--main-border-radius);
+        }
+        
+        .banner-pagination {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .banner-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        
+        .banner-dot.active {
+            background-color: rgba(255, 255, 255, 0.9);
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
@@ -445,6 +500,14 @@
 
         <main id="app-content">
             <div id="main-page" class="page active">
+                <div id="banner-carousel" class="banner-carousel">
+                    <div class="banner-slides">
+                        <!-- Banner slides will be injected here by JavaScript -->
+                    </div>
+                    <div class="banner-pagination">
+                        <!-- Pagination dots will be injected here by JavaScript -->
+                    </div>
+                </div>
                 <h2>Cases</h2>
                 <div id="cases-grid" class="cases-grid"></div>
                 <!-- Removed slots section for brevity, can be re-added if needed -->
@@ -742,6 +805,25 @@ let calculatedUpgradeMultiplier = 0;
 let calculatedUpgradeChance = 0;
 let currentUpgradePickerType = null;
 let allAppGiftsForUpgrade = [];
+
+// Add these with your other global variables
+
+const bannersData = [
+    {
+        name: 'Subscribe',
+        image: 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250828_153346_240.jpg?raw=true',
+        url: 'https://t.me/CaseHunterNews'
+    },
+    {
+        name: 'Case Promo',
+        image: 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250828_153346_408.jpg?raw=true',
+        url: null // No link for this banner
+    }
+];
+let bannerCurrentIndex = 0;
+let bannerAutoSwipeInterval;
+let bannerTouchStartX = 0;
+let bannerTouchMoveX = 0;
     
 const GIFT_NAME_TO_ID_MAP = {
   "Santa Hat": "5983471780763796287","Signet Ring": "5936085638515261992","Precious Peach": "5933671725160989227","Plush Pepe": "5936013938331222567",
@@ -1376,6 +1458,116 @@ async function apiRequest(endpoint, method = 'GET', body = null) {
         throw error;
     }
 }
+
+// --- Add these new functions to your script ---
+
+function renderBanners() {
+    const bannerCarousel = document.getElementById('banner-carousel');
+    if (!bannerCarousel) return;
+    const slidesContainer = bannerCarousel.querySelector('.banner-slides');
+    const paginationContainer = bannerCarousel.querySelector('.banner-pagination');
+    slidesContainer.innerHTML = '';
+    paginationContainer.innerHTML = '';
+
+    bannersData.forEach((banner, index) => {
+        // Create Slide
+        const slide = document.createElement('div');
+        slide.className = 'banner-slide';
+        const img = document.createElement('img');
+        img.src = banner.image;
+        img.alt = banner.name;
+
+        if (banner.url) {
+            const link = document.createElement('a');
+            link.href = "#"; // Use JS for navigation to avoid page reload
+            link.onclick = (e) => {
+                e.preventDefault();
+                // Check if the link is a Telegram link
+                if (banner.url.startsWith('t.me/') || banner.url.startsWith('https://t.me/')) {
+                    Telegram.WebApp.openTelegramLink(banner.url);
+                } else {
+                    Telegram.WebApp.openLink(banner.url);
+                }
+            };
+            link.appendChild(img);
+            slide.appendChild(link);
+        } else {
+            slide.appendChild(img);
+        }
+        slidesContainer.appendChild(slide);
+
+        // Create Dot
+        const dot = document.createElement('div');
+        dot.className = 'banner-dot';
+        dot.onclick = () => {
+            goToBannerSlide(index);
+            resetBannerAutoSwipe(); // Reset timer when user clicks a dot
+        };
+        paginationContainer.appendChild(dot);
+    });
+
+    updateBannerPagination();
+    setupBannerEventListeners();
+    startBannerAutoSwipe();
+}
+
+function goToBannerSlide(index) {
+    const slidesContainer = document.querySelector('.banner-slides');
+    bannerCurrentIndex = (index + bannersData.length) % bannersData.length;
+    slidesContainer.style.transform = `translateX(-${bannerCurrentIndex * 100}%)`;
+    updateBannerPagination();
+}
+
+function updateBannerPagination() {
+    const bannerDots = document.querySelectorAll('.banner-dot');
+    bannerDots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === bannerCurrentIndex);
+    });
+}
+
+function startBannerAutoSwipe() {
+    stopBannerAutoSwipe();
+    bannerAutoSwipeInterval = setInterval(() => {
+        goToBannerSlide(bannerCurrentIndex + 1);
+    }, 5000);
+}
+
+function stopBannerAutoSwipe() {
+    clearInterval(bannerAutoSwipeInterval);
+}
+
+function resetBannerAutoSwipe() {
+    stopBannerAutoSwipe();
+    startBannerAutoSwipe();
+}
+
+function setupBannerEventListeners() {
+    const slidesContainer = document.querySelector('.banner-slides');
+    slidesContainer.addEventListener('touchstart', (e) => {
+        stopBannerAutoSwipe();
+        bannerTouchStartX = e.touches[0].clientX;
+        bannerTouchMoveX = bannerTouchStartX;
+    }, { passive: true });
+
+    slidesContainer.addEventListener('touchmove', (e) => {
+        bannerTouchMoveX = e.touches[0].clientX;
+    }, { passive: true });
+
+    slidesContainer.addEventListener('touchend', () => {
+        const touchDiff = bannerTouchStartX - bannerTouchMoveX;
+        const swipeThreshold = 50; // Minimum pixels to be considered a swipe
+
+        if (touchDiff > swipeThreshold) {
+            // Swiped left
+            goToBannerSlide(bannerCurrentIndex + 1);
+        } else if (touchDiff < -swipeThreshold) {
+            // Swiped right
+            goToBannerSlide(bannerCurrentIndex - 1);
+        }
+        startBannerAutoSwipe(); // Always restart the timer after user interaction
+    });
+}
+    
 function updateBalances() {
     // All balances are now in Stars
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
@@ -2770,6 +2962,7 @@ async function initializeApp() {
     updateUIBasedOnWallet(tonConnectWalletInfo || tonConnectUI.wallet);
     updateLoadingStatus("Loading game content...");
     renderHeader();
+    renderBanners();
     renderCasesAndSlots();
     renderProfile();
     renderLeaderboard();
