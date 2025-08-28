@@ -587,56 +587,48 @@ if bot: # Ensure bot instance exists
 
 # --- Replace the existing successful_payment_process function in your Python backend ---
 
+# --- Replace the existing successful_payment_process function ---
+
 @bot.message_handler(content_types=['successful_payment'])
 def successful_payment_process(message: types.Message):
-    """
-    Handles the successful payment message from Telegram.
-    This function credits the user's account with the purchased Stars
-    and applies the referral bonus to the referrer if applicable.
-    """
     payment_info = message.successful_payment
     currency = payment_info.currency
     total_amount = payment_info.total_amount
-    invoice_payload = payment_info.invoice_payload
     user_id = message.from_user.id
 
-    logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}. Payload: {invoice_payload}")
+    logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
 
     if currency == "XTR":
-        # This is a Telegram Stars payment.
-        # The 'total_amount' is the number of Stars purchased.
         stars_purchased = total_amount
         
-        # Calculate the equivalent TON value of this deposit for referral purposes
+        # Use Decimal for all calculations to maintain precision
         ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
 
         db = SessionLocal()
         try:
-            # Use with_for_update to lock the user's row during the transaction
             user = db.query(User).filter(User.id == user_id).with_for_update().first()
             if not user:
-                logger.error(f"Could not find user {user_id} in DB after successful payment!")
-                # Even if user not found, we must exit cleanly
+                logger.error(f"User {user_id} not found after successful payment!")
                 return
 
-            # Credit the depositor's account with the equivalent TON balance
-            user.ton_balance += float(ton_equivalent_deposit)
+            # Add to the user's balance
+            user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
             
-            # --- NEW REFERRAL LOGIC FOR STARS ---
             if user.referred_by_id:
-                # Find the referrer and lock their row as well to prevent race conditions
                 referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
                 if referrer:
-                    # Calculate the 10% bonus based on the TON equivalent of the deposit
-                    referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10')).quantize(Decimal('0.01'), ROUND_HALF_UP)
+                    # --- CORRECTED CALCULATION ---
+                    # Keep everything as Decimal until the final step
+                    referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10'))
                     
-                    # Add the bonus to the referrer's pending earnings
-                    referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + referral_bonus_ton)
+                    # Add the precise Decimal value to the referrer's pending earnings
+                    current_pending = Decimal(str(referrer.referral_earnings_pending))
+                    referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
+                    # --- END CORRECTION ---
                     
                     logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
                 else:
-                    logger.warning(f"Referrer with ID {user.referred_by_id} not found for user {user.id}. No bonus applied.")
-            # --- END OF NEW REFERRAL LOGIC ---
+                    logger.warning(f"Referrer {user.referred_by_id} not found for user {user.id}. No bonus applied.")
 
             db.commit()
             logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
@@ -645,7 +637,7 @@ def successful_payment_process(message: types.Message):
 
         except Exception as e:
             db.rollback()
-            logger.error(f"DATABASE ERROR while processing successful Stars payment for user {user_id}: {e}", exc_info=True)
+            logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
             bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
         finally:
             db.close()
@@ -2396,11 +2388,7 @@ def get_invited_friends_api():
     finally:
         db.close()
 
-# --- Replace the existing register_referral_api function in your Python backend ---
-
-# --- Replace the existing register_referral_api function in your Python backend ---
-
-# --- Replace the existing register_referral_api function ---
+# --- Replace the entire register_referral_api function in your Python backend with this ---
 
 @app.route('/api/register_referral', methods=['POST'])
 def register_referral_api():
@@ -2416,14 +2404,16 @@ def register_referral_api():
     
     db = next(get_db())
     try:
+        # Use with_for_update() to lock the referrer's row, preventing race conditions
         referrer = db.query(User).filter(User.referral_code == referral_code_used).with_for_update().first()
         if not referrer:
-            db.commit()
+            db.commit() # Commit any potential session changes before returning
             return jsonify({"error": "Referrer not found with this code."}), 404
 
-        # ... (user creation/finding logic remains the same) ...
+        # Find or create the user who clicked the link
         referred_user = db.query(User).filter(User.id == user_id).first()
         if not referred_user:
+            # Generate a new unique referral code for the new user
             new_referral_code_for_user = f"ref_{user_id}_{random.randint(1000,9999)}"
             while db.query(User).filter(User.referral_code == new_referral_code_for_user).first():
                 new_referral_code_for_user = f"ref_{user_id}_{random.randint(1000,9999)}"
@@ -2436,53 +2426,71 @@ def register_referral_api():
                 referral_code=new_referral_code_for_user
             )
             db.add(referred_user)
-            db.flush()
+            db.flush() # Flush to get the new user object ready for relationship assignment
         else:
+            # Update user info if it has changed
             if referred_user.username != username: referred_user.username = username
             if referred_user.first_name != first_name: referred_user.first_name = first_name
             if referred_user.last_name != last_name: referred_user.last_name = last_name
         
+        # Check if the user was already referred by someone
         if referred_user.referred_by_id:
             db.commit()
             return jsonify({"status": "already_referred", "message": "User was already referred."}), 200
         
+        # Prevent a user from referring themselves
         if referrer.id == referred_user.id:
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
 
-        # --- CORRECTED CALCULATION ---
+        # --- PRECISE BONUS CALCULATION ---
         star_bonus = 5
+        # Use Decimal for all financial calculations to maintain precision
         ton_equivalent_bonus = Decimal(str(star_bonus)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
 
-        # Add the precise Decimal value to the referrer's pending earnings
+        # Add the precise bonus to the referrer's PENDING earnings pool
         current_pending = Decimal(str(referrer.referral_earnings_pending))
         referrer.referral_earnings_pending = float(current_pending + ton_equivalent_bonus)
-        # --- END CORRECTION ---
         
+        # Establish the referral relationship
         referred_user.referred_by_id = referrer.id
         
+        # Send a notification to the referrer via the bot
         if bot:
             try:
-                # ... (notification logic remains the same) ...
                 new_user_display_name = referred_user.first_name or referred_user.username or f"User #{str(referred_user.id)[:6]}"
+                
                 notification_message = (
                     f"🎉 *New Referral!* 🎉\n\n"
                     f"Your friend *{new_user_display_name}* has joined using your link. "
                     f"You've earned a *+{star_bonus} Stars* bonus!\n\n"
                     f"You will also earn *10%* from their future deposits."
                 )
-                bot.send_message(chat_id=referrer.id, text=notification_message, parse_mode="Markdown")
+                
+                bot.send_message(
+                    chat_id=referrer.id,
+                    text=notification_message,
+                    parse_mode="Markdown"
+                )
                 logger.info(f"Sent referral notification. Added +{ton_equivalent_bonus:.4f} TON to PENDING for referrer {referrer.id}.")
+
             except Exception as e_notify:
+                # Log error but don't fail the transaction if notification fails (e.g., user blocked the bot)
                 logger.error(f"Failed to send referral notification to user {referrer.id}. Reason: {e_notify}")
 
+        # Commit all changes to the database
         db.commit()
-        logger.info(f"User {user_id} referred by {referrer.id}. Referrer received +{ton_equivalent_bonus:.4f} TON in pending.")
+        logger.info(f"User {user_id} successfully referred by {referrer.id}. Referrer received +{ton_equivalent_bonus:.4f} TON in pending earnings.")
+        
         return jsonify({"status": "success", "message": "Referral registered successfully."})
         
+    except IntegrityError as ie:
+        db.rollback()
+        logger.error(f"Integrity error registering referral for {user_id} with code {referral_code_used}: {ie}", exc_info=True)
+        return jsonify({"error": "Database integrity error, possibly concurrent registration."}), 409
     except Exception as e:
         db.rollback()
-        logger.error(f"Error in register_referral for user {user_id}: {e}", exc_info=True)
+        logger.error(f"Error registering referral for {user_id} with code {referral_code_used}: {e}", exc_info=True)
         return jsonify({"error": "Server error during referral registration."}), 500
     finally:
         db.close()
