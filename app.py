@@ -2649,6 +2649,8 @@ def withdraw_emoji_gift_api():
     finally:
         db.close()
 
+# --- Replace the existing open_case_api function in your Python backend ---
+
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2679,9 +2681,12 @@ def open_case_api():
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
         user_balance_ton = Decimal(str(user.ton_balance))
 
-        if user_balance_ton < total_cost_ton:
-            needed_stars = int(total_cost_ton * TON_TO_STARS_RATE_BACKEND)
-            return jsonify({"error": f"Not enough balance. Need {needed_stars} Stars"}), 400
+        # Convert user balance to stars for comparison
+        user_balance_stars = int(user_balance_ton * TON_TO_STARS_RATE_BACKEND)
+        total_cost_stars = int(total_cost_ton * TON_TO_STARS_RATE_BACKEND)
+
+        if user_balance_stars < total_cost_stars:
+            return jsonify({"error": f"Not enough balance. Need {total_cost_stars} Stars"}), 400
 
         user.ton_balance = float(user_balance_ton - total_cost_ton)
 
@@ -2704,20 +2709,21 @@ def open_case_api():
             prize_name = chosen_prize_info['name']
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
-
-            # --- UNIFIED GIFT HANDLING ---
-            # All items, including emojis, are now added to inventory.
             db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
-            image_url = EMOJI_GIFT_IMAGES.get(prize_name) or (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
+            # --- THIS IS THE KEY FIX ---
+            # Check if the prize is a special emoji gift and get its specific image URL
+            is_emoji = prize_name in EMOJI_GIFT_IMAGES
+            image_url = EMOJI_GIFT_IMAGES.get(prize_name) if is_emoji else (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
+            # --- END OF FIX ---
 
             inventory_item = InventoryItem(
                 user_id=uid,
                 nft_id=db_nft.id if db_nft else None,
                 item_name_override=prize_name,
-                item_image_override=image_url, # Use the determined URL
+                item_image_override=image_url, # Use the correctly determined URL
                 current_value=float(prize_value_ton),
-                is_ton_prize=False
+                is_ton_prize=False # All items from cases go to inventory first
             )
             db.add(inventory_item)
             db.flush()
@@ -2725,9 +2731,9 @@ def open_case_api():
             won_prizes_response_list.append({
                 "id": inventory_item.id,
                 "name": prize_name,
-                "imageFilename": inventory_item.item_image_override, # Send correct URL
+                "imageFilename": inventory_item.item_image_override, # Send the correct URL to the frontend
                 "currentValue": inventory_item.current_value,
-                "is_emoji_gift": prize_name in EMOJI_GIFT_IMAGES, # Send a helpful flag
+                "is_emoji_gift": is_emoji, # A helpful flag for the frontend
             })
 
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
