@@ -2229,7 +2229,10 @@ def validate_init_data(init_data_str: str, bot_token_for_validation: str) -> dic
 def index_route():
     return "Case Hunter API Backend is Running!"
 
-CHANNEL_ID = '@CompactTelegram' # Or your channel's ID: -100...
+# --- Replace the existing check_subscription_api function ---
+
+# Define your required channels at the top, near your other constants
+REQUIRED_CHANNELS = ['@CompactTelegram', '@GiftHunterNews']
 
 @app.route('/api/check_subscription', methods=['GET'])
 def check_subscription_api():
@@ -2240,23 +2243,26 @@ def check_subscription_api():
     user_id = auth["id"]
     
     if not bot:
-        # If the bot is not configured, we cannot check.
-        # Decide on your desired behavior: allow or deny.
-        # Allowing is a safe fallback for development.
-        return jsonify({"is_subscribed": True, "status": "bot_not_configured"})
+        # Fallback for development if the bot isn't configured
+        return jsonify({"is_subscribed": True, "missing": []})
 
-    try:
-        chat_member = bot.get_chat_member(CHANNEL_ID, user_id)
-        if chat_member.status in ['member', 'administrator', 'creator']:
-            return jsonify({"is_subscribed": True})
-        else:
-            return jsonify({"is_subscribed": False})
-    except Exception as e:
-        # This can happen if the user has never interacted with the bot,
-        # or if the bot is not an admin in the channel.
-        logger.error(f"Could not check subscription for user {user_id}: {e}")
-        # Again, decide on fallback behavior. Returning False is safer in production.
-        return jsonify({"is_subscribed": False, "error": "Could not verify subscription."})
+    missing_subscriptions = []
+    for channel_id in REQUIRED_CHANNELS:
+        try:
+            chat_member = bot.get_chat_member(channel_id, user_id)
+            if chat_member.status not in ['member', 'administrator', 'creator']:
+                missing_subscriptions.append(channel_id)
+        except Exception as e:
+            # This error often means the user is not in the channel or the bot lacks permissions
+            logger.warning(f"Could not verify subscription for user {user_id} in {channel_id}. Assuming not subscribed. Error: {e}")
+            missing_subscriptions.append(channel_id)
+            
+    if not missing_subscriptions:
+        # User is subscribed to all required channels
+        return jsonify({"is_subscribed": True, "missing": []})
+    else:
+        # User is missing one or more subscriptions
+        return jsonify({"is_subscribed": False, "missing": missing_subscriptions})
 
 @app.route('/api/get_user_data', methods=['POST'])
 def get_user_data_api():
