@@ -3329,54 +3329,127 @@ async def check_blockchain_for_deposit(pdep: PendingDeposit, db_sess: SessionLoc
         if prov:
             await prov.close_all()
 
+# --- Replace your existing verify_deposit_api function ---
+
 @app.route('/api/verify_deposit', methods=['POST'])
 def verify_deposit_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
-    if not auth:
-        return jsonify({"error": "Auth failed"}), 401
+    if not auth: return jsonify({"error": "Auth failed"}), 401
     
     uid = auth["id"]
     data = flask_request.get_json()
     pid = data.get('pending_deposit_id')
+    if not pid: return jsonify({"error": "Pending deposit ID required."}), 400
 
-    if not pid:
-        return jsonify({"error": "Pending deposit ID required."}), 400
-    
     db = next(get_db())
     try:
-        pdep = db.query(PendingDeposit).filter(PendingDeposit.id == pid, PendingDeposit.user_id == uid).with_for_update().first()
-        if not pdep:
-            return jsonify({"error": "Pending deposit not found or does not belong to your account."}), 404
-        
-        if pdep.status == 'completed':
-            usr = db.query(User).filter(User.id == uid).first()
-            return jsonify({"status":"success","message":"Deposit was already confirmed and credited.","new_balance_ton":usr.ton_balance if usr else 0})
-        
+        # Step 1: Get the necessary data from the DB
+        pdep = db.query(PendingDeposit).filter(PendingDeposit.id == pid, PendingDeposit.user_id == uid).first()
+        if not pdep: return jsonify({"error": "Pending deposit not found."}), 404
+        if pdep.status == 'completed': return jsonify({"status":"success", "message":"Deposit already confirmed."})
         if pdep.status == 'pending' and pdep.expires_at <= dt.now(timezone.utc):
             pdep.status = 'expired'
             db.commit()
-            logger.info(f"Deposit {pdep.id} marked as expired due to time-out on verification request.")
-            return jsonify({"status":"expired","message":"This deposit request has expired."}), 400
-            
-        result = {}
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(check_blockchain_for_deposit(pdep, db))
-        except Exception as e_async_exec:
-            logger.error(f"Asynchronous execution error during verify_deposit for {pid}: {e_async_exec}", exc_info=True)
-            return jsonify({"status":"error","message":"Server error during verification process. Please try again later."}), 500
-        finally:
-            loop.close()
-            
-        return jsonify(result)
-        
-    except Exception as e_outer:
-        db.rollback()
-        logger.error(f"Outer error in verify_deposit for {pid}: {e_outer}", exc_info=True)
-        return jsonify({"error": "Database error or unexpected issue during deposit verification."}), 500
+            return jsonify({"status":"expired", "message":"This deposit request has expired."})
     finally:
+        # Step 2: CLOSE the database connection BEFORE the slow network call
         db.close()
+
+    # Step 3: Perform the slow async network call with NO active DB connection
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    deposit_found = loop.run_until_complete(check_blockchain_for_deposit_simple(pdep)) # Use a simplified async function
+    loop.close()
+
+    # Step 4: If the deposit was found, open a NEW database connection to update the user
+    if deposit_found:
+        db_update = SessionLocal()
+        try:
+            # Re-fetch the records within a new transaction
+            pdep_update = db_update.query(PendingDeposit).filter(PendingDeposit.id == pid).with_for_update().first()
+            usr_update = db_update.query(User).filter(User.id == uid).with_for_update().first()
+            
+            if pdep_update and usr_update and pdep_update.status == 'pending':
+                usr_update.ton_balance = float(Decimal(str(usr_update.ton_balance)) + Decimal(str(pdep_update.original_amount_ton)))
+                pdep_update.status = 'completed'
+                # Handle referral bonus here as well
+                if usr_update.referred_by_id:
+                    referrer = db_update.query(User).filter(User.id == usr_update.referred_by_id).with_for_update().first()
+                    if referrer:
+                        referral_bonus = (Decimal(str(pdep_update.original_amount_ton)) * Decimal('0.10'))
+                        referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + referral_bonus)
+                
+                db_update.commit()
+                return jsonify({"status": "success", "message": "Deposit confirmed and credited!", "new_balance_ton": usr_update.ton_balance})
+            else:
+                db_update.rollback()
+                return jsonify({"status": "pending", "message": "Deposit found, but state changed. Please check again."})
+
+        except Exception as e:
+            db_update.rollback()
+            logger.error(f"Error updating DB after successful deposit check for {pid}: {e}", exc_info=True)
+            return jsonify({"status": "error", "message": "Verification successful, but failed to credit account. Please contact support."})
+        finally:
+            db_update.close()
+    else:
+        return jsonify({"status": "pending", "message": "Transaction not found. Please ensure you sent the exact amount with the correct comment."})
+
+# --- Add this new helper function to your Python backend ---
+
+async def check_blockchain_for_deposit_simple(pdep: PendingDeposit) -> bool:
+    """
+    Asynchronously checks the TON blockchain for a specific deposit.
+    This function does NOT interact with the database; it only performs network calls.
+    It returns True if a matching transaction is found, otherwise False.
+    """
+    prov = None
+    try:
+        # Establish connection to the TON blockchain
+        prov = LiteBalancer.from_mainnet_config(trust_level=2)
+        await prov.start_up()
+
+        # Fetch the last 50 transactions for the recipient address
+        # This count is usually sufficient to find a recent transaction
+        txs = await prov.get_transactions(DEPOSIT_RECIPIENT_ADDRESS_RAW, count=50)
+        
+        deposit_found = False
+        for tx in txs:
+            # We only care about incoming internal messages (standard TON transfers)
+            if not tx.in_msg or not tx.in_msg.is_internal:
+                continue
+            
+            # Check if the transaction time is within a reasonable window of the deposit request
+            tx_time = dt.fromtimestamp(tx.now, tz=timezone.utc)
+            if not (pdep.created_at - timedelta(minutes=5) <= tx_time <= pdep.expires_at + timedelta(minutes=5)):
+                continue
+
+            tx_comment = ""
+            try:
+                # Attempt to parse the comment from the transaction body
+                cmt_slice = tx.in_msg.body.begin_parse()
+                # Check for the standard text comment prefix (0x00000000)
+                if cmt_slice.remaining_bits >= 32 and cmt_slice.load_uint(32) == 0:
+                    tx_comment = cmt_slice.load_snake_string()
+            except Exception:
+                # If parsing fails (e.g., it's a binary comment or no comment), just skip it
+                continue
+            
+            # The core matching logic:
+            if tx_comment == pdep.expected_comment and tx.in_msg.info.value_coins == pdep.final_amount_nano_ton:
+                logger.info(f"MATCH FOUND for deposit ID {pdep.id}: Comment '{pdep.expected_comment}' and amount {pdep.final_amount_nano_ton} nTON.")
+                deposit_found = True
+                break # Exit the loop as soon as we find the correct transaction
+
+        return deposit_found
+
+    except Exception as e_bc_check:
+        logger.error(f"Blockchain check network error for deposit {pdep.id}: {e_bc_check}", exc_info=True)
+        # In case of a network error, we assume the deposit was not found to be safe
+        return False
+    finally:
+        # Ensure the blockchain provider connection is always closed
+        if prov:
+            await prov.close_all()
 
 @app.route('/api/request_manual_withdrawal', methods=['POST'])
 def request_manual_withdrawal_api():
