@@ -1613,13 +1613,16 @@ function showTGNotification(message, type = 'info') {
     }
 }
 
+// --- Replace the existing checkSubscription function ---
 async function checkSubscription() {
     try {
+        // This now returns the full object: { is_subscribed: boolean, missing: [...] }
         const response = await apiRequest('/api/check_subscription', 'GET');
-        return response.is_subscribed;
+        return response;
     } catch (error) {
         console.error("Subscription check failed:", error);
-        return true; // Default to allowing action if check fails
+        // Default to allowing action if the API check itself fails
+        return { is_subscribed: true, missing: [] };
     }
 }
     
@@ -1983,17 +1986,35 @@ function getItemValue(prizeObject) {
 }
 // --- In your <script> tag in index.html ---
 
+// --- Replace the existing spinRoulette function ---
 async function spinRoulette() {
     if (!currentOpenCaseOrSlot) return;
 
-    const isSubscribed = await checkSubscription();
-    if (!isSubscribed) {
-        Telegram.WebApp.showConfirm("Please subscribe to @CompactTelegram to spin the case.", (ok) => {
-            if (ok) {
-                Telegram.WebApp.openTelegramLink('https://t.me/CompactTelegram');
+    // The check now returns a detailed status object
+    const subStatus = await checkSubscription();
+
+    if (!subStatus.is_subscribed) {
+        // Dynamically create buttons for each missing channel
+        const popupButtons = subStatus.missing.map(channelHandle => ({
+            id: channelHandle, // We'll use the handle as the button ID
+            type: 'default',
+            text: `Join ${channelHandle}`
+        }));
+        // Add a cancel button
+        popupButtons.push({ type: 'cancel' });
+
+        Telegram.WebApp.showPopup({
+            title: 'Subscription Required',
+            message: 'Please subscribe to our channels to spin the case and receive news!',
+            buttons: popupButtons
+        }, (buttonId) => {
+            // If a channel button was clicked (not cancel)
+            if (buttonId) {
+                const url = 'https://t.me/' + buttonId.replace('@', '');
+                Telegram.WebApp.openTelegramLink(url);
             }
         });
-        return;
+        return; // Stop the function here
     }
 
     spinButton.disabled = true;
