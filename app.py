@@ -2427,6 +2427,8 @@ def get_invited_friends_api():
     finally:
         db.close()
 
+# --- Replace the existing register_referral_api function in your Python backend ---
+
 @app.route('/api/register_referral', methods=['POST'])
 def register_referral_api():
     data = flask_request.get_json()
@@ -2441,6 +2443,12 @@ def register_referral_api():
     
     db = next(get_db())
     try:
+        # Use with_for_update() on the referrer to prevent race conditions
+        referrer = db.query(User).filter(User.referral_code == referral_code_used).with_for_update().first()
+        if not referrer:
+            db.commit() # Commit any potential session changes before returning
+            return jsonify({"error": "Referrer not found with this code."}), 404
+
         # Find or create the user who clicked the link
         referred_user = db.query(User).filter(User.id == user_id).first()
         if not referred_user:
@@ -2466,50 +2474,47 @@ def register_referral_api():
         if referred_user.referred_by_id:
             db.commit()
             return jsonify({"status": "already_referred", "message": "User was already referred."}), 200
-
-        # Find the referrer (the user who owns the code)
-        referrer = db.query(User).filter(User.referral_code == referral_code_used).first()
-        if not referrer:
-            db.commit()
-            return jsonify({"error": "Referrer not found with this code."}), 404
         
         # Prevent self-referral
         if referrer.id == referred_user.id:
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
 
+        # --- NEW LOGIC: Add bonus and send notification ---
+        star_bonus = 5
+        ton_equivalent_bonus = star_bonus / TON_TO_STARS_RATE_BACKEND
+
+        # Add the bonus to the referrer's main TON balance
+        referrer.ton_balance += ton_equivalent_bonus
+        
         # Establish the referral link
         referred_user.referred_by_id = referrer.id
         
-        # --- NEW: Send notification to the referrer ---
-        if bot: # Check if the bot instance is initialized
+        if bot:
             try:
-                # Get a clean display name for the new user
                 new_user_display_name = referred_user.first_name or referred_user.username or f"User #{str(referred_user.id)[:6]}"
                 
-                # Construct the notification message
+                # Update the notification message to include the star bonus
                 notification_message = (
                     f"🎉 *New Referral!* 🎉\n\n"
-                    f"A new friend, *{new_user_display_name}*, has joined using your referral link.\n\n"
-                    f"You will earn *10%* from their deposits!"
+                    f"Your friend *{new_user_display_name}* has joined using your link. "
+                    f"You've received a *+{star_bonus} Stars* bonus!\n\n"
+                    f"You will also earn *10%* from their future deposits."
                 )
                 
-                # Send the message to the referrer
                 bot.send_message(
-                    chat_id=referrer.id,  # This is the user ID of the person who gets the notification
+                    chat_id=referrer.id,
                     text=notification_message,
                     parse_mode="Markdown"
                 )
-                logger.info(f"Sent referral notification to referrer {referrer.id} for new user {referred_user.id}.")
+                logger.info(f"Sent referral notification and +{star_bonus} Stars bonus to referrer {referrer.id} for new user {referred_user.id}.")
 
             except Exception as e_notify:
-                # Log the error but don't fail the entire transaction.
-                # This can happen if the referrer has blocked the bot.
                 logger.error(f"Failed to send referral notification to user {referrer.id}. Reason: {e_notify}")
-        # --- End of new notification logic ---
+        # --- END OF NEW LOGIC ---
 
         db.commit()
-        logger.info(f"User {user_id} successfully referred by {referrer.id} using code {referral_code_used}")
+        logger.info(f"User {user_id} successfully referred by {referrer.id}. Referrer received +{ton_equivalent_bonus} TON ({star_bonus} Stars).")
         
         return jsonify({"status": "success", "message": "Referral registered successfully."}), 200
     except IntegrityError as ie:
