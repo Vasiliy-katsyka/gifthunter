@@ -3497,7 +3497,7 @@ def withdraw_referral_earnings_api():
         if total_lifetime_deposited_ton < MIN_LIFETIME_DEPOSIT_TON:
             return jsonify({
                 "status": "error",
-                "message": f"You must have a lifetime deposit total of at least {MIN_LIFETIME_DEPOSIT_STARS} Stars to withdraw referral earnings."
+                "message": f"Для вывода реферального заработка вам необходимо сделать депозит минимум {MIN_LIFETIME_DEPOSIT_STARS}⭐ за весь период."
             }), 403 # 403 Forbidden is a good status code
         # --- END OF THE NEW LOGIC ---
 
