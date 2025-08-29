@@ -1633,12 +1633,22 @@ function updateUIBasedOnWallet(wallet) {
         profileElements.walletAddress.textContent = 'Not Connected';
         profileElements.disconnectWalletButton.style.display = 'none';
     }
+    
     if (dataFetchedSuccessfully) {
         updateBalances();
         renderProfile();
     } else {
-        headerElements.tonBalanceSpan.textContent = `0.00`;
-        profileElements.balanceDisplay.innerHTML = `0.00 TON`;
+        // --- START OF THE FIX ---
+        // Correctly reference 'starBalanceSpan' and set a placeholder value for stars.
+        // This runs if the wallet connects before user data is fully loaded.
+        headerElements.starBalanceSpan.textContent = '0';
+        
+        // Also update the profile page placeholder correctly without destroying the star icon.
+        const profileBalanceSpan = document.querySelector('#profile-balance-display span');
+        if (profileBalanceSpan) {
+            profileBalanceSpan.textContent = '0';
+        }
+        // --- END OF THE FIX ---
     }
 }
 function renderCasesAndSlots() {
