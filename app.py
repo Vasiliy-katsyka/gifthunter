@@ -2282,6 +2282,9 @@ def get_invited_friends_api():
 
 # --- Find and REPLACE the entire register_referral_api function ---
 
+# --- In app.py ---
+
+# --- Find and REPLACE the entire register_referral_api function ---
 @app.route('/api/register_referral', methods=['POST'])
 def register_referral_api():
     data = flask_request.get_json()
@@ -2326,6 +2329,7 @@ def register_referral_api():
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
 
+        # --- THIS LOGIC IS ALREADY CORRECT - Adding bonus to PENDING earnings ---
         star_bonus = 5
         ton_equivalent_bonus = Decimal(str(star_bonus)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
 
@@ -2336,21 +2340,19 @@ def register_referral_api():
         
         if bot:
             try:
-                # --- START OF THE MODIFICATION ---
-                # Check if the referrer is a special user to customize the notification message
-                referral_rate_percent = int(DEFAULT_REFERRAL_RATE * 100) # Default to 10%
+                referral_rate_percent = int(DEFAULT_REFERRAL_RATE * 100)
                 if referrer.username and referrer.username.lower() in (name.lower() for name in SPECIAL_REFERRAL_RATES.keys()):
                     special_rate = SPECIAL_REFERRAL_RATES[referrer.username.lower()]
                     referral_rate_percent = int(special_rate * 100)
-                # --- END OF THE MODIFICATION ---
 
                 new_user_display_name = referred_user.first_name or referred_user.username or f"User #{str(referred_user.id)[:6]}"
                 
+                # The message correctly implies the bonus is part of the referral system, not direct balance.
                 notification_message = (
                     f"🎉 *New Referral!* 🎉\n\n"
                     f"Your friend *{new_user_display_name}* has joined using your link. "
-                    f"You've earned a *+{star_bonus} Stars* bonus!\n\n"
-                    f"You will also earn *{referral_rate_percent}%* from their future deposits." # Customized percentage
+                    f"A *+{star_bonus} Stars* bonus has been added to your referral earnings!\n\n"
+                    f"You will also earn *{referral_rate_percent}%* from their future deposits."
                 )
                 
                 bot.send_message(chat_id=referrer.id, text=notification_message, parse_mode="Markdown")
@@ -3440,6 +3442,9 @@ def get_leaderboard_api():
     finally:
         db.close()
 
+# --- In app.py ---
+
+# --- Find and REPLACE the entire withdraw_referral_earnings_api function ---
 @app.route('/api/withdraw_referral_earnings', methods=['POST'])
 def withdraw_referral_earnings_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3453,21 +3458,50 @@ def withdraw_referral_earnings_api():
         if not user:
             return jsonify({"error": "User not found."}), 404
         
+        # --- START OF THE NEW LOGIC ---
+        # Define the withdrawal requirements
+        MIN_DEPOSIT_STARS = 200
+        MIN_DEPOSIT_TON = Decimal(str(MIN_DEPOSIT_STARS)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+        TIME_WINDOW = timedelta(hours=24)
+        
+        # Calculate the start of the 24-hour window
+        twenty_four_hours_ago = dt.now(timezone.utc) - TIME_WINDOW
+        
+        # Query for completed deposits within the time window for this user
+        recent_deposits = db.query(PendingDeposit).filter(
+            PendingDeposit.user_id == uid,
+            PendingDeposit.status == 'completed',
+            PendingDeposit.created_at >= twenty_four_hours_ago
+        ).all()
+        
+        # Sum the total amount of recent deposits
+        total_deposited_recently_ton = sum(Decimal(str(d.original_amount_ton)) for d in recent_deposits)
+        
+        # Check if the user meets the deposit requirement
+        if total_deposited_recently_ton < MIN_DEPOSIT_TON:
+            return jsonify({
+                "status": "error",
+                "message": f"You must deposit at least {MIN_DEPOSIT_STARS} Stars within the last 24 hours to withdraw referral earnings."
+            }), 403 # 403 Forbidden is a good status code for this
+        # --- END OF THE NEW LOGIC ---
+
         if user.referral_earnings_pending > 0:
-            withdrawn_amount = Decimal(str(user.referral_earnings_pending))
-            withdrawn_stars = int(withdrawn_amount * Decimal(TON_TO_STARS_RATE_BACKEND))
-            user.ton_balance = float(Decimal(str(user.ton_balance)) + withdrawn_amount)
+            withdrawn_amount_ton = Decimal(str(user.referral_earnings_pending))
+            withdrawn_stars = int(withdrawn_amount_ton * Decimal(TON_TO_STARS_RATE_BACKEND))
+            
+            user.ton_balance = float(Decimal(str(user.ton_balance)) + withdrawn_amount_ton)
             user.referral_earnings_pending = 0.0
             
             db.commit()
             return jsonify({
                 "status":"success",
-                "message":f"{withdrawn_stars} Stars in referral earnings have been added to your main balance.",
+                "message":f"{withdrawn_stars} Stars from your referral earnings have been added to your main balance.",
                 "new_balance_ton":user.ton_balance,
                 "new_referral_earnings_pending":0.0
             })
         else:
-            return jsonify({"status":"no_earnings","message":"No referral earnings to withdraw."})
+            return jsonify({"status":"no_earnings","message":"You have no referral earnings to withdraw."})
+            
     except Exception as e:
         db.rollback()
         logger.error(f"Error withdrawing referral earnings for user {uid}: {e}", exc_info=True)
