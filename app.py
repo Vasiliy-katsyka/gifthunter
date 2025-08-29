@@ -2347,6 +2347,11 @@ def register_referral_api():
         db.close()
 
 # --- FULLY UPDATED: initiate_stars_deposit_api (with error handling and lower limit) ---
+# --- In app.py ---
+
+# ... (keep all code before this route) ...
+
+# --- Find and REPLACE the initiate_stars_deposit_api function ---
 @app.route('/api/initiate_stars_deposit', methods=['POST'])
 def initiate_stars_deposit_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2359,9 +2364,13 @@ def initiate_stars_deposit_api():
 
     try:
         amount_stars_int = int(amount_stars)
-        # --- NEW LIMIT ---
-        if not (5 <= amount_stars_int <= 10000):
-             return jsonify({"error": "Amount must be between 5 and 10,000 Stars."}), 400
+        
+        # --- START OF THE CHANGE ---
+        # Enforce the new minimum of 50 Stars. The maximum is set by Telegram.
+        if not (50 <= amount_stars_int <= 10000):
+             return jsonify({"error": "Amount must be between 50 and 10,000 Stars."}), 400
+        # --- END OF THE CHANGE ---
+             
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid amount for Stars."}), 400
 
@@ -2387,7 +2396,6 @@ def initiate_stars_deposit_api():
         return jsonify({"status": "success", "invoice_link": invoice_link})
 
     except Exception as e:
-        # Check for the specific "bot was blocked" error
         if 'bot was blocked by the user' in str(e):
             logger.warning(f"Failed to create invoice for user {uid}, likely because they haven't started the bot. Error: {e}")
             return jsonify({
@@ -2400,6 +2408,7 @@ def initiate_stars_deposit_api():
     finally:
         db.close()
 
+# ... (the rest of your code remains unchanged) ...
 # NEW API Endpoint to fetch gift listings
 @app.route('/api/tonnel_gift_listings/<int:inventory_item_id>', methods=['GET'])
 def get_tonnel_gift_listings_api(inventory_item_id):
