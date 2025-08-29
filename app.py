@@ -54,7 +54,7 @@ UPGRADE_MIN_CHANCE = Decimal('3.0')   # Minimum possible chance in %
 # e.g., 0.60 means for X=2, chance is MaxChance*0.6; for X=3, chance is MaxChance*0.6*0.6
 UPGRADE_RISK_FACTOR = Decimal('0.60')
 
-RTP_TARGET = Decimal('0.85') # 85% Return to Player target for all cases and slots
+RTP_TARGET = Decimal('0.65') # 85% Return to Player target for all cases and slots
 TON_TO_STARS_RATE_BACKEND = 250
 PAYMENT_PROVIDER_TOKEN = "" # Add this to your .env file!
 
