@@ -2066,10 +2066,6 @@ async function spinRoulette() {
 
     try {
         const result = await apiRequest('/api/open_case', 'POST', { case_id: currentOpenCaseOrSlot.id, multiplier: selectedCaseMultiplier });
-
-        // API call is back, re-enable the button
-        spinButton.disabled = false;
-        updateSpinButtonText();
         
         // IMPORTANT: Sync with the true balance from the server
         currentUser.tonBalance = result.new_balance_ton;
@@ -2168,6 +2164,9 @@ async function spinRoulette() {
                 });
                 renderInventory();
                 showWinOverlay(result.won_prizes);
+
+                spinButton.disabled = false;
+                updateSpinButtonText();
 
                 activeSpinners.forEach(spinnerReel => {
                     const currentTop = parseFloat(spinnerReel.style.top.replace('px', ''));
