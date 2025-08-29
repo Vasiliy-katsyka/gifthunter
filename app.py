@@ -284,181 +284,100 @@ Base.metadata.create_all(bind=engine)
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False) if BOT_TOKEN else None
 
+# --- In app.py ---
+
+# Make sure you have this import at the top of your file with the others
+import threading
+
+# ... (keep all your existing code, models, and constants before this line) ...
+
 if bot: # Ensure bot instance exists
+
+    # --- Robust Bot Handlers for High-Load Environments ---
+
+    def register_referral_in_background(user_data):
+        """
+        This function runs in a separate thread to avoid blocking the bot.
+        It handles the API call to register a new referral.
+        """
+        try:
+            import requests
+            # The bot calls its own backend API to register the referral relationship
+            response = requests.post(f"{API_BASE_URL}/api/register_referral", json=user_data, timeout=30) # Increased timeout for safety
+            if response.status_code == 200:
+                logger.info(f"Background referral for user {user_data['user_id']} SUCCESS. Response: {response.json()}")
+            else:
+                logger.error(f"Background referral for user {user_data['user_id']} FAILED. Status: {response.status_code}, Response: {response.text}")
+        except Exception as e_api:
+            logger.error(f"Background API call to /api/register_referral failed for user {user_data['user_id']}: {e_api}")
+
+
     @bot.message_handler(commands=['start'])
     def send_welcome(message):
-        user_id = message.chat.id
-        tg_user = message.from_user
-        username = tg_user.username
-        first_name = tg_user.first_name
-        last_name = tg_user.last_name
-
-        logger.info(f"User {user_id} ({username or first_name}) started the bot. Message: {message.text}")
-
-        referral_code_found = None
+        """
+        Handles the /start command. Responds instantly and processes referrals
+        in the background to avoid timeouts under heavy load.
+        """
         try:
-            # The message will be "/start" or "/start ref_..."
-            command_parts = message.text.split(' ')
-            if len(command_parts) > 1 and command_parts[1].startswith('ref_'):
-                referral_code_found = command_parts[1]
-        except Exception as e:
-            logger.error(f"Error parsing start parameter for user {user_id}: {e}")
+            user_id = message.chat.id
+            tg_user = message.from_user
+            logger.info(f"User {user_id} ({tg_user.username or tg_user.first_name}) started the bot. Message: {message.text}")
 
-        if referral_code_found:
-            logger.info(f"User {user_id} initiated start with referral code: {referral_code_found}")
-            # The existing API endpoint /api/register_referral will handle the logic
+            # Check for referral code and queue background processing if found
+            referral_code_found = None
             try:
-                import requests
-                api_payload = {
-                    "user_id": user_id,
-                    "username": username,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "referral_code": referral_code_found
-                }
-                # The bot calls its own backend API to register the referral relationship
-                response = requests.post(f"{API_BASE_URL}/api/register_referral", json=api_payload, timeout=10)
-                if response.status_code == 200:
-                    logger.info(f"Successfully processed referral for user {user_id} with code {referral_code_found}. Response: {response.json()}")
-                else:
-                    logger.error(f"Failed to process referral for user {user_id}. Status: {response.status_code}, Response: {response.text}")
-            except Exception as e_api:
-                logger.error(f"API call to /api/register_referral failed for user {user_id}: {e_api}")
-
-        # This part remains the same, sending the welcome message and the button to open the Web App
-        markup = types.InlineKeyboardMarkup()
-        web_app_info = types.WebAppInfo(url=WEBAPP_URL)
-        app_button = types.InlineKeyboardButton(text="🎮 Open Case Hunter", web_app=web_app_info)
-        markup.add(app_button)
-
-        bot.send_photo(
-            message.chat.id,
-            photo="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250825_191850_208.jpg?raw=true",
-            caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
-            reply_markup=markup
-        )
-
-    @bot.message_handler(commands=['admin'])
-    def admin_panel_command(message):
-        if message.chat.id not in ADMIN_USER_IDS:
-            bot.reply_to(message, "You are not authorized to use this command.")
-            logger.warning(f"Unauthorized /admin attempt by user {message.chat.id}")
-            return
-    
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
-        view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-        stats_button = types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
-        mailing_list_button = types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list")
-        markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
-        bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-    
-    # --- Admin Callback Query Handler ---
-    # --- Replace the entire admin_callback_handler function ---
-    
-    # --- Replace your existing admin callback handler(s) with this single function ---
-    
-    @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
-    def admin_callback_handler(call):
-        user_id = call.from_user.id
-        if user_id not in ADMIN_USER_IDS:
-            bot.answer_callback_query(call.id, "Unauthorized action.")
-            return
-    
-        action = call.data
-        bot.answer_callback_query(call.id)  # Acknowledge callback early
-    
-        # --- Main Menu Navigation ---
-        if action == "admin_mailing_list":
-            handle_mailing_list(call.message)
-            return # Stop further processing
-    
-        if action == "admin_stats":
-            handle_statistics(call.message)
-            return
-    
-        if action == "admin_view_promos":
-            handle_view_all_promos(call.message)
-            return
-    
-        if action == "admin_back_to_menu":
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
-            view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-            stats_button = types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
-            mailing_list_button = types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list")
-            markup.add(new_promo_button, view_promos_button, stats_button, mailing_list_button)
-            try:
-                bot.edit_message_text("👑 Admin Panel 👑", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+                command_parts = message.text.split(' ')
+                if len(command_parts) > 1 and command_parts[1].startswith('ref_'):
+                    referral_code_found = command_parts[1]
             except Exception as e:
-                logger.debug(f"Could not edit message for admin_back_to_menu, sending new: {e}")
-                bot.send_message(call.message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-            return
-            
-        # --- Actions that start a 'next_step_handler' ---
-        if action == "admin_new_promo":
-            msg_prompt = bot.send_message(user_id,
-                                   "Please enter the new promocode details in the format:\n"
-                                   "`promoname activations prize_ton`\n\n"
-                                   "Type /cancel to abort.",
-                                   parse_mode="Markdown")
-            bot.register_next_step_handler(msg_prompt, process_new_promo_creation)
-            return
-            
-        if action == "admin_create_mailing":
-            prompt_text = (
-                "Send me the message for the mailing. You can include text, an image, a video, or a GIF.\n\n"
-                "To add an inline button, add this on a *new line* at the end:\n"
-                "`button: Button Text | https://your-url.com`"
+                logger.error(f"Error parsing start parameter for user {user_id}: {e}")
+
+            if referral_code_found:
+                logger.info(f"User {user_id} queueing background referral with code: {referral_code_found}")
+                api_payload = {
+                    "user_id": user_id, "username": tg_user.username, "first_name": tg_user.first_name,
+                    "last_name": tg_user.last_name, "referral_code": referral_code_found
+                }
+                # Create and start a new thread to run the registration
+                thread = threading.Thread(target=register_referral_in_background, args=(api_payload,))
+                thread.start()
+
+            # --- Send immediate response to the user ---
+            markup = types.InlineKeyboardMarkup()
+            web_app_info = types.WebAppInfo(url=WEBAPP_URL)
+            app_button = types.InlineKeyboardButton(text="🎮 Open Case Hunter", web_app=web_app_info)
+            markup.add(app_button)
+
+            bot.send_photo(
+                message.chat.id,
+                photo="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250825_191850_208.jpg?raw=true",
+                caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
+                reply_markup=markup
             )
-            msg = bot.send_message(call.from_user.id, prompt_text, parse_mode="Markdown")
-            bot.register_next_step_handler(msg, process_mailing_message)
-            return
-    
-        # --- Actions with dynamic parts (like IDs) ---
-        if action.startswith("admin_promo_detail_"):
-            promo_code_id_str = action.split("admin_promo_detail_")[1]
-            try:
-                promo_code_id = int(promo_code_id_str)
-                handle_view_promo_detail(call.message, promo_code_id)
-            except ValueError:
-                logger.error(f"Invalid promo_code_id in callback: {promo_code_id_str}")
-                bot.send_message(call.message.chat.id, "Error: Invalid promo code identifier.")
-            return
-    
-        if action.startswith("admin_send_mailing_"):
-            message_id = int(call.data.split('_')[-1])
-            bot.edit_message_text(f"Mailing #{message_id} is now being sent...", chat_id=call.message.chat.id, message_id=call.message.message_id)
-            
-            import threading
-            threading.Thread(target=send_mailing, args=(message_id,)).start()
-            return
-        
-    # --- New functions for admin panel ---
-    
+        except Exception as e:
+            # This is crucial: Catches errors like "bot was blocked" and just logs them
+            # without crashing the whole application.
+            logger.warning(f"Could not send welcome message to {message.chat.id}. User may have blocked the bot. Error: {e}")
+
+
+    # --- All other bot handlers now follow the same robust, top-level pattern ---
+
     def handle_statistics(message_to_edit):
-        db = SessionLocal()
         try:
+            db = SessionLocal()
             today = dt.now(timezone.utc).date()
             daily_stats = db.query(DailyStats).filter(func.date(DailyStats.date) == today).first()
             all_time_stats = db.query(AllTimeStats).first()
     
-            stats_text = "📊 *Statistics*\n\n"
-            stats_text += "*Today's Stats:*\n"
+            stats_text = "📊 *Statistics*\n\n*Today's Stats:*\n"
             if daily_stats:
-                stats_text += f"- New Users: {daily_stats.new_users}\n"
-                stats_text += f"- Cases Opened: {daily_stats.cases_opened}\n"
-                stats_text += f"- TON Deposited: {daily_stats.ton_deposited:.2f}\n"
-                stats_text += f"- TON Won: {daily_stats.ton_won:.2f}\n"
+                stats_text += f"- New Users: {daily_stats.new_users}\n- Cases Opened: {daily_stats.cases_opened}\n- TON Deposited: {daily_stats.ton_deposited:.2f}\n- TON Won: {daily_stats.ton_won:.2f}\n"
             else:
                 stats_text += "- No stats for today yet.\n"
     
             stats_text += "\n*All-Time Stats:*\n"
             if all_time_stats:
-                stats_text += f"- Total Users: {all_time_stats.total_users}\n"
-                stats_text += f"- Total Cases Opened: {all_time_stats.total_cases_opened}\n"
-                stats_text += f"- Total TON Deposited: {all_time_stats.total_ton_deposited:.2f}\n"
-                stats_text += f"- Total TON Won: {all_time_stats.total_ton_won:.2f}\n"
+                stats_text += f"- Total Users: {all_time_stats.total_users}\n- Total Cases Opened: {all_time_stats.total_cases_opened}\n- Total TON Deposited: {all_time_stats.total_ton_deposited:.2f}\n- Total TON Won: {all_time_stats.total_ton_won:.2f}\n"
             else:
                 stats_text += "- No all-time stats yet.\n"
     
@@ -470,379 +389,259 @@ if bot: # Ensure bot instance exists
             logger.error(f"Error in handle_statistics: {e}")
             bot.send_message(message_to_edit.chat.id, "Error fetching statistics.")
         finally:
-            db.close()
-    
+            if 'db' in locals(): db.close()
+
     def handle_mailing_list(message_to_edit):
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Create New Mailing", callback_data="admin_create_mailing"))
-        markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
-        bot.edit_message_text("✉️ *Mailing List*\n\nCreate and send a message to your users.", chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
-    
-    # --- Replace the process_mailing_message function ---
-    
-    def process_mailing_message(message):
-        message_text = message.text or message.caption
-        file_id = None
-        file_type = None
-        button_text = None
-        button_url = None
-    
-        # Regex to find the button definition line, e.g., "button: Visit Us | https://google.com"
-        button_regex = re.compile(r'^\s*button:\s*(.+?)\s*\|\s*(https?://\S+)\s*$', re.MULTILINE | re.IGNORECASE)
-    
-        if message_text:
-            match = button_regex.search(message_text)
-            if match:
-                button_text = match.group(1).strip()
-                button_url = match.group(2).strip()
-                # Remove the button definition line from the final message text
-                message_text = button_regex.sub('', message_text).strip()
-    
-        if message.photo:
-            file_id = message.photo[-1].file_id
-            file_type = 'photo'
-        elif message.video:
-            file_id = message.video.file_id
-            file_type = 'video'
-        elif message.animation:
-            file_id = message.animation.file_id
-            file_type = 'animation'
-    
-        db = SessionLocal()
         try:
+            markup = types.InlineKeyboardMarkup()
+            markup.add(types.InlineKeyboardButton("Create New Mailing", callback_data="admin_create_mailing"))
+            markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
+            bot.edit_message_text("✉️ *Mailing List*\n\nCreate and send a message to your users.", chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Error in handle_mailing_list: {e}")
+
+    def process_mailing_message(message):
+        try:
+            message_text = message.text or message.caption
+            file_id, file_type, button_text, button_url = None, None, None, None
+            button_regex = re.compile(r'^\s*button:\s*(.+?)\s*\|\s*(https?://\S+)\s*$', re.MULTILINE | re.IGNORECASE)
+
+            if message_text:
+                match = button_regex.search(message_text)
+                if match:
+                    button_text, button_url = match.group(1).strip(), match.group(2).strip()
+                    message_text = button_regex.sub('', message_text).strip()
+
+            if message.photo: file_id, file_type = message.photo[-1].file_id, 'photo'
+            elif message.video: file_id, file_type = message.video.file_id, 'video'
+            elif message.animation: file_id, file_type = message.animation.file_id, 'animation'
+
+            db = SessionLocal()
             new_mailing = MailingListMessage(
-                message_text=message_text,
-                file_id=file_id,
-                file_type=file_type,
-                button_text=button_text,   # Save button text
-                button_url=button_url,     # Save button URL
-                sent_by=message.from_user.id
+                message_text=message_text, file_id=file_id, file_type=file_type,
+                button_text=button_text, button_url=button_url, sent_by=message.from_user.id
             )
             db.add(new_mailing)
             db.commit()
             db.refresh(new_mailing)
-    
+
             markup = types.InlineKeyboardMarkup()
             markup.add(types.InlineKeyboardButton(f"🚀 Send Mailing #{new_mailing.id}", callback_data=f"admin_send_mailing_{new_mailing.id}"))
             bot.send_message(message.from_user.id, f"Mailing #{new_mailing.id} created. Ready to send.", reply_markup=markup)
-    
         except Exception as e:
             logger.error(f"Error creating mailing: {e}")
             bot.send_message(message.from_user.id, "Error creating mailing.")
         finally:
-            db.close()
-    
-    # --- Replace the send_mailing function ---
-    
+            if 'db' in locals(): db.close()
+            
     def send_mailing(message_id):
+        # This function is already run in a thread, so errors here are less critical
+        # but good practice to keep the try/except.
         db = SessionLocal()
         try:
             mailing_message = db.query(MailingListMessage).filter(MailingListMessage.id == message_id).first()
             if not mailing_message:
                 logger.error(f"Mailing message with id {message_id} not found.")
                 return
-    
+
             users_to_send = db.query(User).all()
             for user in users_to_send:
-                try:
-                    # --- NEW: Construct the inline button if it exists ---
+                try: # Inner try/except to continue sending even if one user fails
                     reply_markup = None
                     if mailing_message.button_text and mailing_message.button_url:
                         markup = types.InlineKeyboardMarkup()
                         button = types.InlineKeyboardButton(text=mailing_message.button_text, url=mailing_message.button_url)
                         markup.add(button)
                         reply_markup = markup
-                    # --- END NEW LOGIC ---
-    
-                    # Pass the reply_markup to the send methods
-                    if mailing_message.file_type == 'photo':
-                        bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
-                    elif mailing_message.file_type == 'video':
-                        bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
-                    elif mailing_message.file_type == 'animation':
-                        bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
-                    else:
-                        bot.send_message(user.id, mailing_message.message_text, reply_markup=reply_markup)
-    
-                    # Log that the message was sent to this user
-                    sent_status = MailingListUserStatus(message_id=message_id, user_id=user.id)
-                    db.add(sent_status)
+                    
+                    if mailing_message.file_type == 'photo': bot.send_photo(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
+                    elif mailing_message.file_type == 'video': bot.send_video(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
+                    elif mailing_message.file_type == 'animation': bot.send_animation(user.id, mailing_message.file_id, caption=mailing_message.message_text, reply_markup=reply_markup)
+                    else: bot.send_message(user.id, mailing_message.message_text, reply_markup=reply_markup)
+                    
+                    db.add(MailingListUserStatus(message_id=message_id, user_id=user.id))
                     db.commit()
-    
                 except Exception as e:
-                    logger.error(f"Could not send mailing to user {user.id}: {e}")
+                    logger.warning(f"Could not send mailing to user {user.id} (they may have blocked the bot). Error: {e}")
                     db.rollback()
-    
         except Exception as e:
-            logger.error(f"Error in send_mailing: {e}")
+            logger.error(f"Critical error in send_mailing task for message_id {message_id}: {e}")
         finally:
-            db.close()
+            if 'db' in locals(): db.close()
+
+    def process_new_promo_creation(message):
+        try:
+            if message.text == '/cancel':
+                bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
+                bot.reply_to(message, "Promocode creation cancelled.")
+                admin_panel_command(message) # Go back to menu
+                return
+            
+            parts = message.text.split()
+            if not (3 <= len(parts) <= 4): raise ValueError("Incorrect format.")
+
+            promo_name = parts[0]
+            activations_str = parts[1]
+            if activations_str.lower() in ['unlimited', '-1']: activations = -1
+            else: activations = int(activations_str)
+            if activations < -1: raise ValueError("Activations must be non-negative or -1 for unlimited.")
+
+            prize_ton = float(parts[2])
+            if prize_ton <= 0: raise ValueError("TON prize must be positive.")
+
+            db = SessionLocal()
+            if db.query(PromoCode).filter(PromoCode.code_text == promo_name).first():
+                bot.reply_to(message, f"⚠️ Promocode '{promo_name}' already exists. Try a different name.")
+                msg_reprompt = bot.send_message(message.chat.id, "Enter new promocode details or type /cancel.")
+                bot.register_next_step_handler(msg_reprompt, process_new_promo_creation)
+                return
+
+            new_promo = PromoCode(code_text=promo_name, activations_left=activations, ton_amount=prize_ton)
+            db.add(new_promo)
+            db.commit()
+            bot.reply_to(message, f"✅ Promocode '{promo_name}' created!")
+        except Exception as e:
+            logger.error(f"Error processing promocode: {e}")
+            bot.reply_to(message, f"Invalid input. Please use format `name activations prize` or type /cancel.")
+            msg_retry = bot.send_message(message.chat.id, "Enter details again or /cancel.")
+            bot.register_next_step_handler(msg_retry, process_new_promo_creation)
+        finally:
+            if 'db' in locals(): db.close()
     
+    def handle_view_all_promos(message_to_edit):
+        try:
+            db = SessionLocal()
+            all_promos = db.query(PromoCode).order_by(PromoCode.created_at.desc()).all()
+            markup = types.InlineKeyboardMarkup(row_width=2)
+            if not all_promos: text_to_send = "No promocodes found."
+            else:
+                text_to_send = "Select a promocode to view details:"
+                promo_buttons = [types.InlineKeyboardButton(p.code_text, callback_data=f"admin_promo_detail_{p.id}") for p in all_promos]
+                for i in range(0, len(promo_buttons), 2): markup.row(*promo_buttons[i:i+2])
+            
+            markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
+            bot.edit_message_text(text_to_send, chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup)
+        except Exception as e:
+            logger.error(f"Error in handle_view_all_promos: {e}")
+        finally:
+            if 'db' in locals(): db.close()
+
+    def handle_view_promo_detail(message_to_edit, promo_id):
+        try:
+            db = SessionLocal()
+            promo = db.query(PromoCode).filter(PromoCode.id == promo_id).first()
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(types.InlineKeyboardButton("⬅️ Back to All Promocodes", callback_data="admin_view_promos"))
+            markup.add(types.InlineKeyboardButton("🏠 Back to Admin Menu", callback_data="admin_back_to_menu"))
+
+            if not promo: text_to_send = "Promocode not found."
+            else:
+                activations_text = "Unlimited" if promo.activations_left == -1 else str(promo.activations_left)
+                created_date = promo.created_at.strftime('%Y-%m-%d %H:%M') if promo.created_at else 'N/A'
+                text_to_send = (f"📜 *{promo.code_text}*\n\n🎁 Prize: {promo.ton_amount:.4f} TON\n"
+                                f"🔄 Left: {activations_text}\n🗓️ Created: {created_date}")
+            
+            bot.edit_message_text(text_to_send, chat_id=message_to_edit.chat.id, message_id=message_to_edit.message_id, reply_markup=markup, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Error in handle_view_promo_detail: {e}")
+        finally:
+            if 'db' in locals(): db.close()
+
+    @bot.message_handler(commands=['admin'])
+    def admin_panel_command(message):
+        try:
+            if message.chat.id not in ADMIN_USER_IDS:
+                bot.reply_to(message, "You are not authorized.")
+                return
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo"),
+                       types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos"),
+                       types.InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
+                       types.InlineKeyboardButton("✉️ Mailing List", callback_data="admin_mailing_list"))
+            bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
+        except Exception as e:
+            logger.error(f"Error in admin_panel_command: {e}")
+    
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('admin_'))
+    def admin_callback_handler(call):
+        try:
+            if call.from_user.id not in ADMIN_USER_IDS:
+                bot.answer_callback_query(call.id, "Unauthorized.")
+                return
+        
+            bot.answer_callback_query(call.id) # Answer immediately
+            action = call.data
+            
+            if action == "admin_mailing_list": handle_mailing_list(call.message)
+            elif action == "admin_stats": handle_statistics(call.message)
+            elif action == "admin_view_promos": handle_view_all_promos(call.message)
+            elif action == "admin_new_promo":
+                msg = bot.send_message(call.from_user.id, "Enter promocode: `name activations prize_ton` or /cancel.", parse_mode="Markdown")
+                bot.register_next_step_handler(msg, process_new_promo_creation)
+            elif action == "admin_create_mailing":
+                msg = bot.send_message(call.from_user.id, "Send the message for mailing (text/media + optional button `button: Text | url`) or /cancel.", parse_mode="Markdown")
+                bot.register_next_step_handler(msg, process_mailing_message)
+            elif action.startswith("admin_promo_detail_"):
+                handle_view_promo_detail(call.message, int(action.split('_')[-1]))
+            elif action.startswith("admin_send_mailing_"):
+                bot.edit_message_text(f"Mailing #{int(action.split('_')[-1])} is now being sent in the background...", chat_id=call.message.chat.id, message_id=call.message.message_id)
+                threading.Thread(target=send_mailing, args=(int(action.split('_')[-1]),)).start()
+            elif action == "admin_back_to_menu":
+                admin_panel_command(call.message)
+        except Exception as e:
+            logger.error(f"Error in admin_callback_handler: {e}")
+
     @bot.pre_checkout_query_handler(func=lambda query: True)
     def pre_checkout_process(pre_checkout_query: types.PreCheckoutQuery):
-        """
-        Handles the pre-checkout query from Telegram.
-        This function confirms that the bot is ready to accept the payment.
-        """
-        logger.info(f"Received pre-checkout query: {pre_checkout_query.id} for {pre_checkout_query.total_amount} {pre_checkout_query.currency}")
-        # Always confirm the payment is okay to proceed.
-        # You could add logic here to check if the item is still in stock, etc.
-        bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-        logger.info(f"Answered pre-checkout query {pre_checkout_query.id} with OK.")
-
-
-    # --- Replace the existing successful_payment_process function in your Python backend ---
-    
-    # --- Replace the existing successful_payment_process function ---
+        try:
+            bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+        except Exception as e:
+            logger.error(f"Error in pre_checkout_process: {e}")
     
     @bot.message_handler(content_types=['successful_payment'])
     def successful_payment_process(message: types.Message):
-        payment_info = message.successful_payment
-        currency = payment_info.currency
-        total_amount = payment_info.total_amount
-        user_id = message.from_user.id
-    
-        logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
-    
-        if currency == "XTR":
-            stars_purchased = total_amount
-            
-            # Use Decimal for all calculations to maintain precision
-            ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
-    
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.id == user_id).with_for_update().first()
-                if not user:
-                    logger.error(f"User {user_id} not found after successful payment!")
-                    return
-    
-                # Add to the user's balance
-                user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
-                
-                if user.referred_by_id:
-                    referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
-                    if referrer:
-                        # --- CORRECTED CALCULATION ---
-                        # Keep everything as Decimal until the final step
-                        referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10'))
-                        
-                        # Add the precise Decimal value to the referrer's pending earnings
-                        current_pending = Decimal(str(referrer.referral_earnings_pending))
-                        referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
-                        # --- END CORRECTION ---
-                        
-                        logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
-                    else:
-                        logger.warning(f"Referrer {user.referred_by_id} not found for user {user.id}. No bonus applied.")
-    
-                db.commit()
-                logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
-                
-                bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
-    
-            except Exception as e:
-                db.rollback()
-                logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
-                bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
-            finally:
-                db.close()
-    
-    # --- Process New Promocode Creation (Next Step Handler) ---
-    def process_new_promo_creation(message):
-        if message.chat.id not in ADMIN_USER_IDS: # Security check
-            return
-    
-        # Allow cancellation via /cancel command during this step
-        if message.text == '/cancel':
-            bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
-            bot.reply_to(message, "Promocode creation cancelled.")
-            # Optionally, resend the admin menu
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
-            view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-            markup.add(new_promo_button, view_promos_button)
-            bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-            return
-    
         try:
-            parts = message.text.split()
-            if not (3 <= len(parts) <= 4): # promoname activations prize_ton [ton]
-                raise ValueError("Incorrect format. Expected: `promoname activations prize_ton [ton]`")
-    
-            promo_name = parts[0]
-            
-            activations_str = parts[1]
-            if activations_str.lower() == 'unlimited' or activations_str == '-1':
-                activations = -1
-            else:
-                activations = int(activations_str)
-                if activations < 0 and activations != -1: # Allow -1 for unlimited, but not other negative numbers
-                     raise ValueError("Activations count must be a non-negative integer or -1 for unlimited.")
-    
-    
-            prize_ton_str = parts[2]
-            prize_ton = float(prize_ton_str)
-            if prize_ton <= 0: # Prize amount should be positive
-                    raise ValueError("TON prize amount must be a positive number.")
-    
-            # The optional 'ton' keyword (parts[3]) is implicitly handled by parsing parts[2]
-    
-            db = SessionLocal()
-            try:
-                existing_promo = db.query(PromoCode).filter(PromoCode.code_text == promo_name).first()
-                if existing_promo:
-                    bot.reply_to(message, f"⚠️ Promocode '{promo_name}' already exists. Choose a different name.")
-                    # Re-prompt for creation
-                    msg_reprompt = bot.send_message(message.chat.id, 
-                                       "Please enter new promocode details again or type /cancel to go back to the admin menu.",
-                                       parse_mode="Markdown")
-                    bot.register_next_step_handler(msg_reprompt, process_new_promo_creation)
-                    return
-    
-                new_promo = PromoCode(
-                    code_text=promo_name,
-                    activations_left=activations,
-                    ton_amount=prize_ton
-                )
-                db.add(new_promo)
-                db.commit()
-                bot.reply_to(message, 
-                             f"✅ Promocode '{promo_name}' created successfully!\n"
-                             f"Activations: {'Unlimited' if activations == -1 else activations}\n"
-                             f"TON Prize: {prize_ton:.4f} TON") # Using .4f for TON display
-                logger.info(f"Admin {message.chat.id} created promocode: {promo_name}, Activations: {activations}, Prize: {prize_ton} TON")
-            except IntegrityError:
-                db.rollback()
-                bot.reply_to(message, f"Error: Promocode '{promo_name}' might already exist (concurrent creation?). Please try a different name or check existing codes.")
-            except SQLAlchemyError as e_sql:
-                db.rollback()
-                logger.error(f"SQLAlchemyError creating promocode {promo_name}: {e_sql}")
-                bot.reply_to(message, "Database error while creating promocode.")
-            finally:
-                db.close()
-    
-        except ValueError as e:
-            bot.reply_to(message, f"Error: {str(e)}\nPlease try again in the format: `promoname activations prize_ton`\nOr type /cancel to return to the admin menu.")
-            # Re-register next step handler to allow user to retry
-            msg_retry = bot.send_message(message.chat.id, "Enter details again or type /cancel.")
-            bot.register_next_step_handler(msg_retry, process_new_promo_creation)
+            if message.successful_payment.currency == "XTR":
+                stars = message.successful_payment.total_amount
+                ton_equiv = Decimal(str(stars)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+                db = SessionLocal()
+                user = db.query(User).filter(User.id == message.from_user.id).with_for_update().first()
+                if user:
+                    user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equiv)
+                    if user.referred_by_id:
+                        referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
+                        if referrer:
+                            bonus = ton_equiv * Decimal('0.10')
+                            referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + bonus)
+                    db.commit()
+                    bot.send_message(message.from_user.id, f"✅ Payment successful! Your balance is updated.")
         except Exception as e:
-            logger.error(f"Unexpected error in process_new_promo_creation: {e}", exc_info=True)
-            bot.reply_to(message, "An unexpected error occurred. Please check logs.")
-            # Optionally, re-register or offer /cancel
-            msg_retry_unexpected = bot.send_message(message.chat.id, "Enter details again or type /cancel for the admin menu.")
-            bot.register_next_step_handler(msg_retry_unexpected, process_new_promo_creation)
-    
-    # --- /cancel command for admin flows ---
+            logger.error(f"DB Error processing Stars payment for {message.from_user.id}: {e}")
+            bot.send_message(message.from_user.id, "⚠️ Error processing payment. Contact support.")
+        finally:
+             if 'db' in locals(): db.close()
+
     @bot.message_handler(commands=['cancel'])
     def cancel_operation(message):
-        if message.chat.id in ADMIN_USER_IDS:
-            # Check if there's an active next_step_handler for this user
-            # telebot doesn't have a direct way to check if a handler is registered for a specific chat_id.
-            # Clearing it is generally safe if you are sure it's only used in this admin context for this user.
-            bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
-            bot.reply_to(message, "Operation cancelled.")
-            
-            # Show admin menu again
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            new_promo_button = types.InlineKeyboardButton("🆕 New Promocode", callback_data="admin_new_promo")
-            view_promos_button = types.InlineKeyboardButton("📋 All Promocodes", callback_data="admin_view_promos")
-            markup.add(new_promo_button, view_promos_button)
-            bot.send_message(message.chat.id, "👑 Admin Panel 👑", reply_markup=markup)
-        else:
-            # For regular users, /cancel might not do anything specific unless defined elsewhere.
-            # Or you can have a generic "No active operation to cancel."
-            pass # Or bot.reply_to(message, "No active operation to cancel.")
-    
-    
-    # --- Handle Viewing All Promocodes ---
-    def handle_view_all_promos(message_to_edit): # Takes a message object to edit
-        db = SessionLocal()
         try:
-            all_promos = db.query(PromoCode).order_by(PromoCode.created_at.desc()).all()
-            
-            markup = types.InlineKeyboardMarkup(row_width=2) # Adjust row_width as needed
-            
-            if not all_promos:
-                text_to_send = "No promocodes found in the database."
-            else:
-                text_to_send = "Select a promocode to view details:"
-                promo_buttons = []
-                for promo in all_promos:
-                    # Show promo code text on the button, callback data contains ID for detail view
-                    button_text = f"{promo.code_text}" # Can add more info like (Act: X) if short enough
-                    promo_buttons.append(types.InlineKeyboardButton(button_text, callback_data=f"admin_promo_detail_{promo.id}"))
-                
-                # Add buttons in rows
-                # Simple grouping for row_width=2, can be made more dynamic
-                grouped_buttons = [promo_buttons[i:i + 2] for i in range(0, len(promo_buttons), 2)]
-                for group in grouped_buttons:
-                    markup.row(*group) # Unpack the group of buttons into the row
-            
-            markup.add(types.InlineKeyboardButton("⬅️ Back to Admin Menu", callback_data="admin_back_to_menu"))
-    
-            try:
-                bot.edit_message_text(text_to_send,
-                                      chat_id=message_to_edit.chat.id,
-                                      message_id=message_to_edit.message_id,
-                                      reply_markup=markup)
-            except Exception as e: # If message cannot be edited (e.g. too old, or no change)
-                 logger.debug(f"Could not edit message for view_all_promos, sending new: {e}")
-                 bot.send_message(message_to_edit.chat.id, text_to_send, reply_markup=markup) # Send as new message
-    
-        except SQLAlchemyError as e_sql:
-            logger.error(f"SQLAlchemyError fetching all promocodes: {e_sql}")
-            bot.send_message(message_to_edit.chat.id, "Database error fetching promocodes.")
-        finally:
-            db.close()
-    
-    # --- Handle Viewing Single Promocode Detail ---
-    def handle_view_promo_detail(message_to_edit, promo_id): # Takes a message object to edit
-        db = SessionLocal()
-        try:
-            promo = db.query(PromoCode).filter(PromoCode.id == promo_id).first()
-            
-            markup = types.InlineKeyboardMarkup(row_width=1)
-            # Add navigation buttons
-            markup.add(types.InlineKeyboardButton("⬅️ Back to All Promocodes", callback_data="admin_view_promos"))
-            markup.add(types.InlineKeyboardButton("🏠 Back to Admin Menu", callback_data="admin_back_to_menu"))
-            # Future: Could add a "Delete Promocode" button here, e.g.,
-            # markup.add(types.InlineKeyboardButton("🗑️ Delete Promocode", callback_data=f"admin_delete_promo_{promo.id}"))
-    
-    
-            if not promo:
-                text_to_send = "Promocode not found."
-            else:
-                activations_text = "Unlimited" if promo.activations_left == -1 else str(promo.activations_left)
-                text_to_send = (
-                    f"📜 Promocode Details: *{promo.code_text}*\n\n"
-                    f"🎁 Prize: {promo.ton_amount:.4f} TON\n" # Using .4f for TON display
-                    f"🔄 Activations Left: {activations_text}\n"
-                    f"🗓️ Created: {promo.created_at.strftime('%Y-%m-%d %H:%M') if promo.created_at else 'N/A'}"
-                )
-            
-            try:
-                bot.edit_message_text(text_to_send,
-                                      chat_id=message_to_edit.chat.id,
-                                      message_id=message_to_edit.message_id,
-                                      reply_markup=markup,
-                                      parse_mode="Markdown")
-            except Exception as e: # If message cannot be edited
-                logger.debug(f"Could not edit message for view_promo_detail, sending new: {e}")
-                bot.send_message(message_to_edit.chat.id, text_to_send, reply_markup=markup, parse_mode="Markdown")
-    
-    
-        except SQLAlchemyError as e_sql:
-            logger.error(f"SQLAlchemyError fetching promo detail for ID {promo_id}: {e_sql}")
-            bot.send_message(message_to_edit.chat.id, "Database error fetching promocode details.")
-        finally:
-            db.close()
-            
+            if message.chat.id in ADMIN_USER_IDS:
+                bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
+                bot.reply_to(message, "Operation cancelled.")
+                admin_panel_command(message)
+        except Exception as e:
+            logger.error(f"Error in cancel_operation: {e}")
+
     @bot.message_handler(func=lambda message: True)
     def echo_all(message):
-        logger.info(f"Received non-command message from {message.chat.id}: {message.text[:50]}")
-        bot.reply_to(message, "Send /start, to open Case Hunter")
+        try:
+            logger.info(f"Received non-command from {message.chat.id}: {message.text[:50]}")
+            bot.reply_to(message, "Send /start to open Case Hunter")
+        except Exception as e:
+            logger.warning(f"Could not reply to echo_all for user {message.chat.id}. Error: {e}")
+
+
+# --- Webhook Setup Function (to be called from your main app setup) ---
+# ... (the rest of your file, including the webhook setup and Flask API routes, remains the same) ...
 
 # --- Webhook Setup Function (to be called from your main app setup) ---
 # You need to pass your Flask 'app' instance to this function to register the route.
