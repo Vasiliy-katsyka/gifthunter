@@ -3500,7 +3500,7 @@ def withdraw_referral_earnings_api():
         if total_deposited_recently_ton < MIN_DEPOSIT_TON:
             return jsonify({
                 "status": "error",
-                "message": f"You must deposit at least {MIN_DEPOSIT_STARS} Stars within the last 24 hours to withdraw referral earnings."
+                "message": f"Вы должны сделать депозит минимум {MIN_DEPOSIT_STARS} звёзд за последние 24 часа чтобы вывести звёзды."
             }), 403
 
         if user.referral_earnings_pending > 0:
