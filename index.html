@@ -2740,19 +2740,35 @@ function calculateAndDisplayUpgradeStats() {
             showTGNotification("Selected item has no value.", "error");
         } else {
             calculatedUpgradeMultiplier = desiredItemForUpgrade.floorPrice / selectedItemForUpgrade.currentValue;
+            
+            // --- START OF THE FIX ---
+            // This logic now exactly mirrors the secure backend calculation.
             const xEffective = Math.max(1.01, calculatedUpgradeMultiplier);
-            const maxChance = 75;
-            const minChance = 3;
-            const riskFactor = 0.60;
+            const maxChance = 75; 
+            // NOTE: The risk factor must be a string for JS exponentiation to work correctly with decimals
+            const riskFactor = 0.60; 
+
+            // Calculate the raw, uncapped chance.
             let chance = maxChance * Math.pow(riskFactor, xEffective - 1);
-            calculatedUpgradeChance = Math.min(maxChance, Math.max(minChance, chance));
+            
+            // CRITICAL CHANGE: We ONLY cap the chance at the maximum (75%).
+            // We NO LONGER enforce a minimum of 3%. The chance is allowed to be very small.
+            // We also ensure it's not negative, just as a safety measure.
+            calculatedUpgradeChance = Math.min(maxChance, Math.max(0, chance));
+            // --- END OF THE FIX ---
         }
+
         upgradePageElements.calculatedMultiplierText.textContent = `${calculatedUpgradeMultiplier.toFixed(2)}x`;
-        upgradePageElements.calculatedChanceText.textContent = `${calculatedUpgradeChance.toFixed(1)}% Шанс`;
+        // For very low chances, display with more precision.
+        const chanceDisplay = calculatedUpgradeChance < 0.1 ? calculatedUpgradeChance.toFixed(4) : calculatedUpgradeChance.toFixed(1);
+        upgradePageElements.calculatedChanceText.textContent = `${chanceDisplay}% Шанс`;
+        
         upgradePageElements.doUpgradeButton.disabled = false;
         upgradePageElements.doUpgradeButton.textContent = "Attempt Upgrade";
+        
         const winAngle = (calculatedUpgradeChance / 100) * 360;
         document.documentElement.style.setProperty('--upgrade-win-segment-angle', `${winAngle}deg`);
+
     } else {
         calculatedUpgradeMultiplier = 0;
         calculatedUpgradeChance = 0;
