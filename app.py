@@ -2310,6 +2310,12 @@ def check_subscription_api():
 
 # --- In app.py ---
 
+@app.route('/api/healthcheck', methods=['GET'])
+def health_check():
+    """A simple endpoint to confirm the server is running."""
+    logger.info("Health check endpoint was hit successfully.")
+    return jsonify({"status": "ok", "message": "Server is running."}), 200
+
 # ... (keep all existing code before this route) ...
 
 @app.route('/api/get_user_data', methods=['POST'])
