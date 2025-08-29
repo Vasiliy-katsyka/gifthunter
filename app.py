@@ -2923,6 +2923,11 @@ def upgrade_item_api():
     finally:
         db.close()
 
+# --- In app.py ---
+
+# ... (keep all your code before this function) ...
+
+# --- Find and REPLACE the entire upgrade_item_v2_api function ---
 @app.route('/api/upgrade_item_v2', methods=['POST'])
 def upgrade_item_v2_api():
     auth_user_data = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2962,7 +2967,6 @@ def upgrade_item_v2_api():
         if value_of_item_to_upgrade <= Decimal('0'):
             return jsonify({"error": "Item to upgrade has no value or invalid value."}), 400
 
-        # Fetch desired NFT data from the NFT table (source of truth for floor prices)
         desired_nft_data = db.query(NFT).filter(NFT.name == desired_item_name_str).first()
         if not desired_nft_data:
             return jsonify({"error": f"Desired item '{desired_item_name_str}' not found as an upgradable NFT."}), 404
@@ -2972,23 +2976,20 @@ def upgrade_item_v2_api():
         if value_of_desired_item <= value_of_item_to_upgrade:
             return jsonify({"error": "Desired item must have a higher value than your current item."}), 400
 
-        # Server-side calculation of multiplier (X) and chance
-        # X represents how many times more valuable the desired item is
+        # --- START OF THE FIX ---
+        # Server-side calculation of multiplier (X) and chance, without the flawed minimum.
         calculated_x = value_of_desired_item / value_of_item_to_upgrade
-        
-        # Effective X for chance calculation, must be > 1
-        # (e.g., if desired is 1.0001 times more, X_eff is 1.01 to ensure some risk factor application)
-        x_effective = max(Decimal('1.01'), calculated_x) 
+        x_effective = max(Decimal('1.01'), calculated_x)
 
-        # Chance formula: MaxChance * (RiskFactor ^ (X_effective - 1))
-        # The -1 ensures that if X_effective is 1 (meaning same value, though filtered out), RiskFactor isn't applied, giving MaxChance.
-        # For X_effective > 1, RiskFactor is applied exponentially.
+        # The core chance formula remains the same.
         chance_decimal_raw = UPGRADE_MAX_CHANCE * (UPGRADE_RISK_FACTOR ** (x_effective - Decimal('1')))
         
-        # Clamp the chance between MinChance and MaxChance
-        server_calculated_chance = min(UPGRADE_MAX_CHANCE, max(UPGRADE_MIN_CHANCE, chance_decimal_raw))
+        # CRITICAL CHANGE: We only cap the chance at the MAXIMUM. We no longer enforce a minimum.
+        # The chance is now allowed to be naturally very low for extreme upgrades.
+        # We also ensure the chance is never less than zero, just as a safety measure.
+        server_calculated_chance = min(UPGRADE_MAX_CHANCE, max(Decimal('0'), chance_decimal_raw))
+        # --- END OF THE FIX ---
         
-        # Perform the roll
         roll = Decimal(str(random.uniform(0, 100)))
         is_success = roll < server_calculated_chance
         
@@ -2996,28 +2997,19 @@ def upgrade_item_v2_api():
                                       (item_to_upgrade.nft.name if item_to_upgrade.nft else "Unknown Item")
 
         if is_success:
-            # Calculate net change in value for total_won_ton
             net_value_increase = value_of_desired_item - value_of_item_to_upgrade
             user.total_won_ton = float(Decimal(str(user.total_won_ton)) + net_value_increase)
-
-            # Delete old item
             db.delete(item_to_upgrade)
-            db.flush() # Ensure delete happens before adding new, if any constraints
+            db.flush()
 
-            # Create new upgraded item
             new_upgraded_item = InventoryItem(
-                user_id=user.id,
-                nft_id=desired_nft_data.id,
-                item_name_override=desired_nft_data.name,
+                user_id=user.id, nft_id=desired_nft_data.id, item_name_override=desired_nft_data.name,
                 item_image_override=desired_nft_data.image_filename or generate_image_filename_from_name(desired_nft_data.name),
-                current_value=float(value_of_desired_item), # New item starts at its base floor price
-                upgrade_multiplier=1.0, # Reset upgrade multiplier for the new item
-                is_ton_prize=False, # Upgraded items are not TON prizes
-                variant=None # Assuming base NFTs don't have variants unless specified
+                current_value=float(value_of_desired_item), upgrade_multiplier=1.0, is_ton_prize=False, variant=None
             )
             db.add(new_upgraded_item)
             db.commit()
-            db.refresh(new_upgraded_item) # Get ID and other defaults
+            db.refresh(new_upgraded_item)
 
             logger.info(f"User {player_user_id} UPGRADED item ID {inventory_item_id} ({name_of_item_being_upgraded} @ {value_of_item_to_upgrade} TON) "
                         f"to {desired_nft_data.name} (@ {value_of_desired_item} TON). "
@@ -3026,20 +3018,12 @@ def upgrade_item_v2_api():
             return jsonify({
                 "status": "success",
                 "message": f"Upgrade successful! Your {name_of_item_being_upgraded} became {desired_nft_data.name}.",
-                "item": {
-                    "id": new_upgraded_item.id,
-                    "name": new_upgraded_item.item_name_override,
-                    "imageFilename": new_upgraded_item.item_image_override,
-                    "currentValue": new_upgraded_item.current_value,
-                    "is_ton_prize": new_upgraded_item.is_ton_prize,
-                    "variant": new_upgraded_item.variant,
-                    # Add other fields frontend might expect for consistency
-                }
+                "item": { "id": new_upgraded_item.id, "name": new_upgraded_item.item_name_override,
+                          "imageFilename": new_upgraded_item.item_image_override, "currentValue": new_upgraded_item.current_value,
+                          "is_ton_prize": new_upgraded_item.is_ton_prize, "variant": new_upgraded_item.variant }
             })
         else: # Upgrade failed
-            # Item is lost, adjust total_won_ton by subtracting its value
             user.total_won_ton = float(max(Decimal('0'), Decimal(str(user.total_won_ton)) - value_of_item_to_upgrade))
-            
             db.delete(item_to_upgrade)
             db.commit()
 
@@ -3048,10 +3032,8 @@ def upgrade_item_v2_api():
                         f"X={calculated_x:.2f}, Chance={server_calculated_chance:.2f}%, Roll={roll:.2f}%. FAILED.")
 
             return jsonify({
-                "status": "failed",
-                "message": f"Upgrade failed! Your {name_of_item_being_upgraded} was lost.",
-                "item_lost": True,
-                "lost_item_name": name_of_item_being_upgraded,
+                "status": "failed", "message": f"Upgrade failed! Your {name_of_item_being_upgraded} was lost.",
+                "item_lost": True, "lost_item_name": name_of_item_being_upgraded,
                 "lost_item_value": float(value_of_item_to_upgrade)
             })
 
