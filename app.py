@@ -1638,7 +1638,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Plush Pepe','probability': 0.0000005},
         {'name':'Durov\'s Cap','probability': 0.000005},
         {'name':'Precious Peach','probability': 0.00002},
-        {'name':'Whip Cupcake', 'probability': 0.01}, # New common filler
+        {'name':'Whip Cupcake', 'probability': 0.001}, # New common filler
         {'name':'Lol Pop','probability': 0.001},
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
