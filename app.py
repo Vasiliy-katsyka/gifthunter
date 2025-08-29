@@ -585,62 +585,62 @@ if bot: # Ensure bot instance exists
         logger.info(f"Answered pre-checkout query {pre_checkout_query.id} with OK.")
 
 
-# --- Replace the existing successful_payment_process function in your Python backend ---
-
-# --- Replace the existing successful_payment_process function ---
-
-@bot.message_handler(content_types=['successful_payment'])
-def successful_payment_process(message: types.Message):
-    payment_info = message.successful_payment
-    currency = payment_info.currency
-    total_amount = payment_info.total_amount
-    user_id = message.from_user.id
-
-    logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
-
-    if currency == "XTR":
-        stars_purchased = total_amount
-        
-        # Use Decimal for all calculations to maintain precision
-        ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
-
-        db = SessionLocal()
-        try:
-            user = db.query(User).filter(User.id == user_id).with_for_update().first()
-            if not user:
-                logger.error(f"User {user_id} not found after successful payment!")
-                return
-
-            # Add to the user's balance
-            user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
+    # --- Replace the existing successful_payment_process function in your Python backend ---
+    
+    # --- Replace the existing successful_payment_process function ---
+    
+    @bot.message_handler(content_types=['successful_payment'])
+    def successful_payment_process(message: types.Message):
+        payment_info = message.successful_payment
+        currency = payment_info.currency
+        total_amount = payment_info.total_amount
+        user_id = message.from_user.id
+    
+        logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
+    
+        if currency == "XTR":
+            stars_purchased = total_amount
             
-            if user.referred_by_id:
-                referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
-                if referrer:
-                    # --- CORRECTED CALCULATION ---
-                    # Keep everything as Decimal until the final step
-                    referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10'))
-                    
-                    # Add the precise Decimal value to the referrer's pending earnings
-                    current_pending = Decimal(str(referrer.referral_earnings_pending))
-                    referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
-                    # --- END CORRECTION ---
-                    
-                    logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
-                else:
-                    logger.warning(f"Referrer {user.referred_by_id} not found for user {user.id}. No bonus applied.")
-
-            db.commit()
-            logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
-            
-            bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
-
-        except Exception as e:
-            db.rollback()
-            logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
-            bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
-        finally:
-            db.close()
+            # Use Decimal for all calculations to maintain precision
+            ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+    
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.id == user_id).with_for_update().first()
+                if not user:
+                    logger.error(f"User {user_id} not found after successful payment!")
+                    return
+    
+                # Add to the user's balance
+                user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
+                
+                if user.referred_by_id:
+                    referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
+                    if referrer:
+                        # --- CORRECTED CALCULATION ---
+                        # Keep everything as Decimal until the final step
+                        referral_bonus_ton = (ton_equivalent_deposit * Decimal('0.10'))
+                        
+                        # Add the precise Decimal value to the referrer's pending earnings
+                        current_pending = Decimal(str(referrer.referral_earnings_pending))
+                        referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
+                        # --- END CORRECTION ---
+                        
+                        logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
+                    else:
+                        logger.warning(f"Referrer {user.referred_by_id} not found for user {user.id}. No bonus applied.")
+    
+                db.commit()
+                logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
+                
+                bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
+    
+            except Exception as e:
+                db.rollback()
+                logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
+                bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
+            finally:
+                db.close()
     
     # --- Process New Promocode Creation (Next Step Handler) ---
     def process_new_promo_creation(message):
