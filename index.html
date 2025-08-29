@@ -1827,7 +1827,6 @@ function showWinOverlay(wonPrizesArray) {
         img.alt = prizeItem.name;
         winOverlayPrizeImageContainer.appendChild(img);
 
-        // CORRECTED: Display prize value in Stars with the star icon
         const prizeValueInStars = Math.floor((prizeItem.currentValue || 0) * TON_TO_STARS_RATE);
         prizeDetailsHTML += `<div>- ${prizeItem.name} (${prizeValueInStars} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 12px; height: 12px; vertical-align: middle;">)</div>`;
 
@@ -1838,9 +1837,18 @@ function showWinOverlay(wonPrizesArray) {
     winOverlayPrizeDetailsEl.innerHTML = prizeDetailsHTML;
 
     if (convertiblePrizes.length > 0) {
-        // CORRECTED: Calculate and display total conversion value in Stars
         const totalConvertValueInStars = Math.floor(totalConvertValueInTon * TON_TO_STARS_RATE);
-        winOverlayConvertValue.textContent = totalConvertValueInStars; // Just the number
+
+        // --- START OF THE FIX ---
+        // Instead of just updating a child span, we will forcefully rebuild the
+        // entire inner HTML of the button. This ensures no stale data is ever shown.
+        winOverlayConvertBtn.innerHTML = `Convert All for <span>${totalConvertValueInStars}</span> <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 16px; height: 16px;">`;
+        // We also need to re-find the span if we need to reference it directly later, although it's no longer necessary with this fix.
+        // const winOverlayConvertValueSpan = winOverlayConvertBtn.querySelector('span');
+        // winOverlayConvertValueSpan.textContent = totalConvertValueInStars;
+        // The single innerHTML line above is more robust and replaces the need for the two lines above.
+        // --- END OF THE FIX ---
+
         winOverlayConvertBtn.style.display = 'block';
     } else {
         winOverlayConvertBtn.style.display = 'none';
