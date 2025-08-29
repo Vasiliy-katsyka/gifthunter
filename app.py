@@ -150,13 +150,19 @@ if not TONNEL_SENDER_INIT_DATA:
 NORMAL_WEBAPP_URL = "https://vasiliy-katsyka.github.io/gifthunter"
 MAINTENANCE_WEBAPP_URL = "https://vasiliy-katsyka.github.io/maintencaincec" # If you still use this
 # Example: Choose based on an environment variable or a fixed value for production
-WEBAPP_URL = MAINTENANCE_WEBAPP_URL # Assuming normal operation on the server
+WEBAPP_URL = NORMAL_WEBAPP_URL # Assuming normal operation on the server
 
 API_BASE_URL = "https://gifthunter.onrender.com" # Your backend API URL
 
 
 # --- SQLAlchemy Database Setup ---
-engine = create_engine(DATABASE_URL, pool_recycle=3600, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,          # Start with 10 persistent connections
+    max_overflow=20,       # Allow up to 20 more connections during a spike
+    pool_recycle=300,      # Recycle connections every 5 minutes
+    pool_pre_ping=True     # Check if a connection is still alive before using it
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
