@@ -159,6 +159,16 @@ WEBAPP_URL = NORMAL_WEBAPP_URL # Assuming normal operation on the server
 
 API_BASE_URL = "https://gifthunter.onrender.com" # Your backend API URL
 
+DEFAULT_REFERRAL_RATE = Decimal('0.10')
+
+# --- START OF NEW CODE ---
+# Define users with boosted luck and the multiplier for their valuable prize chances
+BOOSTED_LUCK_USERS = {
+    512257998: 3  # User ID and their luck multiplier (3x)
+}
+# Define what counts as a "valuable" prize (e.g., worth more than the case price)
+# This prevents wasting the boost on common, low-value items.
+VALUABLE_PRIZE_THRESHOLD_MULTIPLIER = Decimal('1.0')
 
 # --- SQLAlchemy Database Setup ---
 engine = create_engine(
@@ -2576,7 +2586,7 @@ def withdraw_emoji_gift_api():
     finally:
         db.close()
 
-# --- Replace the existing open_case_api function in your Python backend ---
+# --- Find and REPLACE the entire open_case_api function ---
 
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
@@ -2608,16 +2618,44 @@ def open_case_api():
         total_cost_ton = cost_per_case_ton * Decimal(multiplier)
         user_balance_ton = Decimal(str(user.ton_balance))
 
-        # Convert user balance to stars for comparison
-        user_balance_stars = int(user_balance_ton * TON_TO_STARS_RATE_BACKEND)
-        total_cost_stars = int(total_cost_ton * TON_TO_STARS_RATE_BACKEND)
-
-        if user_balance_stars < total_cost_stars:
-            return jsonify({"error": f"Not enough balance. Need {total_cost_stars} Stars"}), 400
+        if user_balance_ton < total_cost_ton:
+            # We compare with TON balance here as Stars are just a visual representation
+            return jsonify({"error": f"Not enough balance."}), 400
 
         user.ton_balance = float(user_balance_ton - total_cost_ton)
 
         prizes_in_case = target_case['prizes']
+        
+        # --- START OF THE LUCK BOOST LOGIC ---
+        luck_boost_multiplier = BOOSTED_LUCK_USERS.get(uid) # Check if the user is on the boosted list
+        
+        if luck_boost_multiplier:
+            logger.info(f"Applying x{luck_boost_multiplier} luck boost for user {uid}.")
+            
+            # Create a deep copy to modify probabilities for this spin only
+            dynamic_prizes = [p.copy() for p in prizes_in_case]
+            
+            valuable_threshold = cost_per_case_ton * VALUABLE_PRIZE_THRESHOLD_MULTIPLIER
+            
+            # First, multiply the probability of all "valuable" items
+            for prize in dynamic_prizes:
+                if Decimal(str(prize.get('floor_price', 0))) >= valuable_threshold:
+                    prize['probability'] *= luck_boost_multiplier
+
+            # Second, re-normalize all probabilities so they sum to 1.0
+            total_probability_after_boost = sum(p['probability'] for p in dynamic_prizes)
+            
+            if total_probability_after_boost > 0:
+                for prize in dynamic_prizes:
+                    prize['probability'] /= total_probability_after_boost
+            
+            # Use this modified prize list for the spin
+            prizes_to_use_for_spin = dynamic_prizes
+        else:
+            # For regular users, use the standard prize list
+            prizes_to_use_for_spin = prizes_in_case
+        # --- END OF THE LUCK BOOST LOGIC ---
+
         won_prizes_response_list = []
         total_value_this_spin_ton = Decimal('0')
 
@@ -2625,32 +2663,31 @@ def open_case_api():
             roll = random.random()
             cumulative_probability = 0.0
             chosen_prize_info = None
-            for p_info in prizes_in_case:
+            
+            # Use the potentially modified prize list
+            for p_info in prizes_to_use_for_spin:
                 cumulative_probability += p_info['probability']
                 if roll <= cumulative_probability:
                     chosen_prize_info = p_info
                     break
             
-            if not chosen_prize_info: chosen_prize_info = prizes_in_case[-1]
+            if not chosen_prize_info: chosen_prize_info = prizes_to_use_for_spin[-1]
 
             prize_name = chosen_prize_info['name']
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
             total_value_this_spin_ton += prize_value_ton
             db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
-            # --- THIS IS THE KEY FIX ---
-            # Check if the prize is a special emoji gift and get its specific image URL
             is_emoji = prize_name in EMOJI_GIFT_IMAGES
             image_url = EMOJI_GIFT_IMAGES.get(prize_name) if is_emoji else (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
-            # --- END OF FIX ---
 
             inventory_item = InventoryItem(
                 user_id=uid,
                 nft_id=db_nft.id if db_nft else None,
                 item_name_override=prize_name,
-                item_image_override=image_url, # Use the correctly determined URL
+                item_image_override=image_url,
                 current_value=float(prize_value_ton),
-                is_ton_prize=False # All items from cases go to inventory first
+                is_ton_prize=False
             )
             db.add(inventory_item)
             db.flush()
@@ -2658,9 +2695,9 @@ def open_case_api():
             won_prizes_response_list.append({
                 "id": inventory_item.id,
                 "name": prize_name,
-                "imageFilename": inventory_item.item_image_override, # Send the correct URL to the frontend
+                "imageFilename": inventory_item.item_image_override,
                 "currentValue": inventory_item.current_value,
-                "is_emoji_gift": is_emoji, # A helpful flag for the frontend
+                "is_emoji_gift": is_emoji,
             })
 
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
