@@ -3466,7 +3466,8 @@ def get_leaderboard_api():
 
 # --- In app.py ---
 
-# --- Find and REPLACE the entire withdraw_referral_earnings_api function ---
+# --- In app.py ---
+
 # --- Find and REPLACE the entire withdraw_referral_earnings_api function ---
 @app.route('/api/withdraw_referral_earnings', methods=['POST'])
 def withdraw_referral_earnings_api():
@@ -3481,27 +3482,24 @@ def withdraw_referral_earnings_api():
         if not user:
             return jsonify({"error": "User not found."}), 404
         
-        MIN_DEPOSIT_STARS = 200
-        MIN_DEPOSIT_TON = Decimal(str(MIN_DEPOSIT_STARS)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
-        TIME_WINDOW = timedelta(hours=24)
-        twenty_four_hours_ago = dt.now(timezone.utc) - TIME_WINDOW
+        # --- START OF THE NEW LOGIC ---
+        # Define the lifetime deposit requirement
+        MIN_LIFETIME_DEPOSIT_STARS = 200
+        MIN_LIFETIME_DEPOSIT_TON = Decimal(str(MIN_LIFETIME_DEPOSIT_STARS)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
         
-        # --- START OF THE FIX ---
-        # Query the new unified 'deposits' table instead of 'pending_deposits'
-        recent_deposits = db.query(Deposit).filter(
-            Deposit.user_id == uid,
-            Deposit.created_at >= twenty_four_hours_ago
-        ).all()
+        # Query for all of the user's past deposits from our unified 'deposits' table
+        all_user_deposits = db.query(Deposit).filter(Deposit.user_id == uid).all()
         
-        # Sum the total amount from all recent deposits (TON and STARS)
-        total_deposited_recently_ton = sum(Decimal(str(d.ton_amount)) for d in recent_deposits)
-        # --- END OF THE FIX ---
+        # Sum the total lifetime deposit amount
+        total_lifetime_deposited_ton = sum(Decimal(str(d.ton_amount)) for d in all_user_deposits)
         
-        if total_deposited_recently_ton < MIN_DEPOSIT_TON:
+        # Check if the user meets the lifetime deposit requirement
+        if total_lifetime_deposited_ton < MIN_LIFETIME_DEPOSIT_TON:
             return jsonify({
                 "status": "error",
-                "message": f"Вы должны сделать депозит минимум {MIN_DEPOSIT_STARS} звёзд за последние 24 часа чтобы вывести звёзды."
-            }), 403
+                "message": f"You must have a lifetime deposit total of at least {MIN_LIFETIME_DEPOSIT_STARS} Stars to withdraw referral earnings."
+            }), 403 # 403 Forbidden is a good status code
+        # --- END OF THE NEW LOGIC ---
 
         if user.referral_earnings_pending > 0:
             withdrawn_amount_ton = Decimal(str(user.referral_earnings_pending))
@@ -3526,7 +3524,7 @@ def withdraw_referral_earnings_api():
         return jsonify({"error": "Database error or unexpected issue during withdrawal."}), 500
     finally:
         db.close()
-
+        
 @app.route('/api/redeem_promocode', methods=['POST'])
 def redeem_promocode_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
