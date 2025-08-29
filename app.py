@@ -246,6 +246,15 @@ class UserPromoCodeRedemption(Base):
     promo_code = relationship("PromoCode")
     __table_args__ = (UniqueConstraint('user_id', 'promo_code_id', name='uq_user_promo_redemption'),)
 
+class Deposit(Base):
+    __tablename__ = "deposits"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    ton_amount = Column(Float, nullable=False)
+    deposit_type = Column(String, nullable=False) # Will be 'TON' or 'STARS'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user = relationship("User")
+
 class DailyStats(Base):
     __tablename__ = "daily_stats"
     id = Column(Integer, primary_key=True, index=True)
@@ -605,60 +614,64 @@ if bot: # Ensure bot instance exists
     
     # --- Find and REPLACE the entire successful_payment_process function ---
     
+    # --- Find and REPLACE the entire successful_payment_process function ---
     @bot.message_handler(content_types=['successful_payment'])
     def successful_payment_process(message: types.Message):
-        payment_info = message.successful_payment
-        currency = payment_info.currency
-        total_amount = payment_info.total_amount
-        user_id = message.from_user.id
+        try:
+            payment_info = message.successful_payment
+            currency = payment_info.currency
+            total_amount = payment_info.total_amount
+            user_id = message.from_user.id
     
-        logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
+            logger.info(f"Received successful payment from user {user_id}: {total_amount} {currency}.")
     
-        if currency == "XTR":
-            stars_purchased = total_amount
-            ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+            if currency == "XTR":
+                stars_purchased = total_amount
+                ton_equivalent_deposit = Decimal(str(stars_purchased)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
     
-            db = SessionLocal()
-            try:
-                user = db.query(User).filter(User.id == user_id).with_for_update().first()
-                if not user:
-                    logger.error(f"User {user_id} not found after successful payment!")
-                    return
+                db = SessionLocal()
+                try:
+                    user = db.query(User).filter(User.id == user_id).with_for_update().first()
+                    if not user:
+                        logger.error(f"User {user_id} not found after successful payment!")
+                        return
     
-                user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
-                
-                if user.referred_by_id:
-                    referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
-                    if referrer:
-                        # --- START OF THE MODIFICATION ---
-                        # Check if the referrer is a special user
-                        referral_rate = DEFAULT_REFERRAL_RATE # Default to 10%
-                        if referrer.username and referrer.username.lower() in (name.lower() for name in SPECIAL_REFERRAL_RATES.keys()):
-                            referral_rate = SPECIAL_REFERRAL_RATES[referrer.username.lower()]
-                            logger.info(f"Applying special {referral_rate*100}% referral rate for referrer @{referrer.username}.")
+                    user.ton_balance = float(Decimal(str(user.ton_balance)) + ton_equivalent_deposit)
+                    
+                    # --- START OF CHANGE ---
+                    # Log this successful Star deposit to our new unified table
+                    new_deposit_log = Deposit(
+                        user_id=user_id,
+                        ton_amount=float(ton_equivalent_deposit),
+                        deposit_type='STARS'
+                    )
+                    db.add(new_deposit_log)
+                    # --- END OF CHANGE ---
     
-                        # Calculate bonus using the determined rate
-                        referral_bonus_ton = ton_equivalent_deposit * referral_rate
-                        
-                        current_pending = Decimal(str(referrer.referral_earnings_pending))
-                        referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
-                        # --- END OF THE MODIFICATION ---
-                        
-                        logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
-                    else:
-                        logger.warning(f"Referrer {user.referred_by_id} not found for user {user.id}. No bonus applied.")
+                    if user.referred_by_id:
+                        referrer = db.query(User).filter(User.id == user.referred_by_id).with_for_update().first()
+                        if referrer:
+                            referral_rate = DEFAULT_REFERRAL_RATE
+                            if referrer.username and referrer.username.lower() in (name.lower() for name in SPECIAL_REFERRAL_RATES.keys()):
+                                referral_rate = SPECIAL_REFERRAL_RATES[referrer.username.lower()]
+                            
+                            referral_bonus_ton = ton_equivalent_deposit * referral_rate
+                            current_pending = Decimal(str(referrer.referral_earnings_pending))
+                            referrer.referral_earnings_pending = float(current_pending + referral_bonus_ton)
+                            logger.info(f"Referral bonus of {referral_bonus_ton:.4f} TON credited to referrer {referrer.id} for deposit by user {user.id}.")
     
-                db.commit()
-                logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
-                
-                bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
+                    db.commit()
+                    logger.info(f"Credited user {user_id} with {ton_equivalent_deposit:.4f} TON for {stars_purchased} Stars.")
+                    bot.send_message(user_id, f"✅ Thank you! Your payment for {stars_purchased} Stars was successful. Your balance has been updated.")
     
-            except Exception as e:
-                db.rollback()
-                logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
-                bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
-            finally:
-                db.close()
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"DATABASE ERROR processing Stars payment for {user_id}: {e}", exc_info=True)
+                    bot.send_message(user_id, "⚠️ There was an issue processing your payment. Please contact support.")
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.error(f"Error in successful_payment_process: {e}")
 
     @bot.message_handler(commands=['cancel'])
     def cancel_operation(message):
@@ -3245,6 +3258,7 @@ async def check_blockchain_for_deposit(pdep: PendingDeposit, db_sess: SessionLoc
 
 # --- Replace your existing verify_deposit_api function ---
 
+# --- Find and REPLACE the entire verify_deposit_api function ---
 @app.route('/api/verify_deposit', methods=['POST'])
 def verify_deposit_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3257,7 +3271,6 @@ def verify_deposit_api():
 
     db = next(get_db())
     try:
-        # Step 1: Get the necessary data from the DB
         pdep = db.query(PendingDeposit).filter(PendingDeposit.id == pid, PendingDeposit.user_id == uid).first()
         if not pdep: return jsonify({"error": "Pending deposit not found."}), 404
         if pdep.status == 'completed': return jsonify({"status":"success", "message":"Deposit already confirmed."})
@@ -3266,31 +3279,40 @@ def verify_deposit_api():
             db.commit()
             return jsonify({"status":"expired", "message":"This deposit request has expired."})
     finally:
-        # Step 2: CLOSE the database connection BEFORE the slow network call
         db.close()
 
-    # Step 3: Perform the slow async network call with NO active DB connection
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    deposit_found = loop.run_until_complete(check_blockchain_for_deposit_simple(pdep)) # Use a simplified async function
+    deposit_found = loop.run_until_complete(check_blockchain_for_deposit_simple(pdep))
     loop.close()
 
-    # Step 4: If the deposit was found, open a NEW database connection to update the user
     if deposit_found:
         db_update = SessionLocal()
         try:
-            # Re-fetch the records within a new transaction
             pdep_update = db_update.query(PendingDeposit).filter(PendingDeposit.id == pid).with_for_update().first()
             usr_update = db_update.query(User).filter(User.id == uid).with_for_update().first()
             
             if pdep_update and usr_update and pdep_update.status == 'pending':
-                usr_update.ton_balance = float(Decimal(str(usr_update.ton_balance)) + Decimal(str(pdep_update.original_amount_ton)))
+                deposited_ton_amount = Decimal(str(pdep_update.original_amount_ton))
+                usr_update.ton_balance = float(Decimal(str(usr_update.ton_balance)) + deposited_ton_amount)
                 pdep_update.status = 'completed'
-                # Handle referral bonus here as well
+
+                # --- START OF CHANGE ---
+                # Log this successful deposit to our new unified table
+                new_deposit_log = Deposit(
+                    user_id=uid,
+                    ton_amount=float(deposited_ton_amount),
+                    deposit_type='TON'
+                )
+                db_update.add(new_deposit_log)
+                # --- END OF CHANGE ---
+
                 if usr_update.referred_by_id:
                     referrer = db_update.query(User).filter(User.id == usr_update.referred_by_id).with_for_update().first()
                     if referrer:
-                        referral_bonus = (Decimal(str(pdep_update.original_amount_ton)) * Decimal('0.10'))
+                        referral_bonus = (deposited_ton_amount * DEFAULT_REFERRAL_RATE)
+                        if referrer.username and referrer.username.lower() in (name.lower() for name in SPECIAL_REFERRAL_RATES.keys()):
+                            referral_bonus = (deposited_ton_amount * SPECIAL_REFERRAL_RATES[referrer.username.lower()])
                         referrer.referral_earnings_pending = float(Decimal(str(referrer.referral_earnings_pending)) + referral_bonus)
                 
                 db_update.commit()
@@ -3445,6 +3467,7 @@ def get_leaderboard_api():
 # --- In app.py ---
 
 # --- Find and REPLACE the entire withdraw_referral_earnings_api function ---
+# --- Find and REPLACE the entire withdraw_referral_earnings_api function ---
 @app.route('/api/withdraw_referral_earnings', methods=['POST'])
 def withdraw_referral_earnings_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3458,32 +3481,27 @@ def withdraw_referral_earnings_api():
         if not user:
             return jsonify({"error": "User not found."}), 404
         
-        # --- START OF THE NEW LOGIC ---
-        # Define the withdrawal requirements
         MIN_DEPOSIT_STARS = 200
         MIN_DEPOSIT_TON = Decimal(str(MIN_DEPOSIT_STARS)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
         TIME_WINDOW = timedelta(hours=24)
-        
-        # Calculate the start of the 24-hour window
         twenty_four_hours_ago = dt.now(timezone.utc) - TIME_WINDOW
         
-        # Query for completed deposits within the time window for this user
-        recent_deposits = db.query(PendingDeposit).filter(
-            PendingDeposit.user_id == uid,
-            PendingDeposit.status == 'completed',
-            PendingDeposit.created_at >= twenty_four_hours_ago
+        # --- START OF THE FIX ---
+        # Query the new unified 'deposits' table instead of 'pending_deposits'
+        recent_deposits = db.query(Deposit).filter(
+            Deposit.user_id == uid,
+            Deposit.created_at >= twenty_four_hours_ago
         ).all()
         
-        # Sum the total amount of recent deposits
-        total_deposited_recently_ton = sum(Decimal(str(d.original_amount_ton)) for d in recent_deposits)
+        # Sum the total amount from all recent deposits (TON and STARS)
+        total_deposited_recently_ton = sum(Decimal(str(d.ton_amount)) for d in recent_deposits)
+        # --- END OF THE FIX ---
         
-        # Check if the user meets the deposit requirement
         if total_deposited_recently_ton < MIN_DEPOSIT_TON:
             return jsonify({
                 "status": "error",
                 "message": f"You must deposit at least {MIN_DEPOSIT_STARS} Stars within the last 24 hours to withdraw referral earnings."
-            }), 403 # 403 Forbidden is a good status code for this
-        # --- END OF THE NEW LOGIC ---
+            }), 403
 
         if user.referral_earnings_pending > 0:
             withdrawn_amount_ton = Decimal(str(user.referral_earnings_pending))
