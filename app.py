@@ -150,7 +150,7 @@ if not TONNEL_SENDER_INIT_DATA:
 NORMAL_WEBAPP_URL = "https://vasiliy-katsyka.github.io/gifthunter"
 MAINTENANCE_WEBAPP_URL = "https://vasiliy-katsyka.github.io/maintencaincec" # If you still use this
 # Example: Choose based on an environment variable or a fixed value for production
-WEBAPP_URL = NORMAL_WEBAPP_URL # Assuming normal operation on the server
+WEBAPP_URL = MAINTENANCE_WEBAPP_URL # Assuming normal operation on the server
 
 API_BASE_URL = "https://gifthunter.onrender.com" # Your backend API URL
 
