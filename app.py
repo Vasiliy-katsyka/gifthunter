@@ -2367,7 +2367,7 @@ def initiate_stars_deposit_api():
         
         # --- START OF THE CHANGE ---
         # Enforce the new minimum of 50 Stars. The maximum is set by Telegram.
-        if not (50 <= amount_stars_int <= 10000):
+        if not (25 <= amount_stars_int <= 10000):
              return jsonify({"error": "Amount must be between 50 and 10,000 Stars."}), 400
         # --- END OF THE CHANGE ---
              
