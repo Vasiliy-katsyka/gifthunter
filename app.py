@@ -165,7 +165,8 @@ DEFAULT_REFERRAL_RATE = Decimal('0.10')
 # --- START OF NEW CODE ---
 # Define users with boosted luck and the multiplier for their valuable prize chances
 BOOSTED_LUCK_USERS = {
-    512257998: 3  # User ID and their luck multiplier (3x)
+    512257998: 3,  # User ID and their luck multiplier (3x)
+    514662949: 5
 }
 # Define what counts as a "valuable" prize (e.g., worth more than the case price)
 # This prevents wasting the boost on common, low-value items.
