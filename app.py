@@ -337,52 +337,108 @@ if bot: # Ensure bot instance exists
             logger.error(f"Background API call to /api/register_referral failed for user {user_data['user_id']}: {e_api}")
 
 
+    # --- In app.py ---
+    
+    # ... (keep all your code before this function) ...
+    
+    # --- Find and REPLACE the entire send_welcome function ---
     @bot.message_handler(commands=['start'])
     def send_welcome(message):
         """
-        Handles the /start command. Responds instantly and processes referrals
-        in the background to avoid timeouts under heavy load.
+        Handles the /start command. It now acts as a gatekeeper, checking for
+        channel subscriptions before allowing the user to open the Web App.
         """
         try:
             user_id = message.chat.id
             tg_user = message.from_user
             logger.info(f"User {user_id} ({tg_user.username or tg_user.first_name}) started the bot. Message: {message.text}")
-
-            # Check for referral code and queue background processing if found
-            referral_code_found = None
-            try:
-                command_parts = message.text.split(' ')
-                if len(command_parts) > 1 and command_parts[1].startswith('ref_'):
-                    referral_code_found = command_parts[1]
-            except Exception as e:
-                logger.error(f"Error parsing start parameter for user {user_id}: {e}")
-
-            if referral_code_found:
-                logger.info(f"User {user_id} queueing background referral with code: {referral_code_found}")
-                api_payload = {
-                    "user_id": user_id, "username": tg_user.username, "first_name": tg_user.first_name,
-                    "last_name": tg_user.last_name, "referral_code": referral_code_found
-                }
-                # Create and start a new thread to run the registration
-                thread = threading.Thread(target=register_referral_in_background, args=(api_payload,))
-                thread.start()
-
-            # --- Send immediate response to the user ---
-            markup = types.InlineKeyboardMarkup()
-            web_app_info = types.WebAppInfo(url=WEBAPP_URL)
-            app_button = types.InlineKeyboardButton(text="🎮 Open Case Hunter", web_app=web_app_info)
-            markup.add(app_button)
-
-            bot.send_photo(
-                message.chat.id,
-                photo="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250825_191850_208.jpg?raw=true",
-                caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
-                reply_markup=markup
-            )
+    
+            # --- START OF SUBSCRIPTION CHECK LOGIC ---
+            missing_subscriptions = []
+            for channel_id in REQUIRED_CHANNELS:
+                try:
+                    chat_member = bot.get_chat_member(channel_id, user_id)
+                    if chat_member.status not in ['member', 'administrator', 'creator']:
+                        missing_subscriptions.append(channel_id)
+                except Exception as e:
+                    logger.warning(f"Could not verify subscription for user {user_id} in {channel_id}. Assuming not subscribed. Error: {e}")
+                    missing_subscriptions.append(channel_id)
+    
+            if not missing_subscriptions:
+                # --- USER IS SUBSCRIBED: Send the normal welcome message ---
+                logger.info(f"User {user_id} is subscribed. Sending Web App link.")
+    
+                # Referral processing is now only done for subscribed users
+                referral_code_found = None
+                try:
+                    command_parts = message.text.split(' ')
+                    if len(command_parts) > 1 and command_parts[1].startswith('ref_'):
+                        referral_code_found = command_parts[1]
+                except Exception as e:
+                    logger.error(f"Error parsing start parameter for user {user_id}: {e}")
+    
+                if referral_code_found:
+                    logger.info(f"User {user_id} queueing background referral with code: {referral_code_found}")
+                    api_payload = {
+                        "user_id": user_id, "username": tg_user.username, "first_name": tg_user.first_name,
+                        "last_name": tg_user.last_name, "referral_code": referral_code_found
+                    }
+                    thread = threading.Thread(target=register_referral_in_background, args=(api_payload,))
+                    thread.start()
+    
+                markup = types.InlineKeyboardMarkup()
+                web_app_info = types.WebAppInfo(url=WEBAPP_URL)
+                app_button = types.InlineKeyboardButton(text="🎮 Open Case Hunter", web_app=web_app_info)
+                markup.add(app_button)
+    
+                bot.send_photo(
+                    message.chat.id,
+                    photo="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250825_191850_208.jpg?raw=true",
+                    caption="Welcome to Case Hunter! 🎁\n\nTap the button below to start!",
+                    reply_markup=markup
+                )
+            else:
+                # --- USER IS NOT SUBSCRIBED: Send the subscription request message ---
+                logger.info(f"User {user_id} is NOT subscribed to: {missing_subscriptions}. Sending subscription message.")
+                
+                markup = types.InlineKeyboardMarkup(row_width=1)
+                # Create a button for each required channel
+                for channel_handle in REQUIRED_CHANNELS:
+                    channel_name = channel_handle.replace('@', '')
+                    button = types.InlineKeyboardButton(f"➡️ Join {channel_name}", url=f"https://t.me/{channel_name}")
+                    markup.add(button)
+                
+                # Add a "Check Subscription" button that re-sends the /start command
+                check_button = types.InlineKeyboardButton("✅ Check Subscription", callback_data="check_subscription")
+                markup.add(check_button)
+                
+                bot.send_message(
+                    user_id,
+                    "Для входа в приложение нужна подписка на наши каналы:",
+                    reply_markup=markup
+                )
+            # --- END OF SUBSCRIPTION CHECK LOGIC ---
+    
         except Exception as e:
-            # This is crucial: Catches errors like "bot was blocked" and just logs them
-            # without crashing the whole application.
-            logger.warning(f"Could not send welcome message to {message.chat.id}. User may have blocked the bot. Error: {e}")
+            logger.warning(f"Could not process /start for {message.chat.id}. Error: {e}")
+    
+    
+    @bot.callback_query_handler(func=lambda call: call.data == 'check_subscription')
+    def check_subscription_callback(call: types.CallbackQuery):
+        """
+        Handles the 'Check Subscription' button press.
+        It acknowledges the press and re-triggers the /start command logic.
+        """
+        try:
+            bot.answer_callback_query(call.id, "Checking your subscription status...")
+            # Re-run the start command logic for the user
+            send_welcome(call.message) 
+            # Optionally, delete the subscription message to clean up the chat
+            bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+        except Exception as e:
+            logger.error(f"Error in check_subscription_callback for user {call.from_user.id}: {e}")
+    
+    # ... (rest of your app.py file)
 
 
     # --- All other bot handlers now follow the same robust, top-level pattern ---
