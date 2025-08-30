@@ -585,15 +585,22 @@
                         <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon" style="width: 28px; height: 28px; margin-right: 8px;">
                         <span>0</span>
                     </div>
-                    <input type="number" id="deposit-amount-input" placeholder="Amount (Min 25 stars)">
+                    <input type="number" id="deposit-amount-input" placeholder="Amount (min 50 Stars)">
+                    
+                    <!-- First row for Stars and TON deposits -->
                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <button id="initiate-deposit-stars-button" class="button" style="flex-grow: 1;">Депозит Stars</button>
-                        <button id="initiate-deposit-ton-button" class="button button-secondary" style="flex-grow: 1;">Депозит TON</button>
+                        
+                        <!-- START OF CHANGE: Removed 'button-secondary' class -->
+                        <button id="initiate-deposit-ton-button" class="button" style="flex-grow: 1;">Депозит TON</button>
+                        <!-- END OF CHANGE -->
                     </div>
                 
                     <!-- Second, separate row for Gift deposits -->
                     <div style="margin-bottom: 15px;">
-                        <button id="initiate-deposit-gifts-button" class="button button-secondary">Депозит Подарками</button>
+                        <!-- START OF CHANGE: Removed 'button-secondary' class -->
+                        <button id="initiate-deposit-gifts-button" class="button">Депозит Подарками</button>
+                        <!-- END OF CHANGE -->
                     </div>
                 </div>
             
