@@ -443,8 +443,56 @@ if bot: # Ensure bot instance exists
         except Exception as e:
             logger.error(f"Error in check_subscription_callback for user {call.from_user.id}: {e}")
     
-    # ... (rest of your app.py file)
-
+    @bot.callback_query_handler(func=lambda call: call.data.startswith(('confirm_gift_deposit:', 'deny_gift_deposit:')))
+    def handle_gift_deposit_confirmation(call: types.CallbackQuery):
+        try:
+            if call.from_user.id not in ADMIN_USER_IDS:
+                bot.answer_callback_query(call.id, "Unauthorized action.")
+                return
+    
+            action, _, data = call.data.partition(':')
+            target_user_id_str, star_amount_str = data.split(':')
+            target_user_id = int(target_user_id_str)
+            star_amount = int(star_amount_str)
+    
+            if action == 'confirm_gift_deposit':
+                ton_amount_to_add = Decimal(str(star_amount)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+                
+                db = SessionLocal()
+                try:
+                    user_to_credit = db.query(User).filter(User.id == target_user_id).with_for_update().first()
+                    if user_to_credit:
+                        user_to_credit.ton_balance = float(Decimal(str(user_to_credit.ton_balance)) + ton_amount_to_add)
+                        
+                        # Log this to the new unified Deposit table
+                        new_deposit_log = Deposit(
+                            user_id=target_user_id,
+                            ton_amount=float(ton_amount_to_add),
+                            deposit_type='GIFT'
+                        )
+                        db.add(new_deposit_log)
+                        db.commit()
+                        
+                        bot.answer_callback_query(call.id, f"Success! {star_amount} Stars added to user {target_user_id}.")
+                        bot.edit_message_text(f"✅ Approved: {star_amount} Stars were added to user {target_user_id}.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+                        
+                        # Notify the user
+                        bot.send_message(target_user_id, f"✅ Ваш депозит подарком был подтвержден! На ваш баланс зачислено {star_amount} Stars.")
+                    else:
+                        bot.answer_callback_query(call.id, "Error: User not found in database.", show_alert=True)
+                        bot.edit_message_text(f"⚠️ Failed: User {target_user_id} not found.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+                finally:
+                    db.close()
+    
+            elif action == 'deny_gift_deposit':
+                bot.answer_callback_query(call.id, "Deposit denied.")
+                bot.edit_message_text(f"❌ Denied: Deposit for user {target_user_id} was rejected.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+                # Notify the user
+                bot.send_message(target_user_id, f"❌ Ваш депозит подарком был отклонен. Пожалуйста, свяжитесь с поддержкой для уточнения деталей.")
+    
+        except Exception as e:
+            logger.error(f"Error in handle_gift_deposit_confirmation: {e}", exc_info=True)
+            bot.answer_callback_query(call.id, "An error occurred.", show_alert=True)
 
     # --- All other bot handlers now follow the same robust, top-level pattern ---
 
@@ -2232,7 +2280,176 @@ def check_subscription_api():
         return jsonify({"is_subscribed": False, "missing": missing_subscriptions})
 
 # --- In app.py ---
+# --- In app.py ---
 
+# ... (add near your other API routes) ...
+
+@app.route('/api/internal/log_gift_deposit', methods=['POST'])
+def log_gift_deposit_api():
+    # SECURITY: A simple secret key check to ensure only our userbot can call this.
+    # Set this secret key in your Render environment variables.
+    USERBOT_SECRET_KEY = os.environ.get("USERBOT_SECRET_KEY")
+    auth_header = flask_request.headers.get('X-Userbot-Secret')
+
+    if not USERBOT_SECRET_KEY or auth_header != USERBOT_SECRET_KEY:
+        logger.warning("Unauthorized attempt to access internal gift deposit API.")
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = flask_request.get_json()
+    logger.info(f"Received gift deposit log request: {data}")
+
+    try:
+        from_user_id = int(data.get('from_user_id'))
+        from_username = data.get('from_username', 'N/A')
+        star_amount = int(data.get('star_amount'))
+        gift_link = data.get('gift_link', 'N/A')
+        gift_attributes = data.get('gift_attributes', 'N/A')
+
+        if not all([from_user_id, star_amount]):
+            return jsonify({"error": "Missing required data"}), 400
+
+        # Send confirmation message to the admin/withdrawer
+        if bot and TARGET_WITHDRAWER_ID:
+            message_text = (
+                f"🎁 *Новый Депозит Подарком*\n\n"
+                f"От: {from_username} (ID: `{from_user_id}`)\n"
+                f"Сумма: *{star_amount} Stars*\n"
+                f"Подарок: {gift_link}\n\n"
+                f"*Атрибуты:*\n{gift_attributes}\n\n"
+                f"Добавить на баланс?"
+            )
+            
+            # Create a unique payload for the callback buttons
+            callback_payload = f"gift_deposit:{from_user_id}:{star_amount}"
+            
+            markup = types.InlineKeyboardMarkup()
+            yes_button = types.InlineKeyboardButton("✅ Yes", callback_data=f"confirm_{callback_payload}")
+            deny_button = types.InlineKeyboardButton("❌ Deny", callback_data=f"deny_{callback_payload}")
+            markup.add(yes_button, deny_button)
+            
+            bot.send_message(TARGET_WITHDRAWER_ID, message_text, reply_markup=markup, parse_mode="Markdown")
+            return jsonify({"status": "success", "message": "Admin notified for confirmation."})
+        else:
+            return jsonify({"error": "Bot or target withdrawer not configured."}), 500
+
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid data in gift deposit log request: {e}")
+        return jsonify({"error": "Invalid data format."}), 400
+    except Exception as e:
+        logger.error(f"Error in log_gift_deposit_api: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error."}), 500
+
+# --- Add this new callback handler to your bot logic ---
+# (Inside the `if bot:` block)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith(('confirm_gift_deposit:', 'deny_gift_deposit:')))
+def handle_gift_deposit_confirmation(call: types.CallbackQuery):
+    try:
+        if call.from_user.id not in ADMIN_USER_IDS:
+            bot.answer_callback_query(call.id, "Unauthorized action.")
+            return
+
+        action, _, data = call.data.partition(':')
+        target_user_id_str, star_amount_str = data.split(':')
+        target_user_id = int(target_user_id_str)
+        star_amount = int(star_amount_str)
+
+        if action == 'confirm_gift_deposit':
+            ton_amount_to_add = Decimal(str(star_amount)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+            
+            db = SessionLocal()
+            try:
+                user_to_credit = db.query(User).filter(User.id == target_user_id).with_for_update().first()
+                if user_to_credit:
+                    user_to_credit.ton_balance = float(Decimal(str(user_to_credit.ton_balance)) + ton_amount_to_add)
+                    
+                    # Log this to the new unified Deposit table
+                    new_deposit_log = Deposit(
+                        user_id=target_user_id,
+                        ton_amount=float(ton_amount_to_add),
+                        deposit_type='GIFT'
+                    )
+                    db.add(new_deposit_log)
+                    db.commit()
+                    
+                    bot.answer_callback_query(call.id, f"Success! {star_amount} Stars added to user {target_user_id}.")
+                    bot.edit_message_text(f"✅ Approved: {star_amount} Stars were added to user {target_user_id}.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+                    
+                    # Notify the user
+                    bot.send_message(target_user_id, f"✅ Ваш депозит подарком был подтвержден! На ваш баланс зачислено {star_amount} Stars.")
+                else:
+                    bot.answer_callback_query(call.id, "Error: User not found in database.", show_alert=True)
+                    bot.edit_message_text(f"⚠️ Failed: User {target_user_id} not found.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+            finally:
+                db.close()
+
+        elif action == 'deny_gift_deposit':
+            bot.answer_callback_query(call.id, "Deposit denied.")
+            bot.edit_message_text(f"❌ Denied: Deposit for user {target_user_id} was rejected.", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+            # Notify the user
+            bot.send_message(target_user_id, f"❌ Ваш депозит подарком был отклонен. Пожалуйста, свяжитесь с поддержкой для уточнения деталей.")
+
+    except Exception as e:
+        logger.error(f"Error in handle_gift_deposit_confirmation: {e}", exc_info=True)
+        bot.answer_callback_query(call.id, "An error occurred.", show_alert=True)# --- In app.py ---
+
+# ... (add near your other API routes) ...
+
+@app.route('/api/internal/log_gift_deposit', methods=['POST'])
+def log_gift_deposit_api():
+    # SECURITY: A simple secret key check to ensure only our userbot can call this.
+    # Set this secret key in your Render environment variables.
+    USERBOT_SECRET_KEY = os.environ.get("USERBOT_SECRET_KEY")
+    auth_header = flask_request.headers.get('X-Userbot-Secret')
+
+    if not USERBOT_SECRET_KEY or auth_header != USERBOT_SECRET_KEY:
+        logger.warning("Unauthorized attempt to access internal gift deposit API.")
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = flask_request.get_json()
+    logger.info(f"Received gift deposit log request: {data}")
+
+    try:
+        from_user_id = int(data.get('from_user_id'))
+        from_username = data.get('from_username', 'N/A')
+        star_amount = int(data.get('star_amount'))
+        gift_link = data.get('gift_link', 'N/A')
+        gift_attributes = data.get('gift_attributes', 'N/A')
+
+        if not all([from_user_id, star_amount]):
+            return jsonify({"error": "Missing required data"}), 400
+
+        # Send confirmation message to the admin/withdrawer
+        if bot and TARGET_WITHDRAWER_ID:
+            message_text = (
+                f"🎁 *Новый Депозит Подарком*\n\n"
+                f"От: {from_username} (ID: `{from_user_id}`)\n"
+                f"Сумма: *{star_amount} Stars*\n"
+                f"Подарок: {gift_link}\n\n"
+                f"*Атрибуты:*\n{gift_attributes}\n\n"
+                f"Добавить на баланс?"
+            )
+            
+            # Create a unique payload for the callback buttons
+            callback_payload = f"gift_deposit:{from_user_id}:{star_amount}"
+            
+            markup = types.InlineKeyboardMarkup()
+            yes_button = types.InlineKeyboardButton("✅ Yes", callback_data=f"confirm_{callback_payload}")
+            deny_button = types.InlineKeyboardButton("❌ Deny", callback_data=f"deny_{callback_payload}")
+            markup.add(yes_button, deny_button)
+            
+            bot.send_message(TARGET_WITHDRAWER_ID, message_text, reply_markup=markup, parse_mode="Markdown")
+            return jsonify({"status": "success", "message": "Admin notified for confirmation."})
+        else:
+            return jsonify({"error": "Bot or target withdrawer not configured."}), 500
+
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid data in gift deposit log request: {e}")
+        return jsonify({"error": "Invalid data format."}), 400
+    except Exception as e:
+        logger.error(f"Error in log_gift_deposit_api: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error."}), 500
+        
 @app.route('/api/healthcheck', methods=['GET'])
 def health_check():
     """A simple endpoint to confirm the server is running."""
