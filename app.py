@@ -168,7 +168,7 @@ BOOSTED_LUCK_USERS = {
     512257998: 2,
     #5146625949: 1.2, # Your ID with a 5x multiplie
     8262163216: 10,
-    1090125517: 1.1
+
 }
 # Define what counts as a "valuable" prize (e.g., worth more than the case price)
 VALUABLE_PRIZE_THRESHOLD_MULTIPLIER = Decimal('1.0')
