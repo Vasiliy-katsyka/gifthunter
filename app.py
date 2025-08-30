@@ -53,6 +53,7 @@ UPGRADE_MIN_CHANCE = Decimal('3.0')   # Minimum possible chance in %
 # RiskFactor: lower value means chance drops faster for higher multipliers (X)
 # e.g., 0.60 means for X=2, chance is MaxChance*0.6; for X=3, chance is MaxChance*0.6*0.6
 UPGRADE_RISK_FACTOR = Decimal('0.60')
+UPGRADE_HOUSE_EDGE_FACTOR = Decimal('0.80')
 
 RTP_TARGET = Decimal('0.65') # 85% Return to Player target for all cases and slots
 TON_TO_STARS_RATE_BACKEND = 250
@@ -2928,6 +2929,7 @@ def upgrade_item_api():
 # ... (keep all your code before this function) ...
 
 # --- Find and REPLACE the entire upgrade_item_v2_api function ---
+
 @app.route('/api/upgrade_item_v2', methods=['POST'])
 def upgrade_item_v2_api():
     auth_user_data = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2976,25 +2978,26 @@ def upgrade_item_v2_api():
         if value_of_desired_item <= value_of_item_to_upgrade:
             return jsonify({"error": "Desired item must have a higher value than your current item."}), 400
 
-        # --- START OF THE FIX ---
-        # Server-side calculation of multiplier (X) and chance, without the flawed minimum.
         calculated_x = value_of_desired_item / value_of_item_to_upgrade
         x_effective = max(Decimal('1.01'), calculated_x)
-
-        # The core chance formula remains the same.
-        chance_decimal_raw = UPGRADE_MAX_CHANCE * (UPGRADE_RISK_FACTOR ** (x_effective - Decimal('1')))
         
-        # CRITICAL CHANGE: We only cap the chance at the MAXIMUM. We no longer enforce a minimum.
-        # The chance is now allowed to be naturally very low for extreme upgrades.
-        # We also ensure the chance is never less than zero, just as a safety measure.
-        server_calculated_chance = min(UPGRADE_MAX_CHANCE, max(Decimal('0'), chance_decimal_raw))
-        # --- END OF THE FIX ---
+        # This is the "fair" chance that the frontend displays
+        chance_decimal_raw = UPGRADE_MAX_CHANCE * (UPGRADE_RISK_FACTOR ** (x_effective - Decimal('1')))
+        displayed_chance = min(UPGRADE_MAX_CHANCE, max(Decimal('0'), chance_decimal_raw))
+        
+        # --- START OF THE HOUSE EDGE LOGIC ---
+        # We take the displayed chance and apply our house edge factor to get the REAL chance.
+        actual_server_chance = displayed_chance * UPGRADE_HOUSE_EDGE_FACTOR
+        # --- END OF THE HOUSE EDGE LOGIC ---
         
         roll = Decimal(str(random.uniform(0, 100)))
-        is_success = roll < server_calculated_chance
+        is_success = roll < actual_server_chance # The roll is compared against the REAL chance
         
         name_of_item_being_upgraded = item_to_upgrade.item_name_override or \
                                       (item_to_upgrade.nft.name if item_to_upgrade.nft else "Unknown Item")
+        
+        # Log both chances for your own records, this is very useful for debugging and balancing.
+        logger.info(f"User {player_user_id} attempting upgrade. Displayed Chance: {displayed_chance:.2f}%, Actual Chance: {actual_server_chance:.2f}%, Roll: {roll:.2f}%.")
 
         if is_success:
             net_value_increase = value_of_desired_item - value_of_item_to_upgrade
@@ -3011,9 +3014,7 @@ def upgrade_item_v2_api():
             db.commit()
             db.refresh(new_upgraded_item)
 
-            logger.info(f"User {player_user_id} UPGRADED item ID {inventory_item_id} ({name_of_item_being_upgraded} @ {value_of_item_to_upgrade} TON) "
-                        f"to {desired_nft_data.name} (@ {value_of_desired_item} TON). "
-                        f"X={calculated_x:.2f}, Chance={server_calculated_chance:.2f}%, Roll={roll:.2f}%. SUCCESS.")
+            logger.info(f"Upgrade for user {player_user_id} was SUCCESSFUL.")
 
             return jsonify({
                 "status": "success",
@@ -3027,9 +3028,7 @@ def upgrade_item_v2_api():
             db.delete(item_to_upgrade)
             db.commit()
 
-            logger.info(f"User {player_user_id} FAILED to upgrade item ID {inventory_item_id} ({name_of_item_being_upgraded} @ {value_of_item_to_upgrade} TON) "
-                        f"to {desired_nft_data.name} (@ {value_of_desired_item} TON). "
-                        f"X={calculated_x:.2f}, Chance={server_calculated_chance:.2f}%, Roll={roll:.2f}%. FAILED.")
+            logger.info(f"Upgrade for user {player_user_id} FAILED.")
 
             return jsonify({
                 "status": "failed", "message": f"Upgrade failed! Your {name_of_item_being_upgraded} was lost.",
@@ -3047,7 +3046,7 @@ def upgrade_item_v2_api():
         return jsonify({"error": "An unexpected server error occurred during upgrade."}), 500
     finally:
         db.close()
-
+        
 @app.route('/api/convert_to_ton', methods=['POST'])
 def convert_to_ton_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
