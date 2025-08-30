@@ -1656,7 +1656,7 @@ kissed_frog_processed_prizes = calculate_rtp_probabilities(
 # Backend cases data (initial templates - will be adjusted by RTP function)
 # --- In app.py, REPLACE the entire cases_data_backend_with_fixed_prices_raw list ---
 cases_data_backend_with_fixed_prices_raw = [
-    {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.1,'prizes': sorted([
+    {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': sorted([
         {'name':'Heart Locket','probability': 0.0000001}, # Jackpot!
         {'name':'Plush Pepe','probability': 0.0000005},
         {'name':'Durov\'s Cap','probability': 0.000005},
@@ -1670,7 +1670,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name': "Bottle", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
-    {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.5,'prizes': sorted([
+    {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.756,'prizes': sorted([
         {'name':'Heroic Helmet','probability': 0.000005}, # New high-tier prize
         {'name':'Perfume Bottle','probability': 0.0001},
         {'name':'Vintage Cigar','probability': 0.00012},
@@ -1686,7 +1686,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name': "Bottle", 'probability': 0.15},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
-    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.0,'prizes': sorted([
+    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': sorted([
         {'name':'Plush Pepe','probability':0.0000001},
         {'name':'Neko Helmet','probability':0.00001},
         {'name':'Snoop Dogg', 'probability': 0.05},      # New Thematic Filler
@@ -1706,7 +1706,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Hypno Lollipop','probability':0.1},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
-    {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.0,'prizes': sorted([
+    {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': sorted([
         {'name':'Plush Pepe','probability':0.0000001},
         {'name':'Bow Tie', 'probability': 0.02},         # New
         {'name':'Joyful Bundle', 'probability': 0.02},   # New
