@@ -586,9 +586,14 @@
                         <span>0</span>
                     </div>
                     <input type="number" id="deposit-amount-input" placeholder="Amount (Min 25 stars)">
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <button id="initiate-deposit-stars-button" class="button">Депозит Stars</button>
-                        <button id="initiate-deposit-ton-button" class="button button-secondary">Депозит TON</button>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <button id="initiate-deposit-stars-button" class="button" style="flex-grow: 1;">Депозит Stars</button>
+                        <button id="initiate-deposit-ton-button" class="button button-secondary" style="flex-grow: 1;">Депозит TON</button>
+                    </div>
+                
+                    <!-- Second, separate row for Gift deposits -->
+                    <div style="margin-bottom: 15px;">
+                        <button id="initiate-deposit-gifts-button" class="button button-secondary">Депозит Подарками</button>
                     </div>
                 </div>
             
@@ -754,6 +759,25 @@
             </div>
         </div>
     </div>
+
+    <div id="gift-deposit-modal" class="modal">
+        <div class="modal-content">
+            <h3>Депозит Подарками</h3>
+            <div class="modal-body" style="text-align: left;">
+                <p>
+                    Переведите ваш подарок на аккаунт <a href="https://t.me/SellerFrament" target="_blank" style="color: var(--primary-color); text-decoration: none;">@SellerFrament</a>.
+                    <br>Актуальные цены:
+                </p>
+                <div id="gift-prices-list" style="max-height: 40vh; overflow-y: auto; padding-right: 10px;">
+                    <!-- Gift list will be populated here by JavaScript -->
+                    <div class="loader"></div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button id="close-gift-deposit-modal-button" class="button button-secondary">Close</button>
+            </div>
+        </div>
+    </div>
 <script>
 // Global Constants and Data Definitions
 const IMAGE_BASE_URL = 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/GiftImages/';
@@ -772,6 +796,15 @@ const currentUser = {
 };
 // --- In your <script> tag in index.html ---
 
+const giftDepositModal = document.getElementById('gift-deposit-modal');
+const openGiftDepositBtn = document.getElementById('initiate-deposit-gifts-button');
+const closeGiftDepositBtn = document.getElementById('close-gift-deposit-modal-button');
+const giftPricesListContainer = document.getElementById('gift-prices-list');
+let allGiftsForDeposit = [];
+
+
+
+    
 const EMOJI_GIFTS = {
     "Heart": {
         id: "5170145012310081615",
@@ -1488,6 +1521,54 @@ function renderBanners() {
     startBannerAutoSwipe();
 }
 
+function populateAllGiftsForDeposit() {
+    const uniqueGifts = new Map();
+    casesData.forEach(caseItem => {
+        caseItem.prizes.forEach(prize => {
+            // Only include items with a name and a value > 0
+            if (prize.name && prize.floorPrice > 0) {
+                if (!uniqueGifts.has(prize.name)) {
+                    uniqueGifts.set(prize.name, {
+                        name: prize.name,
+                        imageFilename: prize.imageFilename || generateImageFilename(prize.name),
+                        floorPrice: prize.floorPrice
+                    });
+                }
+            }
+        });
+    });
+    // Convert map to array and sort by value, highest first
+    allGiftsForDeposit = Array.from(uniqueGifts.values()).sort((a, b) => b.floorPrice - a.floorPrice);
+}
+
+function renderGiftPricesList() {
+    if (allGiftsForDeposit.length === 0) {
+        populateAllGiftsForDeposit();
+    }
+    
+    giftPricesListContainer.innerHTML = ''; // Clear previous content
+
+    allGiftsForDeposit.forEach(gift => {
+        const starValue = Math.floor(gift.floorPrice * TON_TO_STARS_RATE);
+        
+        const listItem = document.createElement('div');
+        listItem.style.display = 'flex';
+        listItem.style.alignItems = 'center';
+        listItem.style.padding = '8px 0';
+        listItem.style.borderBottom = '1px solid var(--border-color)';
+
+        listItem.innerHTML = `
+            <img src="${gift.imageFilename}" alt="${gift.name}" style="width: 40px; height: 40px; margin-right: 12px; object-fit: contain;">
+            <span style="flex-grow: 1; font-weight: 500;">${gift.name}</span>
+            <span style="font-weight: 600; display: flex; align-items: center;">
+                ${starValue}
+                <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 16px; height: 16px; margin-left: 5px;">
+            </span>
+        `;
+        giftPricesListContainer.appendChild(listItem);
+    });
+}
+    
 function goToBannerSlide(index) {
     const slidesContainer = document.querySelector('.banner-slides');
     bannerCurrentIndex = (index + bannersData.length) % bannersData.length;
@@ -2961,6 +3042,21 @@ inviteElements.withdrawReferralButton.addEventListener('click', async () => {
 profileElements.sellAllButton?.addEventListener('click', sellAllItems);
 confirmPaymentSentButton?.addEventListener('click', verifyPaymentSent);
 cancelDepositButton?.addEventListener('click', closeDepositInstructionsModal);
+openGiftDepositBtn.addEventListener('click', () => {
+    renderGiftPricesList();
+    giftDepositModal.classList.add('active');
+});
+
+closeGiftDepositBtn.addEventListener('click', () => {
+    giftDepositModal.classList.remove('active');
+});
+
+// Also make the modal close if clicking outside of it
+giftDepositModal.addEventListener('click', (event) => {
+    if (event.target === giftDepositModal) {
+        giftDepositModal.classList.remove('active');
+    }
+});
 async function fetchInitialUserData() {
     if (!Telegram.WebApp.initData) {
         dataFetchedSuccessfully = true;
