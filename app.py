@@ -426,7 +426,77 @@ if bot: # Ensure bot instance exists
     
         except Exception as e:
             logger.warning(f"Could not process /start for {message.chat.id}. Error: {e}")
+
+    @bot.message_handler(commands=['add'])
+    def add_balance_command(message):
+        """
+        Admin command to add Stars to a user's account by username.
+        Format: /add @username 5000
+        """
+        try:
+            # 1. Security Check: Only admins can use this command.
+            if message.from_user.id not in ADMIN_USER_IDS:
+                bot.reply_to(message, "You are not authorized to use this command.")
+                logger.warning(f"Unauthorized /add attempt by user {message.from_user.id}")
+                return
     
+            # 2. Parse the command arguments
+            parts = message.text.split()
+            if len(parts) != 3:
+                bot.reply_to(message, "Incorrect format. Use: `/add @username amount`", parse_mode="Markdown")
+                return
+            
+            target_username = parts[1].replace('@', '').strip().lower()
+            star_amount_to_add = int(parts[2])
+    
+            if star_amount_to_add <= 0:
+                bot.reply_to(message, "Amount must be a positive number.")
+                return
+    
+            # 3. Find the user and update their balance
+            db = SessionLocal()
+            # Find user by username, case-insensitive
+            target_user = db.query(User).filter(func.lower(User.username) == target_username).with_for_update().first()
+    
+            if not target_user:
+                bot.reply_to(message, f"User @{target_username} not found in the database.")
+                return
+            
+            ton_equivalent_to_add = Decimal(str(star_amount_to_add)) / Decimal(str(TON_TO_STARS_RATE_BACKEND))
+            
+            original_balance = Decimal(str(target_user.ton_balance))
+            target_user.ton_balance = float(original_balance + ton_equivalent_to_add)
+            
+            # Also log this as a "GIFT" deposit for their history
+            new_deposit_log = Deposit(
+                user_id=target_user.id,
+                ton_amount=float(ton_equivalent_to_add),
+                deposit_type='GIFT' # Use a special type for admin-added funds
+            )
+            db.add(new_deposit_log)
+            
+            db.commit()
+    
+            # 4. Send confirmations
+            admin_confirmation = (
+                f"✅ Successfully added {star_amount_to_add} Stars to @{target_username}.\n"
+                f"Their new balance is {int(target_user.ton_balance * TON_TO_STARS_RATE_BACKEND)} Stars."
+            )
+            bot.reply_to(message, admin_confirmation)
+    
+            # Notify the user that they received a deposit
+            user_notification = f"🎉 An administrator has credited your account with {star_amount_to_add} Stars!"
+            bot.send_message(target_user.id, user_notification)
+    
+            logger.info(f"Admin {message.from_user.id} used /add to give {star_amount_to_add} Stars to user {target_user.id} (@{target_username}).")
+    
+        except ValueError:
+            bot.reply_to(message, "Invalid amount. Please provide a whole number of Stars.")
+        except Exception as e:
+            logger.error(f"Error in /add command: {e}", exc_info=True)
+            bot.reply_to(message, "An error occurred while processing the command.")
+        finally:
+            if 'db' in locals(): db.close()
     
     @bot.callback_query_handler(func=lambda call: call.data == 'check_subscription')
     def check_subscription_callback(call: types.CallbackQuery):
