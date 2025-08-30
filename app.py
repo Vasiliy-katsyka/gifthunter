@@ -166,8 +166,7 @@ DEFAULT_REFERRAL_RATE = Decimal('0.10')
 # Define users with boosted luck and the multiplier for their valuable prize chances
 BOOSTED_LUCK_USERS = {
     512257998: 2,
-    5146625949: 1.2, # Your ID with a 5x multiplier
-    1090125517: 1.2,
+    5146625949: 1.2, # Your ID with a 5x multiplie
     8262163216: 10
 }
 # Define what counts as a "valuable" prize (e.g., worth more than the case price)
