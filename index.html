@@ -1708,6 +1708,8 @@ function renderProfile() {
     profileElements.disconnectWalletButton.style.display = currentUser.walletAddress ? 'block' : 'none';
     renderInventory();
 }
+
+// --- Find and REPLACE the entire renderInventory function ---
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
@@ -1728,21 +1730,27 @@ function renderInventory() {
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            // Simplified image logic
             const img = document.createElement('img');
-            img.src = generateImageFilename(item.imageFilename || item.name);
+            img.src = item.imageFilename || generateImageFilename(item.name);
             img.alt = item.name;
             img.loading = 'lazy';
             imgCont.appendChild(img);
             
-            // Note: item.is_emoji_gift might need adjustment depending on your backend response now
-            const withdrawAction = `startWithdrawalProcess(${item.id}, ${!!EMOJI_GIFTS[item.name]})`;
+            // --- START OF THE FIX ---
+            // Check if the item is one of the emoji gifts
+            const isEmojiGift = !!EMOJI_GIFTS[item.name];
+            
+            // If it is an emoji gift, add the 'disabled' attribute to the button.
+            // Otherwise, the button is enabled as normal.
+            const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
+            const withdrawAction = `startWithdrawalProcess(${item.id})`;
 
             const valueHTML = `<div class="inventory-item-value">${itemValueInStars} ⭐</div>`;
             const actionsHTML = `<div class="inventory-item-actions">
-                                    <button class="button button-secondary" onclick="${withdrawAction}">Withdraw</button>
+                                    <button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button>
                                     <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
                                  </div>`;
+            // --- END OF THE FIX ---
 
             itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
             itemDiv.insertBefore(imgCont, itemDiv.firstChild);
@@ -1754,6 +1762,7 @@ function renderInventory() {
     }
     profileElements.inventoryCount.textContent = currentUser.inventory.length;
 }
+      
 // --- Replace your existing renderLeaderboard function ---
 
 async function renderLeaderboard() {
