@@ -86,6 +86,14 @@
             50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.7; }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
         }
+
+        @keyframes backgroundDrift {
+            0%   { transform: translate(10vw, -15vh) scale(1.1); opacity: 0.6; }
+            25%  { transform: translate(-20vw, 20vh) scale(1.3); opacity: 0.4; }
+            50%  { transform: translate(25vw, 30vh) scale(1.0); opacity: 0.7; }
+            75%  { transform: translate(5vw, -25vh) scale(1.4); opacity: 0.5; }
+            100% { transform: translate(10vw, -15vh) scale(1.1); opacity: 0.6; }
+        }
         
         .slot-card { background-image: var(--case-grad-default); border-radius: var(--main-border-radius); padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color); overflow: hidden; position: relative; }
         .slot-card:hover { filter: brightness(1.12); transform: translateY(-6px) scale(1.02); box-shadow: var(--soft-shadow); }
@@ -346,7 +354,7 @@
             left: 0; 
             width: 100%; 
             height: 100%; 
-            background: #0D101B; /* Darker, solid background from the video */
+            background: #0D101B; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
@@ -355,20 +363,22 @@
             color: var(--text-primary); 
             font-family: var(--font-family); 
             transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
-            overflow: hidden; /* Important to contain the glow */
+            overflow: hidden;
         }
         
         /* This is the new animated background glow */
         #loading-screen::before {
             content: '';
             position: absolute;
-            top: 40%; /* Position it behind the logo and title */
+            /* Start position is less important now as the animation will move it */
+            top: 50%;
             left: 50%;
-            width: 80vmin; /* Use viewport units to scale nicely on all screen sizes */
-            height: 80vmin;
-            background: radial-gradient(circle, rgba(0, 122, 255, 0.2) 0%, rgba(0, 122, 255, 0) 65%);
-            animation: backgroundGlow 8s ease-in-out infinite;
-            z-index: 0; /* Place it behind all content */
+            width: 100vmin; /* Made it larger for a more ambient effect */
+            height: 100vmin;
+            background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0) 60%);
+            /* Use the new 'backgroundDrift' animation */
+            animation: backgroundDrift 20s ease-in-out infinite; 
+            z-index: 0;
         }
         #loading-screen > * {
             position: relative;
@@ -376,11 +386,11 @@
         }
         #loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .loading-logo { 
-            width: 130px; /* Made the logo larger */
-            height: 130px;
-            border-radius: 0; /* New logo is borderless */
+            width: 150px; /* --- LOGO BIGGER --- */
+            height: 150px; 
+            border-radius: 0; 
             margin-bottom: 10px;
-            box-shadow: none; /* Removed old shadow */
+            box-shadow: none; 
             object-fit: contain;
         }
         
@@ -389,12 +399,12 @@
             font-size: 2.8em; 
             font-weight: 800;
             margin-bottom: 30px; 
-            letter-spacing: 2px; /* Added spacing to match video */
-            color: #34AADC; /* Bright, solid blue color */
-            text-shadow: 0 0 10px rgba(52, 170, 220, 0.7), 0 0 20px rgba(52, 170, 220, 0.5); /* Glowing text effect */
+            letter-spacing: 2px;
+            color: #34AADC;
+            /* --- TITLE NOT GLOWING --- */
+            text-shadow: none; /* Removed the glow effect */
             font-style: italic;
             text-transform: uppercase;
-            /* Reset old gradient styles from previous version */
             background: none;
             -webkit-background-clip: unset;
             -webkit-text-fill-color: unset;
@@ -407,7 +417,7 @@
             margin-bottom: 25px; 
             border-width: 4px; 
             box-shadow: none;
-            border-top-color: #34AADC; /* Match the new blue color */
+            border-top-color: #34AADC;
             border-left-color: transparent;
             border-right-color: transparent;
             border-bottom-color: transparent;
@@ -416,7 +426,7 @@
         .loading-status-text { 
             font-size: 1em; 
             font-weight: 400; 
-            color: #AEB4C0; /* Light gray text */
+            color: #AEB4C0; 
             margin-bottom: 40px; 
         }
         
