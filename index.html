@@ -2242,7 +2242,7 @@ function openRouletteModal(caseItem) {
         let itemValueInTon = pData.floorPrice || 0;
         // Check if the current case is 'black_only_case' and apply the 3x display multiplier
         if (caseItem.id === 'black_only_case') {
-            itemValueInTon *= 10;
+            itemValueInTon *= 6;
         }
         const displayPriceInStars = Math.floor(itemValueInTon * TON_TO_STARS_RATE);
         // --- END OF MODIFICATION ---
