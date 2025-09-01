@@ -1917,6 +1917,18 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Hypno Lollipop','probability':0.065},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
+    {'id':'schooler_case','name':'Schooler','imageFilename':'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215435_909.jpg?raw=true','priceTON':6.0,'prizes': sorted([
+        {'name':'Durov\'s Cap','probability': 0.0001},
+        {'name':'Swiss Watch','probability': 0.01},
+        {'name':'Record Player','probability': 0.02},
+        {'name':'Voodoo Doll','probability': 0.05},
+        {'name':'Top Hat','probability': 0.1},
+        {'name':'Bow Tie','probability': 0.2},
+        {'name':'Tama Gadget','probability': 0.2},
+        {'name':'Star Notepad','probability': 0.2199},
+        {'name':'Desk Calendar','probability': 0.2},
+    ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
+
     {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': sorted([
         {'name':'Heart Locket', 'probability': 0.00005},  # New Ultimate Prize
         {'name':'Nail Bracelet', 'probability': 0.0001}, # New Top Prize
@@ -1963,6 +1975,31 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Top Hat','probability':0.1},
         {'name':'Trapped Heart','probability':0.1},
         {'name':'Love Potion','probability':0.1},
+    ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
+
+    {'id':'black_only_case','name':'Black Only','imageFilename':'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215438_642.jpg?raw=true','priceTON':16.0,
+     'special_variant': 'blackbg', # This new key will be used to tag items
+     'prizes': sorted([
+        # High-tier but very rare
+        {'name':'Plush Pepe','probability': 0.000001},
+        {'name':'Durov\'s Cap','probability': 0.000005},
+        {'name':'Precious Peach','probability': 0.00001},
+        {'name':'Nail Bracelet','probability': 0.00005},
+        # Mid-tier
+        {'name':'Astral Shard','probability': 0.0001},
+        {'name':'Perfume Bottle','probability': 0.0005},
+        {'name':'Swiss Watch','probability': 0.001},
+        {'name':'Vintage Cigar','probability': 0.001},
+        {'name':'Sharp Tongue','probability': 0.002},
+        {'name':'Electric Skull','probability': 0.002},
+        # Low-tier, common
+        {'name':'Record Player','probability': 0.05},
+        {'name':'Top Hat','probability': 0.05},
+        {'name':'Skull Flower','probability': 0.1},
+        {'name':'Spy Agaric','probability': 0.1},
+        {'name':'Hypno Lollipop','probability': 0.2},
+        {'name':'Desk Calendar','probability': 0.246334},
+        {'name':'Lol Pop','probability': 0.25},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'kissedfrog','name':'Kissed Frog Pond','priceTON':20.0,'imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Kissed-Frog.jpg',
@@ -2950,7 +2987,8 @@ def open_case_api():
 
             inventory_item = InventoryItem(
                 user_id=uid, nft_id=db_nft.id if db_nft else None, item_name_override=prize_name,
-                item_image_override=image_url, current_value=float(prize_value_ton), is_ton_prize=False
+                item_image_override=image_url, current_value=float(prize_value_ton), is_ton_prize=False,
+                variant=target_case.get('special_variant') # This line is new
             )
             db.add(inventory_item)
             db.flush()
@@ -3691,7 +3729,11 @@ def request_manual_withdrawal_api():
         item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown Item")
         model = item.variant if item.variant else ""
 
-        message = f"Send {item_name} {model} to user {user.first_name} (@{user.username} - {user.id})"
+        message_note = ""
+        if item.variant == 'blackbg':
+            message_note = " (Variant: Black BG - MUST write with black background!)"
+
+        message = f"Send {item_name}{message_note} to user {user.first_name} (@{user.username} - {user.id})"
 
         if bot and TARGET_WITHDRAWER_ID:
             try:
