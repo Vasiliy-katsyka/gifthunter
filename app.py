@@ -2871,6 +2871,8 @@ def withdraw_emoji_gift_api():
 
 # --- Find and REPLACE the entire open_case_api function ---
 
+# In app.py, replace your entire open_case_api function with this
+
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2908,58 +2910,42 @@ def open_case_api():
 
         prizes_in_case = target_case['prizes']
         
-        # --- START OF THE NEW, MORE POWERFUL LUCK BOOST LOGIC ---
         luck_boost_multiplier = BOOSTED_LUCK_USERS.get(uid)
         
         if luck_boost_multiplier:
             logger.info(f"Applying new x{luck_boost_multiplier} reallocation luck boost for user {uid}.")
-            
             dynamic_prizes = [p.copy() for p in prizes_in_case]
             valuable_threshold = cost_per_case_ton * VALUABLE_PRIZE_THRESHOLD_MULTIPLIER
-
             valuable_prizes = []
             common_prizes = []
             total_common_prob = Decimal('0')
-
             for prize in dynamic_prizes:
                 if Decimal(str(prize.get('floor_price', 0))) >= valuable_threshold:
                     valuable_prizes.append(prize)
                 else:
                     common_prizes.append(prize)
                     total_common_prob += Decimal(str(prize['probability']))
-            
             if valuable_prizes and total_common_prob > 0:
-                # 1. Determine how much probability to steal from the common items
                 prob_to_reallocate = total_common_prob * BOOSTED_LUCK_REALLOCATION_FACTOR
-                
-                # 2. Reduce the chance of all common items proportionally
                 reduction_factor = (total_common_prob - prob_to_reallocate) / total_common_prob
                 for prize in common_prizes:
                     prize['probability'] = float(Decimal(str(prize['probability'])) * reduction_factor)
-                
-                # 3. Distribute the stolen probability among the valuable items.
-                # We'll give it to them based on their original chances (rarer valuable items get a smaller piece of the pie).
                 total_original_valuable_prob = sum(Decimal(str(p['probability'])) for p in valuable_prizes)
-                
                 if total_original_valuable_prob > 0:
                     for prize in valuable_prizes:
                         original_prob = Decimal(str(prize['probability']))
                         share_of_reallocation = original_prob / total_original_valuable_prob
                         bonus_prob = prob_to_reallocate * share_of_reallocation
                         prize['probability'] = float(original_prob + bonus_prob)
-
-                # 4. Re-assemble and re-normalize the final prize list to be perfectly 1.0
                 prizes_to_use_for_spin = valuable_prizes + common_prizes
                 final_total_prob = sum(p['probability'] for p in prizes_to_use_for_spin)
                 if final_total_prob > 0:
                     for prize in prizes_to_use_for_spin:
                         prize['probability'] /= final_total_prob
             else:
-                # Fallback to the original list if there are no valuable prizes to boost
                 prizes_to_use_for_spin = prizes_in_case
         else:
             prizes_to_use_for_spin = prizes_in_case
-        # --- END OF THE LUCK BOOST LOGIC ---
 
         won_prizes_response_list = []
         total_value_this_spin_ton = Decimal('0')
@@ -2979,7 +2965,15 @@ def open_case_api():
 
             prize_name = chosen_prize_info['name']
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
-            total_value_this_spin_ton += prize_value_ton
+
+            # --- START OF MODIFICATION ---
+            final_prize_value_ton = prize_value_ton
+            if target_case.get('id') == 'black_only_case':
+                final_prize_value_ton *= Decimal('3')
+            
+            total_value_this_spin_ton += final_prize_value_ton
+            # --- END OF MODIFICATION ---
+            
             db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
             
             is_emoji = prize_name in EMOJI_GIFT_IMAGES
@@ -2987,15 +2981,18 @@ def open_case_api():
 
             inventory_item = InventoryItem(
                 user_id=uid, nft_id=db_nft.id if db_nft else None, item_name_override=prize_name,
-                item_image_override=image_url, current_value=float(prize_value_ton), is_ton_prize=False,
-                variant=target_case.get('special_variant') # This line is new
+                item_image_override=image_url, 
+                current_value=float(final_prize_value_ton), # Use the potentially multiplied value
+                is_ton_prize=False,
+                variant=target_case.get('special_variant')
             )
             db.add(inventory_item)
             db.flush()
 
             won_prizes_response_list.append({
                 "id": inventory_item.id, "name": prize_name, "imageFilename": inventory_item.item_image_override,
-                "currentValue": inventory_item.current_value, "is_emoji_gift": is_emoji
+                "currentValue": inventory_item.current_value, # Send the multiplied value to the frontend
+                "is_emoji_gift": is_emoji
             })
 
         user.total_won_ton = float(Decimal(str(user.total_won_ton)) + total_value_this_spin_ton)
