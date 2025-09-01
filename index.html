@@ -2151,11 +2151,17 @@ function openRouletteModal(caseItem) {
     currentOpenCaseOrSlot = caseItem;
     selectedCaseMultiplier = 1;
     updateCaseMultiplierButtons();
-    rouletteCaseName.textContent = caseItem.name;
+
+    // --- START OF THE CHANGE ---
+    // Fetch the Russian name from our translation mapping.
+    // If a translation doesn't exist for some reason, it will safely fall back to the original English name.
+    const translatedCaseName = caseNameTranslations[caseItem.name] || caseItem.name;
+    rouletteCaseName.textContent = translatedCaseName;
+    // --- END OF THE CHANGE ---
+
     updateSpinButtonText();
     updateModalBalanceDisplay();
 
-    // NEW: Update balance display inside the modal when it opens
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
     const balanceValueEl = document.getElementById('roulette-modal-balance-value');
     if (balanceValueEl) {
@@ -2169,7 +2175,6 @@ function openRouletteModal(caseItem) {
         if (!pData || !pData.name) return;
 
         const displayPriceInStars = Math.floor((pData.floorPrice || 0) * TON_TO_STARS_RATE);
-
         const card = document.createElement('div');
         card.className = 'prize-card';
 
