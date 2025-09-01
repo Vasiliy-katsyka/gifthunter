@@ -78,7 +78,18 @@
         .case-image-display img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
         .case-image-display .overlay-image { position: absolute; width: 70%; height: 70%; top: 50%; left: 50%; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
         .case-name { font-weight: 600; font-size: 1.05em; margin-bottom: 8px; color: var(--text-primary); min-height: 2.5em; display: flex; align-items: center; justify-content: center; }
-        .case-card .case-name { display: none !important; }
+        .case-card .case-name {
+            display: flex; /* Make sure it's visible */
+            font-weight: 600;
+            font-size: 1em;
+            color: var(--text-primary);
+            line-height: 1.3;
+            padding: 0 8px; /* Add some horizontal padding */
+            min-height: 50px; /* Ensure space for two lines of text */
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
         .case-price { font-size: 0.95em; font-weight: 600; color: var(--text-primary); padding: 12px 0; background-color: rgba(0,0,0,0.2); width: 100%; border-top: 1px solid var(--border-color); }
 
         @keyframes backgroundGlow {
@@ -587,7 +598,10 @@
     </div>
     <div id="app-container">
         <header id="app-header">
-            <div class="app-title-container"><img src="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/black%20(3).png?raw=true" alt="Pusik Gifts Logo" class="app-logo"><div class="app-title">Case Hunter</div></div>
+            <div class="app-title-container">
+                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/BackgroundEraser_20250831_184845312.png" alt="Case Hunter Logo" class="app-logo">
+                <div class="app-title">Case Hunter</div>
+            </div>
             <div class="wallet-info">
                 <div id="wallet-address-display">Connected: ...</div>
                 <div id="balance">
@@ -608,7 +622,7 @@
                         <!-- Pagination dots will be injected here by JavaScript -->
                     </div>
                 </div>
-                <h2>Cases</h2>
+                <h2>Кейсы</h2>
                 <div id="cases-grid" class="cases-grid"></div>
                 <!-- Removed slots section for brevity, can be re-added if needed -->
             </div>
@@ -1200,6 +1214,21 @@ let remainingProbForConsolation = 1.0 - currentProbSumForKF;
 if(remainingProbForConsolation > 0.00001){finalKissedFrogPrizesWithConsolation.push({name:"Desk Calendar",probability:remainingProbForConsolation});}
 finalKissedFrogPrizesWithConsolation.forEach(p=>{if(!p.imageFilename)p.imageFilename=generateImageFilename(p.name);if(p.floorPrice===undefined)p.floorPrice=UPDATED_FLOOR_PRICES_FRONTEND[p.name];});
 
+const caseNameTranslations = {
+    'All In': 'Всё сразу',
+    'Small Billionaire': 'Мини Миллиардер',
+    'Lol Pop Stash': 'Леденец',
+    'Record Player Vault': 'Проигрыватель',
+    'Girl\'s Collection': 'Женская Коллекция',
+    'Men\'s Collection': 'Мужская Коллекция',
+    'Swiss Watch Box': 'Швейцарские Часы',
+    'Kissed Frog Pond': 'Лягушки',
+    'Perfume Chest': 'Парфюм',
+    'Vintage Cigar Safe': 'Сигарки',
+    'Astral Shard Relic': 'Алмазы',
+    'Plush Pepe Hoard': 'Плюш Пепе'
+};
+    
 // This is the clean, raw definition of all your cases.
 // --- In index.html, REPLACE the entire casesData list ---
 const casesData = [
@@ -1853,6 +1882,7 @@ function renderCases() {
         card.className = 'case-card';
         card.dataset.caseId = caseItem.id;
         card.onclick = () => openRouletteModal(caseItem);
+
         const imgCont = document.createElement('div');
         imgCont.className = 'case-image-display';
         const img = document.createElement('img');
@@ -1861,18 +1891,25 @@ function renderCases() {
         img.onerror = () => { imgCont.textContent = '❓'; imgCont.style.cssText = 'font-size:2.5em;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);'; };
         img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
         imgCont.appendChild(img);
+        
+        // --- START OF CHANGE: Logic to display Russian name ---
         const nameCont = document.createElement('div');
-        nameCont.className = 'case-name-container';
+        nameCont.className = 'case-name-container'; // Use the existing container class
+        
         const nameEl = document.createElement('div');
-        nameEl.className = 'case-name';
-        nameEl.textContent = caseItem.name;
+        nameEl.className = 'case-name'; // Use the existing name class
+        // Fetch the Russian name from our new mapping, or fall back to the original name
+        nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
         nameCont.appendChild(nameEl);
+        // --- END OF CHANGE ---
 
         const priceEl = document.createElement('div');
         priceEl.className = 'case-price';
         const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
         priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-        card.append(imgCont, priceEl);
+        
+        // Append in the correct order: Image, then Name, then Price
+        card.append(imgCont, nameCont, priceEl);
         casesGrid.appendChild(card);
     });
 }
