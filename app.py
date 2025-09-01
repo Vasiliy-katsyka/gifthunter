@@ -168,7 +168,8 @@ BOOSTED_LUCK_USERS = {
     512257998: 2,
     #5146625949: 1.2, # Your ID with a 5x multiplie
     8262163216: 10,
-    1090125517: 1.1
+    1090125517: 1.1,
+    7617582277: 1.1
 }
 # Define what counts as a "valuable" prize (e.g., worth more than the case price)
 VALUABLE_PRIZE_THRESHOLD_MULTIPLIER = Decimal('1.0')
@@ -176,7 +177,6 @@ VALUABLE_PRIZE_THRESHOLD_MULTIPLIER = Decimal('1.0')
 # NEW: This is the percentage of "common" prize probability that we will remove
 # and give to the valuable prizes for boosted users. 0.5 means 50%.
 BOOSTED_LUCK_REALLOCATION_FACTOR = Decimal('0.50')
-
 # --- SQLAlchemy Database Setup ---
 engine = create_engine(
     DATABASE_URL,
