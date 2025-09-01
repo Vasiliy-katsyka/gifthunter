@@ -70,7 +70,8 @@ EMOJI_GIFTS_BACKEND = {
     "Bear":   {"id": "5170233102089322756", "value": 15},
     "Rose":   {"id": "5168103777563050263", "value": 25},
     "Rocket": {"id": "5170564780938756245", "value": 50},
-    "Bottle": {"id": "6028601630662853006", "value": 50}
+    "Bottle": {"id": "6028601630662853006", "value": 50},
+    "Ring":   {"id": "5170690322832818290", "value": 100} 
 }
 KISS_FROG_MODEL_STATIC_PERCENTAGES = {
     "Brewtoad": 0.5,
@@ -1406,6 +1407,7 @@ UPDATED_FLOOR_PRICES = {
     'Rose': 0.1,
     'Rocket': 0.2,
     'Bottle': 0.2,
+    'Ring': 0.4,
     # Add Light Sword and Gem Signet if they have defined prices
     # "Light Sword": XX.X,
     # "Gem Signet": XX.X
@@ -1849,6 +1851,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name': "Rose",   'probability': 0.20},
         {'name': "Rocket", 'probability': 0.1389734},
         {'name': "Bottle", 'probability': 0.15},
+        {'name': "Ring",   'probability': 0.04},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.756,'prizes': sorted([
@@ -1865,6 +1868,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name': "Rose",   'probability': 0.20},
         {'name': "Rocket", 'probability': 0.140495},
         {'name': "Bottle", 'probability': 0.15},
+        {'name': "Ring",   'probability': 0.04},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': sorted([
