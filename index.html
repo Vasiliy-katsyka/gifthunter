@@ -2001,6 +2001,8 @@ function renderProfile() {
     renderInventory();
 }
 
+// In index.html, this function already works correctly with the backend changes. No edits are needed.
+
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
@@ -2012,6 +2014,7 @@ function renderInventory() {
         profileElements.emptyInventoryMessage.style.display = 'none';
 
         currentUser.inventory.forEach(item => {
+            // This line correctly reads the `currentValue`, which will be 3x for "Black Only" items
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
 
@@ -2021,13 +2024,11 @@ function renderInventory() {
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            // --- START OF MODIFICATION ---
             let variantBadgeHTML = '';
             if (item.variant) {
                 variantBadgeHTML = `<div class="item-variant-badge">${item.variant}</div>`;
             }
             imgCont.innerHTML = `<img src="${item.imageFilename || generateImageFilename(item.name)}" alt="${item.name}" loading="lazy">${variantBadgeHTML}`;
-            // --- END OF MODIFICATION ---
             
             const isEmojiGift = !!EMOJI_GIFTS[item.name];
             const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
@@ -2209,17 +2210,15 @@ function initializeRouletteVisuals(caseItem, multiplier) {
         }
     }
 }
+// In index.html, replace your entire openRouletteModal function with this
+
 function openRouletteModal(caseItem) {
     currentOpenCaseOrSlot = caseItem;
     selectedCaseMultiplier = 1;
     updateCaseMultiplierButtons();
 
-    // --- START OF THE CHANGE ---
-    // Fetch the Russian name from our translation mapping.
-    // If a translation doesn't exist for some reason, it will safely fall back to the original English name.
     const translatedCaseName = caseNameTranslations[caseItem.name] || caseItem.name;
     rouletteCaseName.textContent = translatedCaseName;
-    // --- END OF THE CHANGE ---
 
     updateSpinButtonText();
     updateModalBalanceDisplay();
@@ -2236,9 +2235,17 @@ function openRouletteModal(caseItem) {
     sortedPrizes.forEach(pData => {
         if (!pData || !pData.name) return;
 
-        const displayPriceInStars = Math.floor((pData.floorPrice || 0) * TON_TO_STARS_RATE);
         const card = document.createElement('div');
         card.className = 'prize-card';
+
+        // --- START OF MODIFICATION ---
+        let itemValueInTon = pData.floorPrice || 0;
+        // Check if the current case is 'black_only_case' and apply the 3x display multiplier
+        if (caseItem.id === 'black_only_case') {
+            itemValueInTon *= 3;
+        }
+        const displayPriceInStars = Math.floor(itemValueInTon * TON_TO_STARS_RATE);
+        // --- END OF MODIFICATION ---
 
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
