@@ -2969,7 +2969,7 @@ def open_case_api():
             # --- START OF MODIFICATION ---
             final_prize_value_ton = prize_value_ton
             if target_case.get('id') == 'black_only_case':
-                final_prize_value_ton *= Decimal('10')
+                final_prize_value_ton *= Decimal('6')
             
             total_value_this_spin_ton += final_prize_value_ton
             # --- END OF MODIFICATION ---
