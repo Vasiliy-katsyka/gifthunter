@@ -584,6 +584,21 @@
             background-color: rgba(255, 255, 255, 0.9);
             transform: scale(1.2);
         }
+
+        .item-variant-badge {
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 2px 6px;
+            font-size: 0.65em;
+            font-weight: 600;
+            border-radius: 4px;
+            line-height: 1.2;
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
@@ -1233,6 +1248,8 @@ const caseNameTranslations = {
     'Vintage Cigar Safe': 'Сигарки',
     'Astral Shard Relic': 'Алмазы',
     'Plush Pepe Hoard': 'Плюш Пепе'
+    'Black Only': 'Чёрный фон',
+    'Schooler': 'Школьный'
 };
     
 // This is the clean, raw definition of all your cases.
@@ -1309,6 +1326,23 @@ const casesData = [
         {'name':'Lol Pop','probability':0.15},
         {'name':'Hypno Lollipop','probability':0.065},
     ]},
+    {
+        'id': 'schooler_case',
+        'name': 'Schooler',
+        'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215435_909.jpg?raw=true',
+        'priceTON': 6.0, // 1500 stars / 250
+        'prizes': [
+            {'name':'Durov\'s Cap','probability': 0.0001},
+            {'name':'Swiss Watch','probability': 0.01},
+            {'name':'Record Player','probability': 0.02},
+            {'name':'Voodoo Doll','probability': 0.05},
+            {'name':'Top Hat','probability': 0.1},
+            {'name':'Bow Tie','probability': 0.2},
+            {'name':'Tama Gadget','probability': 0.2},
+            {'name':'Star Notepad','probability': 0.2199},
+            {'name':'Desk Calendar','probability': 0.2},
+        ]
+    },
     {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': [
         {'name':'Heart Locket', 'probability': 0.00005},  // New Ultimate Prize
         {'name':'Nail Bracelet', 'probability': 0.0001}, // New Top Prize
@@ -1354,6 +1388,31 @@ const casesData = [
         {'name':'Trapped Heart','probability':0.1},
         {'name':'Love Potion','probability':0.1},
     ]},
+    {
+        'id': 'black_only_case',
+        'name': 'Black Only',
+        'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215438_642.jpg?raw=true',
+        'priceTON': 16.0, // 4000 stars / 250
+        'prizes': [
+            {'name':'Plush Pepe','probability': 0.000001},
+            {'name':'Durov\'s Cap','probability': 0.000005},
+            {'name':'Precious Peach','probability': 0.00001},
+            {'name':'Nail Bracelet','probability': 0.00005},
+            {'name':'Astral Shard','probability': 0.0001},
+            {'name':'Perfume Bottle','probability': 0.0005},
+            {'name':'Swiss Watch','probability': 0.001},
+            {'name':'Vintage Cigar','probability': 0.001},
+            {'name':'Sharp Tongue','probability': 0.002},
+            {'name':'Electric Skull','probability': 0.002},
+            {'name':'Record Player','probability': 0.05},
+            {'name':'Top Hat','probability': 0.05},
+            {'name':'Skull Flower','probability': 0.1},
+            {'name':'Spy Agaric','probability': 0.1},
+            {'name':'Hypno Lollipop','probability': 0.2},
+            {'name':'Desk Calendar','probability': 0.246334},
+            {'name':'Lol Pop','probability': 0.25},
+        ]
+    },
     {'id':'kissedfrog','name':'Kissed Frog Pond','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Kissed-Frog.jpg','priceTON':20.0,
      'prizes': finalKissedFrogPrizesWithConsolation
     },
@@ -1942,7 +2001,6 @@ function renderProfile() {
     renderInventory();
 }
 
-// --- Find and REPLACE the entire renderInventory function ---
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
@@ -1963,18 +2021,15 @@ function renderInventory() {
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            const img = document.createElement('img');
-            img.src = item.imageFilename || generateImageFilename(item.name);
-            img.alt = item.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
+            // --- START OF MODIFICATION ---
+            let variantBadgeHTML = '';
+            if (item.variant) {
+                variantBadgeHTML = `<div class="item-variant-badge">${item.variant}</div>`;
+            }
+            imgCont.innerHTML = `<img src="${item.imageFilename || generateImageFilename(item.name)}" alt="${item.name}" loading="lazy">${variantBadgeHTML}`;
+            // --- END OF MODIFICATION ---
             
-            // --- START OF THE FIX ---
-            // Check if the item is one of the emoji gifts
             const isEmojiGift = !!EMOJI_GIFTS[item.name];
-            
-            // If it is an emoji gift, add the 'disabled' attribute to the button.
-            // Otherwise, the button is enabled as normal.
             const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
             const withdrawAction = `startWithdrawalProcess(${item.id})`;
 
@@ -1983,9 +2038,8 @@ function renderInventory() {
                                     <button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button>
                                     <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
                                  </div>`;
-            // --- END OF THE FIX ---
 
-            itemDiv.innerHTML = `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
+            itemDiv.innerHTML += `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
             itemDiv.insertBefore(imgCont, itemDiv.firstChild);
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
