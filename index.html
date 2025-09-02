@@ -599,6 +599,18 @@
             line-height: 1.2;
             z-index: 2;
         }
+
+        /* ADD this new rule for the glow effect */
+        .black-glow-bg {
+            /* The radial gradient creates the soft glow from black to transparent */
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.75) 20%, transparent 75%);
+        }
+        
+        /* This ensures the image sits on top of the background glow */
+        .item-image-display img, .prize-card-image-placeholder img, .roulette-item img {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
@@ -2014,7 +2026,6 @@ function renderInventory() {
         profileElements.emptyInventoryMessage.style.display = 'none';
 
         currentUser.inventory.forEach(item => {
-            // This line correctly reads the `currentValue`, which will be 3x for "Black Only" items
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
 
@@ -2024,11 +2035,18 @@ function renderInventory() {
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            let variantBadgeHTML = '';
-            if (item.variant) {
-                variantBadgeHTML = `<div class="item-variant-badge">${item.variant}</div>`;
+            // --- START OF CHANGE ---
+            // Add the glow class if the item has the 'blackbg' variant
+            if (item.variant === 'blackbg') {
+                imgCont.classList.add('black-glow-bg');
             }
-            imgCont.innerHTML = `<img src="${item.imageFilename || generateImageFilename(item.name)}" alt="${item.name}" loading="lazy">${variantBadgeHTML}`;
+            // --- END OF CHANGE ---
+            
+            const img = document.createElement('img');
+            img.src = item.imageFilename || generateImageFilename(item.name);
+            img.alt = item.name;
+            img.loading = 'lazy';
+            imgCont.appendChild(img);
             
             const isEmojiGift = !!EMOJI_GIFTS[item.name];
             const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
@@ -2186,7 +2204,12 @@ function initializeRouletteVisuals(caseItem, multiplier) {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'roulette-item';
 
-                // Simplified image logic
+                // --- START OF CHANGE ---
+                if (caseItem && caseItem.id === 'black_only_case') {
+                    itemEl.classList.add('black-glow-bg');
+                }
+                // --- END OF CHANGE ---
+
                 const img = document.createElement('img');
                 img.src = generateImageFilename(pData.imageFilename || pData.name);
                 img.alt = pData.name;
@@ -2238,17 +2261,21 @@ function openRouletteModal(caseItem) {
         const card = document.createElement('div');
         card.className = 'prize-card';
 
-        // --- START OF MODIFICATION ---
         let itemValueInTon = pData.floorPrice || 0;
-        // Check if the current case is 'black_only_case' and apply the 3x display multiplier
         if (caseItem.id === 'black_only_case') {
-            itemValueInTon *= 6;
+            itemValueInTon *= 3;
         }
         const displayPriceInStars = Math.floor(itemValueInTon * TON_TO_STARS_RATE);
-        // --- END OF MODIFICATION ---
 
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
+
+        // --- START OF CHANGE ---
+        // Add glow effect to possible prizes if it's the Black Only case
+        if (caseItem.id === 'black_only_case') {
+            imgCont.classList.add('black-glow-bg');
+        }
+        // --- END OF CHANGE ---
 
         const img = document.createElement('img');
         img.src = generateImageFilename(pData.imageFilename || pData.name);
@@ -2353,6 +2380,7 @@ async function spinRoulette() {
     const rouletteRowVisibleHeight = activeSpinners[0].parentElement.clientHeight;
     const centerOffset = (rouletteRowVisibleHeight / 2);
 
+    // In the `spinRoulette` function, find this block of code:
     activeSpinners.forEach((spinnerReel, reelIndex) => {
         spinnerReel.style.transition = 'none';
         void spinnerReel.offsetWidth;
@@ -2360,6 +2388,14 @@ async function spinRoulette() {
             const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
+            
+            // --- START OF CHANGE ---
+            // Add the glow class to the spinning items as well
+            if (currentOpenCaseOrSlot.id === 'black_only_case') {
+                itemEl.classList.add('black-glow-bg');
+            }
+            // --- END OF CHANGE ---
+    
             const img = document.createElement('img');
             img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
             img.alt = randomPrize.name;
