@@ -1173,6 +1173,10 @@ const UPDATED_FLOOR_PRICES_FRONTEND = {
     "Snoop Cigar": 4.4,
     "Low Rider": 21.7,
     "Westside Sign": 44.5,
+    "Backpack": 10.0,
+    "Book": 20.0,
+    "Pen": 30.0,
+    "Suitcase": 100.0,
     'Heart': 0.06,
     'Bear': 0.06,
     'Rose': 0.1,
@@ -1196,7 +1200,10 @@ function generateImageFilename(nameOrUrl) {
     if (name.toLowerCase().includes("ton") && name.toLowerCase().includes("prize")) return TON_COIN_FULL_URL;
     if (GIFT_NAME_TO_ID_MAP[name]) return `https://cdn.changes.tg/gifts/originals/${GIFT_NAME_TO_ID_MAP[name]}/Original.png`;
     if (Object.keys(KISSED_FROG_VARIANT_FLOORS).includes(name)) return `https://cdn.changes.tg/gifts/models/Kissed%20Frog/png/${name.replace(/\s/g, '%20')}.png`;
-    
+    if (CUSTOM_GIFT_IMAGES[nameOrUrl]) {
+        return CUSTOM_GIFT_IMAGES[nameOrUrl];
+    }
+
     let filename = name.replace(/\s+/g, '-').replace(/&/g, 'and').replace(/'/g, "");
     if (name === "Durov's Cap") filename = "Durov's-Cap";
     if (name === "Vintage Cigar") filename = "Vintage-Cigar";
@@ -1292,6 +1299,13 @@ const caseNameTranslations = {
     'Black Only': 'Чёрный фон',
     'Schooler': 'Школьный'
 };
+
+const CUSTOM_GIFT_IMAGES = {
+    "Backpack": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgAD-IYAAsfWsEk.png?raw=true",
+    "Book": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADo4cAAu7EsUk.png?raw=true",
+    "Pen": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADyoUAAmZioUk.png?raw=true",
+    "Suitcase": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADa4wAAurDqUk.png?raw=true",
+};
     
 // This is the clean, raw definition of all your cases.
 // --- In index.html, REPLACE the entire casesData list ---
@@ -1370,18 +1384,22 @@ const casesData = [
     {
         'id': 'schooler_case',
         'name': 'Schooler',
-        'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250901_225305515.jpg?raw=true',
-        'priceTON': 6.0, // 1500 stars / 250
+        'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215435_909.jpg?raw=true',
+        'priceTON': 6.0,
         'prizes': [
             {'name':'Durov\'s Cap','probability': 0.0001},
+            {'name':'Suitcase','probability': 0.0001},
+            {'name':'Pen','probability': 0.005},
+            {'name':'Book','probability': 0.01},
             {'name':'Swiss Watch','probability': 0.01},
-            {'name':'Record Player','probability': 0.02},
-            {'name':'Voodoo Doll','probability': 0.05},
+            {'name':'Backpack','probability': 0.02},
+            {'name':'Record Player','probability': 0.05},
+            {'name':'Voodoo Doll','probability': 0.1},
             {'name':'Top Hat','probability': 0.1},
-            {'name':'Bow Tie','probability': 0.2},
+            {'name':'Bow Tie','probability': 0.15},
             {'name':'Tama Gadget','probability': 0.2},
-            {'name':'Star Notepad','probability': 0.2199},
-            {'name':'Desk Calendar','probability': 0.2},
+            {'name':'Star Notepad','probability': 0.2},
+            {'name':'Desk Calendar','probability': 0.1548},
         ]
     },
     {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': [
