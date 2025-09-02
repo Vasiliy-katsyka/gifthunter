@@ -73,7 +73,13 @@ EMOJI_GIFTS_BACKEND = {
     "Bottle": {"id": "6028601630662853006", "value": 50},
     "Ring":   {"id": "5170690322832818290", "value": 100} 
 }
-# In app.py, near the top with other constants
+
+CUSTOM_GIFT_IMAGES = {
+    "Backpack": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgAD-IYAAsfWsEk.png?raw=true",
+    "Book": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADo4cAAu7EsUk.png?raw=true",
+    "Pen": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADyoUAAmZioUk.png?raw=true",
+    "Suitcase": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADa4wAAurDqUk.png?raw=true",
+}
 
 GIFT_BACKGROUNDS = [
     {"name": "Electric Purple", "hex": {"centerColor": "#ca70c6"}}, {"name": "Lavender", "hex": {"centerColor": "#b789e4"}},
@@ -1340,7 +1346,8 @@ def generate_image_filename_from_name(name_str: str) -> str:
     if not name_str: return 'placeholder.png'
 
     if name_str == "placeholder_nothing.png": return 'https://images.emojiterra.com/mozilla/512px/274c.png'
-
+    if name_str in CUSTOM_GIFT_IMAGES:
+        return CUSTOM_GIFT_IMAGES[name_str]
     if "TON" in name_str.upper() and ("PRIZE" in name_str.upper() or name_str.replace('.', '', 1).replace(' TON', '').strip().replace(',', '').isdigit()):
         return TON_PRIZE_IMAGE_DEFAULT
 
@@ -1449,6 +1456,10 @@ UPDATED_FLOOR_PRICES = {
     "Snoop Cigar": 4.4,
     "Low Rider": 21.7,
     "Westside Sign": 44.5,
+    "Backpack": 10.0,   # 2500 / 250
+    "Book": 20.0,       # 5000 / 250
+    "Pen": 30.0,        # 7500 / 250
+    "Suitcase": 100.0,  # 25000 / 250
     'Heart': 0.06,
     'Bear': 0.06,
     'Rose': 0.1,
@@ -1962,15 +1973,21 @@ cases_data_backend_with_fixed_prices_raw = [
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'schooler_case','name':'Schooler','imageFilename':'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215435_909.jpg?raw=true','priceTON':6.0,'prizes': sorted([
+        # High value items have very low probability
         {'name':'Durov\'s Cap','probability': 0.0001},
+        {'name':'Suitcase','probability': 0.0001},
+        {'name':'Pen','probability': 0.005},
+        {'name':'Book','probability': 0.01},
         {'name':'Swiss Watch','probability': 0.01},
-        {'name':'Record Player','probability': 0.02},
-        {'name':'Voodoo Doll','probability': 0.05},
+        {'name':'Backpack','probability': 0.02},
+        # Mid-to-low value items
+        {'name':'Record Player','probability': 0.05},
+        {'name':'Voodoo Doll','probability': 0.1},
         {'name':'Top Hat','probability': 0.1},
-        {'name':'Bow Tie','probability': 0.2},
+        {'name':'Bow Tie','probability': 0.15},
         {'name':'Tama Gadget','probability': 0.2},
-        {'name':'Star Notepad','probability': 0.2199},
-        {'name':'Desk Calendar','probability': 0.2},
+        {'name':'Star Notepad','probability': 0.2},
+        {'name':'Desk Calendar','probability': 0.1548},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': sorted([
