@@ -2506,6 +2506,8 @@ def health_check():
 
 # ... (keep all existing code before this route) ...
 
+# In app.py, replace the entire get_user_data_api function with this:
+
 @app.route('/api/get_user_data', methods=['POST'])
 def get_user_data_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -2550,31 +2552,27 @@ def get_user_data_api():
         inv = []
         for i in user.inventory:
             item_name = i.nft.name if i.nft else i.item_name_override
-            
-            # --- START OF THE FIX ---
-            # Prioritize the canonical emoji image URL if the item is an emoji gift.
-            # This corrects any old/incorrect image paths stored in the database.
             item_image = ""
             is_emoji = item_name in EMOJI_GIFT_IMAGES
 
             if is_emoji:
                 item_image = EMOJI_GIFT_IMAGES[item_name]
             else:
-                # Fallback to existing logic for all other items (NFTs, etc.)
                 item_image = i.nft.image_filename if i.nft else i.item_image_override or generate_image_filename_from_name(item_name)
-            # --- END OF THE FIX ---
-
+            
+            # --- THIS IS THE CORRECTED BLOCK ---
+            # It now includes the 'variant' field from the database object `i`.
             inv.append({
-                "id":i.id,
-                "name":item_name,
-                "imageFilename":item_image, # This will now always be correct for emojis
-                "floorPrice":i.nft.floor_price if i.nft else i.current_value,
-                "currentValue":i.current_value,
-                "upgradeMultiplier":i.upgrade_multiplier,
-                "variant":i.variant,
-                "is_ton_prize":i.is_ton_prize,
-                "is_emoji_gift": is_emoji, # Add this flag for consistency
-                "obtained_at":i.obtained_at.isoformat() if i.obtained_at else None
+                "id": i.id,
+                "name": item_name,
+                "imageFilename": item_image,
+                "floorPrice": i.nft.floor_price if i.nft else i.current_value,
+                "currentValue": i.current_value,
+                "upgradeMultiplier": i.upgrade_multiplier,
+                "variant": i.variant,  # THIS LINE ENSURES THE BG INFO IS SENT
+                "is_ton_prize": i.is_ton_prize,
+                "is_emoji_gift": is_emoji,
+                "obtained_at": i.obtained_at.isoformat() if i.obtained_at else None
             })
 
         refs_count = db.query(User).filter(User.referred_by_id == uid).count()
