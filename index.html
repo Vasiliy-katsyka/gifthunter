@@ -2394,6 +2394,8 @@ async function spinRoulette() {
     const rouletteRowVisibleHeight = activeSpinners[0].parentElement.clientHeight;
     const centerOffset = (rouletteRowVisibleHeight / 2);
 
+    const colorKeys = Object.keys(BG_COLORS_MAP);
+
     // In the `spinRoulette` function, find this block of code:
     activeSpinners.forEach((spinnerReel, reelIndex) => {
         spinnerReel.style.transition = 'none';
