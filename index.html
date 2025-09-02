@@ -2044,48 +2044,73 @@ function renderProfile() {
 
 // In index.html, this function already works correctly with the backend changes. No edits are needed.
 
+// In index.html, replace the entire renderInventory function with this:
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
+
     if (currentUser.inventory.length === 0) {
         profileElements.emptyInventoryMessage.style.display = 'block';
         profileElements.sellAllButton.style.display = 'none';
     } else {
         profileElements.emptyInventoryMessage.style.display = 'none';
+
         currentUser.inventory.forEach(item => {
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
+
+            // 1. Create all elements with pure JavaScript
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
+
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            // --- START OF MODIFICATION ---
+            // 2. Apply conditional styling to the image container
             if (item.variant) {
                 if (item.variant === 'blackbg') {
                     imgCont.classList.add('black-glow-bg');
                 } else if (BG_COLORS_MAP[item.variant]) {
                     const color = BG_COLORS_MAP[item.variant];
-                    imgCont.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`; // Added opacity
+                    // Apply the colored background gradient
+                    imgCont.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`;
                 }
             }
-            // --- END OF MODIFICATION ---
             
             const img = document.createElement('img');
             img.src = item.imageFilename || generateImageFilename(item.name);
             img.alt = item.name;
             img.loading = 'lazy';
             imgCont.appendChild(img);
-            
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'inventory-item-name';
+            nameEl.title = item.name;
+            nameEl.textContent = item.name;
+
+            const valueEl = document.createElement('div');
+            valueEl.className = 'inventory-item-value';
+            valueEl.innerHTML = `${itemValueInStars} ⭐`;
+
+            const actionsEl = document.createElement('div');
+            actionsEl.className = 'inventory-item-actions';
             const isEmojiGift = !!EMOJI_GIFTS[item.name];
             const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
             const withdrawAction = `startWithdrawalProcess(${item.id})`;
-            const valueHTML = `<div class="inventory-item-value">${itemValueInStars} ⭐</div>`;
-            const actionsHTML = `<div class="inventory-item-actions"><button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button><button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button></div>`;
-            itemDiv.innerHTML += `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
-            itemDiv.insertBefore(imgCont, itemDiv.firstChild);
+            actionsEl.innerHTML = `
+                <button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button>
+                <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
+            `;
+
+            // 3. Append all created elements in the correct order
+            itemDiv.appendChild(imgCont);
+            itemDiv.appendChild(nameEl);
+            itemDiv.appendChild(valueEl);
+            itemDiv.appendChild(actionsEl);
+
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
+
         profileElements.sellAllButton.style.display = 'block';
         profileElements.sellAllValueSpan.textContent = totalValueInStars;
     }
