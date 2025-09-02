@@ -2059,7 +2059,7 @@ function renderInventory() {
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
 
-            // 1. Create all elements with pure JavaScript
+            // 1. Create all elements as JavaScript objects
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
 
@@ -2072,7 +2072,7 @@ function renderInventory() {
                     imgCont.classList.add('black-glow-bg');
                 } else if (BG_COLORS_MAP[item.variant]) {
                     const color = BG_COLORS_MAP[item.variant];
-                    // Apply the colored background gradient
+                    // Apply the colored background gradient directly to the style
                     imgCont.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`;
                 }
             }
@@ -2081,7 +2081,7 @@ function renderInventory() {
             img.src = item.imageFilename || generateImageFilename(item.name);
             img.alt = item.name;
             img.loading = 'lazy';
-            imgCont.appendChild(img);
+            imgCont.appendChild(img); // Put the image inside its container
 
             const nameEl = document.createElement('div');
             nameEl.className = 'inventory-item-name';
@@ -2090,7 +2090,7 @@ function renderInventory() {
 
             const valueEl = document.createElement('div');
             valueEl.className = 'inventory-item-value';
-            valueEl.innerHTML = `${itemValueInStars} ⭐`;
+            valueEl.innerHTML = `${itemValueInStars} ⭐`; // Using innerHTML here is safe for the star icon
 
             const actionsEl = document.createElement('div');
             actionsEl.className = 'inventory-item-actions';
@@ -2102,12 +2102,13 @@ function renderInventory() {
                 <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
             `;
 
-            // 3. Append all created elements in the correct order
+            // 3. Append all created elements to the main card div in the correct order
             itemDiv.appendChild(imgCont);
             itemDiv.appendChild(nameEl);
             itemDiv.appendChild(valueEl);
             itemDiv.appendChild(actionsEl);
 
+            // 4. Finally, add the fully constructed card to the grid
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
 
