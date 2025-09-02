@@ -602,10 +602,8 @@
 
         /* ADD this new rule for the glow effect */
         .black-glow-bg {
-            /* The radial gradient creates the soft glow from black to transparent */
-            background: radial-gradient(circle, rgba(0, 0, 0, 0.75) 20%, transparent 75%);
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.85) 30%, transparent 80%);
         }
-        
         /* This ensures the image sits on top of the background glow */
         .item-image-display img, .prize-card-image-placeholder img, .roulette-item img {
             position: relative;
@@ -1018,6 +1016,37 @@ let bannerCurrentIndex = 0;
 let bannerAutoSwipeInterval;
 let bannerTouchStartX = 0;
 let bannerTouchMoveX = 0;
+
+// In index.html <script> tag, near the top
+const BG_COLORS_MAP = {
+    "Electric Purple": "#ca70c6", "Lavender": "#b789e4", "Cyberpunk": "#858ff3",
+    "Electric Indigo": "#a980f3", "Neon Blue": "#7596f9", "Navy Blue": "#6c9edd",
+    "Sapphire": "#58a3c8", "Sky Blue": "#58b4c8", "Azure Blue": "#5db1cb",
+    "Pacific Cyan": "#5abea6", "Aquamarine": "#60b195", "Pacific Green": "#6fc793",
+    "Emerald": "#78c585", "Mint Green": "#7ecb82", "Malachite": "#95b457",
+    "Shamrock Green": "#8ab163", "Lemongrass": "#aeb85a", "Light Olive": "#c2af64",
+    "Satin Gold": "#bf9b47", "Pure Gold": "#ccab41", "Amber": "#dab345",
+    "Caramel": "#d09932", "Orange": "#d19a3a", "Carrot Juice": "#db9867",
+    "Coral Red": "#da896b", "Persimmon": "#e7a75a", "Strawberry": "#dd8e6f",
+    "Raspberry": "#e07b85", "Mystic Pearl": "#d08b6d", "Fandango": "#e28ab6",
+    "Dark Lilac": "#b17da5", "English Violet": "#b186bb", "Moonstone": "#7eb1b4",
+    "Pine Green": "#6ba97c", "Hunter Green": "#8fae78", "Pistachio": "#97b07c",
+    "Khaki Green": "#adb070", "Desert Sand": "#b39f82", "Cappuccino": "#b1907e",
+    "Rosewood": "#b77a77", "Ivory White": "#bab6b1", "Platinum": "#b2aea7",
+    "Roman Silver": "#a3a8b5", "Steel Grey": "#97a2ac", "Silver Blue": "#80a4b8",
+    "Burgundy": "#a35e66", "Indigo Dye": "#537991", "Midnight Blue": "#5c6985",
+    "Onyx Black": "#4d5254", "Battleship Grey": "#8c8c85", "Purple": "#ae6cae",
+    "Grape": "#9d74c1", "Cobalt Blue": "#6088cf", "French Blue": "#5c9bc4",
+    "Turquoise": "#5ec0b8", "Jade Green": "#55c49c", "Copper": "#d08656",
+    "Chestnut": "#be6f54", "Chocolate": "#a46e58", "Marine Blue": "#4e689c",
+    "Tactical Pine": "#44826b", "Gunship Green": "#558a65", "Dark Green": "#516341",
+    "Seal Brown": "#664d45", "Rifle Green": "#64695c", "Ranger Green": "#5f7849",
+    "Camo Green": "#75944d", "Feldgrau": "#899288", "Gunmetal": "#4c5d63",
+    "Deep Cyan": "#31b5aa", "Mexican Pink": "#e36692", "Tomato": "#e6793e",
+    "Fire Engine": "#f05f4f", "Celtic Blue": "#45b8ed", "Old Gold": "#b58d38",
+    "Burnt Sienna": "#d66f3c", "Carmine": "#e0574a", "Mustard": "#d4980d",
+    "French Violet": "#c260e6"
+};
     
 const GIFT_NAME_TO_ID_MAP = {
   "Santa Hat": "5983471780763796287","Signet Ring": "5936085638515261992","Precious Peach": "5933671725160989227","Plush Pepe": "5936013938331222567",
@@ -2018,29 +2047,29 @@ function renderProfile() {
 function renderInventory() {
     profileElements.inventoryGrid.innerHTML = '';
     let totalValueInStars = 0;
-
     if (currentUser.inventory.length === 0) {
         profileElements.emptyInventoryMessage.style.display = 'block';
         profileElements.sellAllButton.style.display = 'none';
     } else {
         profileElements.emptyInventoryMessage.style.display = 'none';
-
         currentUser.inventory.forEach(item => {
             const itemValueInStars = Math.floor((item.currentValue || 0) * TON_TO_STARS_RATE);
             totalValueInStars += itemValueInStars;
-
             const itemDiv = document.createElement('div');
             itemDiv.className = 'inventory-item';
-
             const imgCont = document.createElement('div');
             imgCont.className = 'item-image-display';
 
-            // --- START OF CHANGE ---
-            // Add the glow class if the item has the 'blackbg' variant
-            if (item.variant === 'blackbg') {
-                imgCont.classList.add('black-glow-bg');
+            // --- START OF MODIFICATION ---
+            if (item.variant) {
+                if (item.variant === 'blackbg') {
+                    imgCont.classList.add('black-glow-bg');
+                } else if (BG_COLORS_MAP[item.variant]) {
+                    const color = BG_COLORS_MAP[item.variant];
+                    imgCont.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`; // Added opacity
+                }
             }
-            // --- END OF CHANGE ---
+            // --- END OF MODIFICATION ---
             
             const img = document.createElement('img');
             img.src = item.imageFilename || generateImageFilename(item.name);
@@ -2051,18 +2080,12 @@ function renderInventory() {
             const isEmojiGift = !!EMOJI_GIFTS[item.name];
             const withdrawButtonDisabledState = isEmojiGift ? 'disabled' : '';
             const withdrawAction = `startWithdrawalProcess(${item.id})`;
-
             const valueHTML = `<div class="inventory-item-value">${itemValueInStars} ⭐</div>`;
-            const actionsHTML = `<div class="inventory-item-actions">
-                                    <button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button>
-                                    <button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button>
-                                 </div>`;
-
+            const actionsHTML = `<div class="inventory-item-actions"><button class="button button-secondary" onclick="${withdrawAction}" ${withdrawButtonDisabledState}>Withdraw</button><button class="button button-secondary" onclick="handleSingleConvert(${item.id})">Convert</button></div>`;
             itemDiv.innerHTML += `<div class="inventory-item-name" title="${item.name}">${item.name}</div>${valueHTML}${actionsHTML}`;
             itemDiv.insertBefore(imgCont, itemDiv.firstChild);
             profileElements.inventoryGrid.appendChild(itemDiv);
         });
-
         profileElements.sellAllButton.style.display = 'block';
         profileElements.sellAllValueSpan.textContent = totalValueInStars;
     }
@@ -2182,10 +2205,11 @@ function closeWinOverlayModal() {
 }
 function initializeRouletteVisuals(caseItem, multiplier) {
     const allReelContainers = [rouletteReel1, rouletteReel2, rouletteReel3];
-    const itemHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--roulette-item-height').replace('px', '')) || 80;
-    const rouletteRowVisibleHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--single-roulette-row-visual-height').replace('px', '')) || 260;
+    const itemHeight = 80;
+    const rouletteRowVisibleHeight = 260;
     allReelContainers.forEach(container => container.classList.remove('active'));
-    let availablePrizes = caseItem && caseItem.prizes && caseItem.prizes.length > 0 ? caseItem.prizes : [{ name: "Loading...", imageFilename: "placeholder.png", is_ton_prize: false, floor_price: 0 }];
+    let availablePrizes = caseItem?.prizes?.length ? caseItem.prizes : [{ name: "Loading..." }];
+    const colorKeys = Object.keys(BG_COLORS_MAP);
     
     for (let i = 0; i < multiplier; i++) {
         const reelContainer = allReelContainers[i];
@@ -2193,43 +2217,33 @@ function initializeRouletteVisuals(caseItem, multiplier) {
             reelContainer.classList.add('active');
             const spinnerReel = reelContainer.querySelector('.roulette-spinner-reel');
             spinnerReel.innerHTML = '';
-            let defaultVisualItemsData = [];
             
             for (let j = 0; j < VISUAL_ITEMS_PER_REEL_INITIAL; j++) {
                 const randomPrize = availablePrizes[Math.floor(Math.random() * availablePrizes.length)];
-                defaultVisualItemsData.push(randomPrize);
-            }
-
-            defaultVisualItemsData.forEach(pData => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'roulette-item';
 
-                // --- START OF CHANGE ---
+                // --- START OF MODIFICATION ---
                 if (caseItem && caseItem.id === 'black_only_case') {
                     itemEl.classList.add('black-glow-bg');
+                } else if (caseItem) { // Apply for all other cases
+                    const randomColorName = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+                    const color = BG_COLORS_MAP[randomColorName];
+                    itemEl.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`;
                 }
-                // --- END OF CHANGE ---
+                // --- END OF MODIFICATION ---
 
                 const img = document.createElement('img');
-                img.src = generateImageFilename(pData.imageFilename || pData.name);
-                img.alt = pData.name;
+                img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
+                img.alt = randomPrize.name;
                 itemEl.appendChild(img);
-
-                itemEl.dataset.prizeData = JSON.stringify({
-                    name: pData.name,
-                    imageFilename: pData.imageFilename,
-                    is_ton_prize: pData.is_ton_prize,
-                    floorPrice: pData.floor_price,
-                    value: pData.value
-                });
+                itemEl.dataset.prizeData = JSON.stringify(randomPrize);
                 spinnerReel.appendChild(itemEl);
-            });
-
+            }
             spinnerReel.style.transition = 'none';
             const middleItemIndex = Math.floor(VISUAL_ITEMS_PER_REEL_INITIAL / 2);
             const initialScrollOffset = (middleItemIndex * itemHeight) + (itemHeight / 2) - (rouletteRowVisibleHeight / 2);
             spinnerReel.style.top = `-${initialScrollOffset}px`;
-            void spinnerReel.offsetWidth;
         }
     }
 }
@@ -2393,6 +2407,10 @@ async function spinRoulette() {
             // Add the glow class to the spinning items as well
             if (currentOpenCaseOrSlot.id === 'black_only_case') {
                 itemEl.classList.add('black-glow-bg');
+            } else {
+                const randomColorName = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+                const color = BG_COLORS_MAP[randomColorName];
+                itemEl.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`;
             }
             // --- END OF CHANGE ---
     
