@@ -73,6 +73,50 @@ EMOJI_GIFTS_BACKEND = {
     "Bottle": {"id": "6028601630662853006", "value": 50},
     "Ring":   {"id": "5170690322832818290", "value": 100} 
 }
+# In app.py, near the top with other constants
+
+GIFT_BACKGROUNDS = [
+    {"name": "Electric Purple", "hex": {"centerColor": "#ca70c6"}}, {"name": "Lavender", "hex": {"centerColor": "#b789e4"}},
+    {"name": "Cyberpunk", "hex": {"centerColor": "#858ff3"}}, {"name": "Electric Indigo", "hex": {"centerColor": "#a980f3"}},
+    {"name": "Neon Blue", "hex": {"centerColor": "#7596f9"}}, {"name": "Navy Blue", "hex": {"centerColor": "#6c9edd"}},
+    {"name": "Sapphire", "hex": {"centerColor": "#58a3c8"}}, {"name": "Sky Blue", "hex": {"centerColor": "#58b4c8"}},
+    {"name": "Azure Blue", "hex": {"centerColor": "#5db1cb"}}, {"name": "Pacific Cyan", "hex": {"centerColor": "#5abea6"}},
+    {"name": "Aquamarine", "hex": {"centerColor": "#60b195"}}, {"name": "Pacific Green", "hex": {"centerColor": "#6fc793"}},
+    {"name": "Emerald", "hex": {"centerColor": "#78c585"}}, {"name": "Mint Green", "hex": {"centerColor": "#7ecb82"}},
+    {"name": "Malachite", "hex": {"centerColor": "#95b457"}}, {"name": "Shamrock Green", "hex": {"centerColor": "#8ab163"}},
+    {"name": "Lemongrass", "hex": {"centerColor": "#aeb85a"}}, {"name": "Light Olive", "hex": {"centerColor": "#c2af64"}},
+    {"name": "Satin Gold", "hex": {"centerColor": "#bf9b47"}}, {"name": "Pure Gold", "hex": {"centerColor": "#ccab41"}},
+    {"name": "Amber", "hex": {"centerColor": "#dab345"}}, {"name": "Caramel", "hex": {"centerColor": "#d09932"}},
+    {"name": "Orange", "hex": {"centerColor": "#d19a3a"}}, {"name": "Carrot Juice", "hex": {"centerColor": "#db9867"}},
+    {"name": "Coral Red", "hex": {"centerColor": "#da896b"}}, {"name": "Persimmon", "hex": {"centerColor": "#e7a75a"}},
+    {"name": "Strawberry", "hex": {"centerColor": "#dd8e6f"}}, {"name": "Raspberry", "hex": {"centerColor": "#e07b85"}},
+    {"name": "Mystic Pearl", "hex": {"centerColor": "#d08b6d"}}, {"name": "Fandango", "hex": {"centerColor": "#e28ab6"}},
+    {"name": "Dark Lilac", "hex": {"centerColor": "#b17da5"}}, {"name": "English Violet", "hex": {"centerColor": "#b186bb"}},
+    {"name": "Moonstone", "hex": {"centerColor": "#7eb1b4"}}, {"name": "Pine Green", "hex": {"centerColor": "#6ba97c"}},
+    {"name": "Hunter Green", "hex": {"centerColor": "#8fae78"}}, {"name": "Pistachio", "hex": {"centerColor": "#97b07c"}},
+    {"name": "Khaki Green", "hex": {"centerColor": "#adb070"}}, {"name": "Desert Sand", "hex": {"centerColor": "#b39f82"}},
+    {"name": "Cappuccino", "hex": {"centerColor": "#b1907e"}}, {"name": "Rosewood", "hex": {"centerColor": "#b77a77"}},
+    {"name": "Ivory White", "hex": {"centerColor": "#bab6b1"}}, {"name": "Platinum", "hex": {"centerColor": "#b2aea7"}},
+    {"name": "Roman Silver", "hex": {"centerColor": "#a3a8b5"}}, {"name": "Steel Grey", "hex": {"centerColor": "#97a2ac"}},
+    {"name": "Silver Blue", "hex": {"centerColor": "#80a4b8"}}, {"name": "Burgundy", "hex": {"centerColor": "#a35e66"}},
+    {"name": "Indigo Dye", "hex": {"centerColor": "#537991"}}, {"name": "Midnight Blue", "hex": {"centerColor": "#5c6985"}},
+    {"name": "Onyx Black", "hex": {"centerColor": "#4d5254"}}, {"name": "Battleship Grey", "hex": {"centerColor": "#8c8c85"}},
+    {"name": "Purple", "hex": {"centerColor": "#ae6cae"}}, {"name": "Grape", "hex": {"centerColor": "#9d74c1"}},
+    {"name": "Cobalt Blue", "hex": {"centerColor": "#6088cf"}}, {"name": "French Blue", "hex": {"centerColor": "#5c9bc4"}},
+    {"name": "Turquoise", "hex": {"centerColor": "#5ec0b8"}}, {"name": "Jade Green", "hex": {"centerColor": "#55c49c"}},
+    {"name": "Copper", "hex": {"centerColor": "#d08656"}}, {"name": "Chestnut", "hex": {"centerColor": "#be6f54"}},
+    {"name": "Chocolate", "hex": {"centerColor": "#a46e58"}}, {"name": "Marine Blue", "hex": {"centerColor": "#4e689c"}},
+    {"name": "Tactical Pine", "hex": {"centerColor": "#44826b"}}, {"name": "Gunship Green", "hex": {"centerColor": "#558a65"}},
+    {"name": "Dark Green", "hex": {"centerColor": "#516341"}}, {"name": "Seal Brown", "hex": {"centerColor": "#664d45"}},
+    {"name": "Rifle Green", "hex": {"centerColor": "#64695c"}}, {"name": "Ranger Green", "hex": {"centerColor": "#5f7849"}},
+    {"name": "Camo Green", "hex": {"centerColor": "#75944d"}}, {"name": "Feldgrau", "hex": {"centerColor": "#899288"}},
+    {"name": "Gunmetal", "hex": {"centerColor": "#4c5d63"}}, {"name": "Deep Cyan", "hex": {"centerColor": "#31b5aa"}},
+    {"name": "Mexican Pink", "hex": {"centerColor": "#e36692"}}, {"name": "Tomato", "hex": {"centerColor": "#e6793e"}},
+    {"name": "Fire Engine", "hex": {"centerColor": "#f05f4f"}}, {"name": "Celtic Blue", "hex": {"centerColor": "#45b8ed"}},
+    {"name": "Old Gold", "hex": {"centerColor": "#b58d38"}}, {"name": "Burnt Sienna", "hex": {"centerColor": "#d66f3c"}},
+    {"name": "Carmine", "hex": {"centerColor": "#e0574a"}}, {"name": "Mustard", "hex": {"centerColor": "#d4980d"}},
+    {"name": "French Violet", "hex": {"centerColor": "#c260e6"}},
+]
 KISS_FROG_MODEL_STATIC_PERCENTAGES = {
     "Brewtoad": 0.5,
     "Zodiak Croak": 0.5,
@@ -2965,8 +3009,16 @@ def open_case_api():
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
 
             final_prize_value_ton = prize_value_ton
+            item_variant = None
             if target_case.get('id') == 'black_only_case':
                 final_prize_value_ton *= Decimal('3')
+                item_variant = 'blackbg'
+            else:
+                # Assign a random background for all other cases
+                random_bg = random.choice(GIFT_BACKGROUNDS)
+                item_variant = random_bg['name']
+            
+            total_value_this_spin_ton += final_prize_value_ton
             
             total_value_this_spin_ton += final_prize_value_ton
             
@@ -3696,45 +3748,43 @@ async def check_blockchain_for_deposit_simple(pdep: PendingDeposit) -> bool:
         if prov:
             await prov.close_all()
 
+# In app.py
 @app.route('/api/request_manual_withdrawal', methods=['POST'])
 def request_manual_withdrawal_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
     if not auth:
         return jsonify({"error": "Auth failed"}), 401
-
     uid = auth["id"]
     data = flask_request.get_json()
     inventory_item_id = data.get('inventory_item_id')
-
     if not inventory_item_id:
         return jsonify({"error": "inventory_item_id required"}), 400
-
     db = next(get_db())
     try:
         item = db.query(InventoryItem).filter(InventoryItem.id == inventory_item_id, InventoryItem.user_id == uid).first()
-
         if not item:
             return jsonify({"error": "Item not found in your inventory."}), 404
         if item.is_ton_prize:
             return jsonify({"error": "TON prizes cannot be withdrawn this way."}), 400
-
         user = db.query(User).filter(User.id == uid).first()
         if not user:
             return jsonify({"error": "User not found."}), 404
-
         item_name = item.item_name_override or (item.nft.name if item.nft else "Unknown Item")
-        model = item.variant if item.variant else ""
-
+        
+        # --- START OF MODIFICATION ---
         message_note = ""
-        if item.variant == 'blackbg':
-            message_note = " (Variant: Black BG - MUST write with black background!)"
-
+        if item.variant:
+            if item.variant == 'blackbg':
+                message_note = " (Variant: Black BG - MUST write with black background!)"
+            else:
+                message_note = f" (Background: {item.variant})"
+        
         message = f"Send {item_name}{message_note} to user {user.first_name} (@{user.username} - {user.id})"
+        # --- END OF MODIFICATION ---
 
         if bot and TARGET_WITHDRAWER_ID:
             try:
                 bot.send_message(TARGET_WITHDRAWER_ID, message)
-                # After successfully sending the message, remove the item from inventory
                 db.delete(item)
                 db.commit()
                 return jsonify({"status": "success"})
@@ -3743,7 +3793,6 @@ def request_manual_withdrawal_api():
                 return jsonify({"error": "Failed to notify for withdrawal."}), 500
         else:
             return jsonify({"error": "Bot or target user for withdrawal not configured."}), 500
-
     except Exception as e:
         db.rollback()
         logger.error(f"Error in request_manual_withdrawal for user {uid}: {e}", exc_info=True)
