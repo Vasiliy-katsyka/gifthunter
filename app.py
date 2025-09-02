@@ -26,7 +26,7 @@ from Crypto.Util.Padding import pad
 from pytoniq import LiteBalancer
 import asyncio
 import math
-import secrets # Add this import for generating secure random strings
+import secrets # Add this import for generating secure random string
 import uuid
 
 
