@@ -72,7 +72,20 @@
         .content-card { background-color: var(--surface-color); padding: 20px; border-radius: var(--main-border-radius); margin-bottom: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .cases-grid, .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(150px, calc(50% - 10px - 1px)), 1fr)); gap: 20px; }
         
-        .case-card { background-image: var(--case-grad-default); border-radius: var(--main-border-radius); text-align: center; cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color); overflow: hidden; position: relative; display: flex; flex-direction: column; padding: 0; justify-content: space-between; }
+        .case-card {
+            background-image: var(--case-grad-default);
+            border-radius: var(--main-border-radius);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            /* REMOVED: justify-content: space-between; <-- This was the main problem */
+        }
         .case-card:hover { filter: brightness(1.12); transform: translateY(-6px) scale(1.02); box-shadow: var(--soft-shadow); }
         .case-image-display { width: 100%; height: 0; padding-bottom: 100%; position: relative; background-color: var(--surface-hover-color); display:flex; align-items:center; justify-content:center; }
         .case-image-display img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -640,7 +653,7 @@
             align-items: center;
             justify-content: center;
             /* ADDED: Shrinks the animation to 80% of its container size. You can adjust this value (e.g., scale(0.7) for smaller). */
-            transform: scale(0.8);
+            transform: scale(0.5);
         }
         
         .case-card .case-price {
@@ -1053,7 +1066,7 @@ const lottieAnimationUrls = {
     'perfumebottle': 'https://cdn.changes.tg/gifts/originals/5913517067138499193/Original.json',
     'vintagecigar': 'https://cdn.changes.tg/gifts/originals/5857140566201991735/Original.json',
     'astralshard': 'https://cdn.changes.tg/gifts/originals/5933629604416717361/Original.json',
-    'plushpepe': 'https://cdn.changes.tg/gifts/models/Kissed%20Frog/lottie/Midas%20Pepe.json',
+    'plushpepe': 'https://cdn.changes.tg/gifts/models/Plush%20Pepe/lottie/Midas%20Pepe.json',
 };
 const limitedCaseIds = ['schooler_case', 'black_only_case'];
     
