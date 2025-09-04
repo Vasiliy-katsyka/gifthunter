@@ -609,6 +609,41 @@
             position: relative;
             z-index: 1;
         }
+
+        .case-card-title {
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--text-primary);
+            line-height: 1.3;
+            padding: 12px 10px 10px 10px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .case-animation-display {
+            width: 100%;
+            padding-bottom: 100%; /* Maintain 1:1 aspect ratio */
+            position: relative;
+            flex-grow: 1; /* Allow animation to take available space */
+        }
+        
+        .case-animation-display > div { /* This targets the div created by Lottie */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .case-card .case-price {
+            margin-top: auto; /* Push price to the bottom */
+        }
     </style>
 </head>
 <body>
@@ -628,12 +663,10 @@
                 <div class="app-title">Case Hunter</div>
             </div>
             <div class="wallet-info">
-                <div id="wallet-address-display">Connected: ...</div>
                 <div id="balance">
                     <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
                     <span id="star-balance">0</span>
                 </div>
-                <div id="ton-connect-button"></div>
             </div>
         </header>
 
@@ -648,8 +681,14 @@
                     </div>
                 </div>
                 <h2>Кейсы</h2>
-                <div id="cases-grid" class="cases-grid"></div>
-                <!-- Removed slots section for brevity, can be re-added if needed -->
+                <div id="cases-grid-regular" class="cases-grid">
+                    <!-- Regular animated cases will be rendered here by JavaScript -->
+                </div>
+                
+                <h3 style="margin-top: 32px; margin-bottom: 20px;">Лимитированные</h3>
+                <div id="cases-grid-limited" class="cases-grid">
+                    <!-- Limited image-based cases will be rendered here by JavaScript -->
+                </div>
             </div>
 
             <!-- UPGRADE PAGE - MODIFIED STRUCTURE -->
@@ -762,6 +801,8 @@
                 <div class="content-card">
                     <h3>Wallet</h3>
                     <div id="profile-wallet-address">Not Connected</div>
+                    <!-- The TON Connect button now lives here -->
+                    <div id="ton-connect-button" style="display: none; margin-bottom: 12px;"></div>
                     <button id="disconnect-wallet-button" class="button button-secondary" style="display: none;">Disconnect</button>
                 </div>
             
@@ -998,8 +1039,22 @@ let calculatedUpgradeChance = 0;
 let currentUpgradePickerType = null;
 let allAppGiftsForUpgrade = [];
 
-// Add these with your other global variables
-
+const lottieAnimationUrls = {
+    'all_in_01': 'https://cdn.changes.tg/gifts/originals/5933671725160989227/Original.json',
+    'small_billionaire_05': 'https://cdn.changes.tg/gifts/originals/5895328365971244193/Original.json',
+    'lolpop': 'https://cdn.changes.tg/gifts/originals/5170594532177215681/Original.json',
+    'recordplayer': 'https://cdn.changes.tg/gifts/originals/5856973938650776169/Original.json',
+    'girls_collection': 'https://cdn.changes.tg/gifts/originals/5933793770951673155/Original.json',
+    'mens_collection': 'https://cdn.changes.tg/gifts/originals/5897593557492957738/Original.json',
+    'swisswatch': 'https://cdn.changes.tg/gifts/originals/5936043693864651359/Original.json',
+    'kissedfrog': 'https://cdn.changes.tg/gifts/models/Kissed%20Frog/lottie/Happy%20Pepe.json',
+    'perfumebottle': 'https://cdn.changes.tg/gifts/originals/5913517067138499193/Original.json',
+    'vintagecigar': 'https://cdn.changes.tg/gifts/originals/5857140566201991735/Original.json',
+    'astralshard': 'https://cdn.changes.tg/gifts/originals/5933629604416717361/Original.json',
+    'plushpepe': 'https://cdn.changes.tg/gifts/models/Kissed%20Frog/lottie/Midas%20Pepe.json',
+};
+const limitedCaseIds = ['schooler_case', 'black_only_case'];
+    
 const bannersData = [
     {
         name: 'Subscribe',
@@ -1658,7 +1713,7 @@ let depositRecipientAddressRaw = '';
 
 const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
     manifestUrl: 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/tonconnect-manifest.json',
-    buttonRootId: 'ton-connect-button'
+    buttonRootId: 'ton-connect-button' // Now points to the button on the profile page
 });
 let tgBackButton = null;
 const backButtonHandlerStack = [];
@@ -1952,30 +2007,50 @@ function renderHeader() {
 function updateUIBasedOnWallet(wallet) {
     tonConnectWalletInfo = wallet;
     const connected = !!wallet;
+    const tonConnectButtonEl = document.getElementById('ton-connect-button');
+
     if (connected) {
         const addr = wallet.account.address;
         currentUser.walletAddressRaw = addr;
         const friendlyAddr = TonConnectSDK.toUserFriendlyAddress(addr, wallet.account.chain === TonConnectSDK.CHAIN.TESTNET);
         currentUser.walletAddress = friendlyAddr;
-        headerElements.walletAddressDisplay.textContent = `${friendlyAddr.substring(0, 5)}...${friendlyAddr.substring(friendlyAddr.length - 4)}`;
-        headerElements.walletAddressDisplay.classList.add('connected');
-        headerElements.walletAddressDisplay.style.display = 'block';
+
+        // Header elements are no longer managed here
         headerElements.balanceDisplay.classList.add('connected');
         headerElements.balanceDisplay.style.display = 'flex';
-        headerElements.tonConnectButton.style.display = 'none';
+        
+        // Profile page elements
         profileElements.walletAddress.textContent = friendlyAddr;
+        profileElements.walletAddress.style.display = 'block';
         profileElements.disconnectWalletButton.style.display = 'block';
+        if (tonConnectButtonEl) tonConnectButtonEl.style.display = 'none';
+
     } else {
         currentUser.walletAddress = null;
         currentUser.walletAddressRaw = null;
-        headerElements.walletAddressDisplay.classList.remove('connected');
-        headerElements.walletAddressDisplay.style.display = 'none';
+        
+        // Header elements
         headerElements.balanceDisplay.classList.remove('connected');
         headerElements.balanceDisplay.style.display = 'none';
-        headerElements.tonConnectButton.style.display = 'block';
+        
+        // Profile page elements
         profileElements.walletAddress.textContent = 'Not Connected';
+        profileElements.walletAddress.style.display = 'none';
         profileElements.disconnectWalletButton.style.display = 'none';
+        if (tonConnectButtonEl) tonConnectButtonEl.style.display = 'block';
     }
+    
+    if (dataFetchedSuccessfully) {
+        updateBalances();
+        renderProfile();
+    } else {
+        headerElements.starBalanceSpan.textContent = '0';
+        const profileBalanceSpan = document.querySelector('#profile-balance-display span');
+        if (profileBalanceSpan) {
+            profileBalanceSpan.textContent = '0';
+        }
+    }
+}
     
     if (dataFetchedSuccessfully) {
         updateBalances();
@@ -1998,45 +2073,91 @@ function renderCasesAndSlots() {
     renderCases();
 }
 function renderCases() {
-    casesGrid.innerHTML = '';
-    if (!casesData || casesData.length === 0) {
-        casesGrid.innerHTML = "<p>Loading cases...</p>";
+    const regularGrid = document.getElementById('cases-grid-regular');
+    const limitedGrid = document.getElementById('cases-grid-limited');
+    const oldGrid = document.getElementById('cases-grid'); // Keep for fallback
+
+    // If new grids don't exist, use the old one to prevent crashing
+    if (!regularGrid || !limitedGrid) {
+        if(oldGrid) oldGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
+
+    regularGrid.innerHTML = '';
+    limitedGrid.innerHTML = '';
+
+    if (!casesData || casesData.length === 0) {
+        regularGrid.innerHTML = "<p>Loading cases...</p>";
+        return;
+    }
+
     casesData.forEach(caseItem => {
-        const card = document.createElement('div');
-        card.className = 'case-card';
-        card.dataset.caseId = caseItem.id;
-        card.onclick = () => openRouletteModal(caseItem);
+        // --- RENDER LIMITED CASES (OLD STYLE) ---
+        if (limitedCaseIds.includes(caseItem.id)) {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.dataset.caseId = caseItem.id;
+            card.onclick = () => openRouletteModal(caseItem);
 
-        const imgCont = document.createElement('div');
-        imgCont.className = 'case-image-display';
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.alt = caseItem.name;
-        img.onerror = () => { imgCont.textContent = '❓'; imgCont.style.cssText = 'font-size:2.5em;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);'; };
-        img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
-        imgCont.appendChild(img);
-        
-        // --- START OF CHANGE: Logic to display Russian name ---
-        const nameCont = document.createElement('div');
-        nameCont.className = 'case-name-container'; // Use the existing container class
-        
-        const nameEl = document.createElement('div');
-        nameEl.className = 'case-name'; // Use the existing name class
-        // Fetch the Russian name from our new mapping, or fall back to the original name
-        nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-        nameCont.appendChild(nameEl);
-        // --- END OF CHANGE ---
+            const imgCont = document.createElement('div');
+            imgCont.className = 'case-image-display';
+            const img = document.createElement('img');
+            img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
+            img.alt = caseItem.name;
+            img.loading = 'lazy';
+            imgCont.appendChild(img);
 
-        const priceEl = document.createElement('div');
-        priceEl.className = 'case-price';
-        const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-        priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-        
-        // Append in the correct order: Image, then Name, then Price
-        card.append(imgCont, nameCont, priceEl);
-        casesGrid.appendChild(card);
+            const nameCont = document.createElement('div');
+            nameCont.className = 'case-name-container';
+            const nameEl = document.createElement('div');
+            nameEl.className = 'case-name';
+            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+            nameCont.appendChild(nameEl);
+            
+            const priceEl = document.createElement('div');
+            priceEl.className = 'case-price';
+            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+            
+            card.append(imgCont, nameCont, priceEl);
+            limitedGrid.appendChild(card);
+        } 
+        // --- RENDER ANIMATED CASES (NEW STYLE) ---
+        else {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.dataset.caseId = caseItem.id;
+            card.onclick = () => openRouletteModal(caseItem);
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'case-card-title';
+            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+
+            const animationCont = document.createElement('div');
+            animationCont.className = 'case-animation-display';
+
+            const priceEl = document.createElement('div');
+            priceEl.className = 'case-price';
+            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+
+            card.append(nameEl, animationCont, priceEl);
+            regularGrid.appendChild(card);
+            
+            const animUrl = lottieAnimationUrls[caseItem.id];
+            if (animUrl) {
+                lottie.loadAnimation({
+                    container: animationCont,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: animUrl
+                });
+            } else {
+                animationCont.textContent = '❓';
+                animationCont.style.cssText = 'font-size: 2.5em; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); padding-bottom: 0;';
+            }
+        }
     });
 }
 function renderProfile() {
