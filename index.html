@@ -627,7 +627,7 @@
             width: 100%;
             padding-bottom: 100%; /* Maintain 1:1 aspect ratio */
             position: relative;
-            flex-grow: 1; /* Allow animation to take available space */
+            /* REMOVED: flex-grow: 1; This was causing the container to stretch vertically */
         }
         
         .case-animation-display > div { /* This targets the div created by Lottie */
@@ -639,6 +639,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            /* ADDED: Shrinks the animation to 80% of its container size. You can adjust this value (e.g., scale(0.7) for smaller). */
+            transform: scale(0.8);
         }
         
         .case-card .case-price {
@@ -693,7 +695,7 @@
 
             <!-- UPGRADE PAGE - MODIFIED STRUCTURE -->
             <div id="upgrade-page" class="page">
-                <h2>Upgrade Item</h2>
+                <h2>Апгрейд</h2>
                 <div class="content-card">
                     <div id="upgrade-selection-area">
                         <div class="upgrade-item-slot" id="selected-inventory-item-slot" data-type="inventory">
