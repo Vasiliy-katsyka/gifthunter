@@ -705,12 +705,18 @@
                 <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/BackgroundEraser_20250831_184845312.png" alt="Case Hunter Logo" class="app-logo">
                 <div class="app-title">Case Hunter</div>
             </div>
-            <div class="wallet-info">
-                <div id="balance">
-                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
-                    <span id="star-balance">0</span>
-                </div>
+        <div class="wallet-info">
+            <div id="balance">
+                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+                <span id="star-balance">0</span>
             </div>
+            <!-- NEW TICKET BALANCE DISPLAY -->
+            <div id="ticket-balance-display" style="background-color: var(--surface-hover-color); padding: 8px 12px; border-radius: var(--button-border-radius); font-size: 0.875em; font-weight: 600; border: 1px solid var(--border-color); display: none; align-items: center; gap: 6px;">
+                <span style="font-size: 20px; line-height: 1;">🎟️</span>
+                <span id="ticket-balance">0</span>
+            </div>
+            <!-- END NEW TICKET BALANCE DISPLAY -->
+        </div>
         </header>
 
         <main id="app-content">
@@ -727,7 +733,10 @@
                 <div id="cases-grid-regular" class="cases-grid">
                     <!-- Regular animated cases will be rendered here by JavaScript -->
                 </div>
-                
+                <h3 style="margin-top: 32px; margin-bottom: 20px;">Бесплатные</h3>
+                <div id="cases-grid-free" class="cases-grid">
+                    <!-- Free cases will be rendered here by JavaScript -->
+                </div>
                 <h3 style="margin-top: 32px; margin-bottom: 20px;">Лимитированные</h3>
                 <div id="cases-grid-limited" class="cases-grid">
                     <!-- Limited image-based cases will be rendered here by JavaScript -->
@@ -1423,6 +1432,22 @@ const CUSTOM_GIFT_IMAGES = {
 // This is the clean, raw definition of all your cases.
 // --- In index.html, REPLACE the entire casesData list ---
 const casesData = [
+    {
+        'id': 'daily_case', 'name': 'Daily Case', 'priceTickets': 0, 'isDaily': true,
+        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5821261908354794038/Original.png' // Spy Agaric
+    },
+    {
+        'id': 'friend_case', 'name': 'Дружеский', 'priceTickets': 15,
+        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5170594532177215681/Original.png' // Lol Pop
+    },
+    {
+        'id': 'bro_case', 'name': 'Братский', 'priceTickets': 30,
+        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5856973938650776169/Original.png' // Record Player
+    },
+    {
+        'id': 'whale_case', 'name': 'Китяра', 'priceTickets': 50,
+        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5933793770951673155/Original.png' // Neko Helmet
+    },
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': [
         {'name':'Heart Locket','probability': 0.0000001}, // Jackpot!
         {'name':'Plush Pepe','probability': 0.0000005},
@@ -1453,7 +1478,7 @@ const casesData = [
         {'name': "Bottle", 'probability': 0.15},
         {'name': "Ring", 'probability': 0.04},
     ]},
-    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': [
+    {'id':'lolpop', 'name':'Покетик', 'priceTON':2.0, 'prizes': [
         {'name':'Plush Pepe','probability':0.0000001},
         {'name':'Neko Helmet','probability':0.00001},
         {'name':'Snoop Dogg', 'probability': 0.05},      // New Thematic Filler
@@ -1996,10 +2021,21 @@ function setupBannerEventListeners() {
 }
     
 function updateBalances() {
-    // All balances are now in Stars
+    // Star balance logic remains the same
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
-    headerElements.starBalanceSpan.textContent = `${starBalance}`; // Keep ID for now, but it's stars
+    headerElements.starBalanceSpan.textContent = `${starBalance}`;
     document.querySelector('#profile-balance-display span').textContent = `${starBalance}`;
+
+    // --- NEW TICKET BALANCE LOGIC ---
+    const ticketBalanceDisplay = document.getElementById('ticket-balance-display');
+    const ticketBalanceSpan = document.getElementById('ticket-balance');
+    if (ticketBalanceDisplay && ticketBalanceSpan) {
+        // We get the tickets count directly from the user object now
+        const tickets = currentUser.tickets || 0;
+        ticketBalanceSpan.textContent = tickets;
+        // Show the display if the user has 1 or more tickets
+        ticketBalanceDisplay.style.display = tickets > 0 ? 'flex' : 'none';
+    }
 }
 function navigateToPage(pageId) {
     pages.forEach(p => p.classList.remove('active'));
@@ -2106,94 +2142,88 @@ function updateUIBasedOnWallet(wallet) {
 function renderCasesAndSlots() {
     renderCases();
 }
+// In index.html <script>, replace the entire renderCases function
 function renderCases() {
     const regularGrid = document.getElementById('cases-grid-regular');
     const limitedGrid = document.getElementById('cases-grid-limited');
-    const oldGrid = document.getElementById('cases-grid'); // Keep for fallback
+    const freeGrid = document.getElementById('cases-grid-free'); // Get the new grid
 
-    // If new grids don't exist, use the old one to prevent crashing
-    if (!regularGrid || !limitedGrid) {
-        if(oldGrid) oldGrid.innerHTML = "<p>Loading cases...</p>";
+    // Check for all grids
+    if (!regularGrid || !limitedGrid || !freeGrid) {
+        console.error("One or more case grids are missing from the DOM.");
         return;
     }
 
     regularGrid.innerHTML = '';
     limitedGrid.innerHTML = '';
+    freeGrid.innerHTML = ''; // Clear the new grid
 
     if (!casesData || casesData.length === 0) {
         regularGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
 
+    // A helper map to easily identify free cases by their ID
+    const freeCaseIds = ['daily_case', 'friend_case', 'bro_case', 'whale_case'];
+
     casesData.forEach(caseItem => {
-        // --- RENDER LIMITED CASES (OLD STYLE) ---
-        if (limitedCaseIds.includes(caseItem.id)) {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
-
-            const imgCont = document.createElement('div');
-            imgCont.className = 'case-image-display';
-            const img = document.createElement('img');
-            img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
-            img.alt = caseItem.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
-
-            const nameCont = document.createElement('div');
-            nameCont.className = 'case-name-container';
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-name';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-            nameCont.appendChild(nameEl);
-            
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-            
-            card.append(imgCont, nameCont, priceEl);
-            limitedGrid.appendChild(card);
-        } 
-        // --- RENDER ANIMATED CASES (NEW STYLE) ---
-        else {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
-
-            // 1. Create the image container (same as limited cases)
-            const imgCont = document.createElement('div');
-            imgCont.className = 'case-image-display';
-            const img = document.createElement('img');
-
-            // 2. Get the representative prize name from our new map and generate its image URL
-            const representativePrizeName = CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] || caseItem.name; // Fallback to case name just in case
-            img.src = generateImageFilename(representativePrizeName);
-            img.alt = caseItem.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
-
-            // 3. Create the name container (same as limited cases)
-            const nameCont = document.createElement('div');
-            nameCont.className = 'case-name-container';
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-name';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-            nameCont.appendChild(nameEl);
-            
-            // 4. Create the price element (same as limited cases)
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-            
-            // 5. Append everything in the correct order
-            card.append(imgCont, nameCont, priceEl);
-            regularGrid.appendChild(card);
+        const isLimited = limitedCaseIds.includes(caseItem.id);
+        const isFree = freeCaseIds.includes(caseItem.id);
+        
+        // Determine which grid to put the case in
+        let targetGrid;
+        if (isFree) {
+            targetGrid = freeGrid;
+        } else if (isLimited) {
+            targetGrid = limitedGrid;
+        } else {
+            targetGrid = regularGrid;
         }
-        // --- ^^^^ REPLACE THIS ENTIRE ELSE BLOCK ^^^^ ---
+
+        const card = document.createElement('div');
+        card.className = 'case-card';
+        card.dataset.caseId = caseItem.id;
+        card.onclick = () => openRouletteModal(caseItem);
+
+        const imgCont = document.createElement('div');
+        imgCont.className = 'case-image-display';
+        const img = document.createElement('img');
+        
+        // Use representative image logic for non-limited, non-free cases
+        const representativePrizeName = (!isLimited && !isFree && CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id])
+            ? CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] 
+            : (caseItem.imageFilename || caseItem.name);
+
+        img.src = generateImageFilename(representativePrizeName);
+        img.alt = caseItem.name;
+        img.loading = 'lazy';
+        imgCont.appendChild(img);
+        
+        const nameCont = document.createElement('div');
+        nameCont.className = 'case-name-container';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'case-name';
+        // Use Russian name directly if provided, otherwise check translations
+        nameEl.textContent = caseItem.name === 'Покетик' ? 'Покетик' : (caseNameTranslations[caseItem.name] || caseItem.name);
+        nameCont.appendChild(nameEl);
+            
+        const priceEl = document.createElement('div');
+        priceEl.className = 'case-price';
+        
+        // --- NEW PRICE DISPLAY LOGIC ---
+        if (caseItem.isDaily) {
+            priceEl.textContent = 'Daily Free';
+            priceEl.style.fontSize = '0.9em'; // Make text slightly smaller
+        } else if (typeof caseItem.priceTickets !== 'undefined') {
+            priceEl.innerHTML = `<span style="font-size: 18px; line-height: 1;">🎟️</span> ${caseItem.priceTickets}`;
+        } else {
+            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+        }
+        // --- END NEW PRICE DISPLAY LOGIC ---
+
+        card.append(imgCont, nameCont, priceEl);
+        targetGrid.appendChild(card);
     });
 }
 function renderProfile() {
