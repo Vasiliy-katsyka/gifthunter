@@ -251,6 +251,8 @@ class User(Base):
     last_name = Column(String, nullable=True)
     ton_balance = Column(Float, default=0.0, nullable=False)
     star_balance = Column(Integer, default=0, nullable=False)
+    tickets = Column(Integer, default=0, nullable=False)
+    last_daily_case_opened = Column(DateTime(timezone=True), nullable=True)
     referral_code = Column(String, unique=True, index=True, nullable=True)
     referred_by_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     referral_earnings_pending = Column(Float, default=0.0, nullable=False)
@@ -1897,56 +1899,92 @@ kissed_frog_processed_prizes = calculate_rtp_probabilities(
 # Backend cases data (initial templates - will be adjusted by RTP function)
 # --- In app.py, REPLACE the entire cases_data_backend_with_fixed_prices_raw list ---
 cases_data_backend_with_fixed_prices_raw = [
+    {
+        'id': 'daily_case', 'name': 'Daily Case', 'priceTickets': 0, 'isDaily': True,
+        'imageFilename': generate_image_filename_from_name('Spy Agaric'),
+        'prizes': sorted([
+            {'name': 'Spy Agaric', 'probability': 0.01},
+            {'name': 'Desk Calendar', 'probability': 0.04},
+            {'name': "Heart",  'probability': 0.25},
+            {'name': "Bear",   'probability': 0.25},
+            {'name': "Rose",   'probability': 0.45},
+        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
+    },
+    {
+        'id': 'friend_case', 'name': 'Дружеский', 'priceTickets': 15,
+        'imageFilename': generate_image_filename_from_name('Lol Pop'),
+        'prizes': sorted([
+            {'name': 'Lol Pop', 'probability': 0.05},
+            {'name': 'Desk Calendar', 'probability': 0.15},
+            {'name': "Heart",  'probability': 0.2},
+            {'name': "Bear",   'probability': 0.2},
+            {'name': "Rose",   'probability': 0.2},
+            {'name': "Rocket", 'probability': 0.1},
+            {'name': "Bottle", 'probability': 0.1},
+        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
+    },
+    {
+        'id': 'bro_case', 'name': 'Братский', 'priceTickets': 30,
+        'imageFilename': generate_image_filename_from_name('Record Player'),
+        'prizes': sorted([
+            {'name': 'Record Player', 'probability': 0.03},
+            {'name': 'Top Hat', 'probability': 0.07},
+            {'name': "Rose", 'probability': 0.25},
+            {'name': "Rocket", 'probability': 0.3},
+            {'name': "Bottle", 'probability': 0.3},
+            {'name': "Ring", 'probability': 0.05},
+        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
+    },
+    {
+        'id': 'whale_case', 'name': 'Китяра', 'priceTickets': 50,
+        'imageFilename': generate_image_filename_from_name('Neko Helmet'),
+        'prizes': sorted([
+            {'name': 'Neko Helmet', 'probability': 0.02},
+            {'name': 'Voodoo Doll', 'probability': 0.08},
+            {'name': "Rocket", 'probability': 0.3},
+            {'name': "Bottle", 'probability': 0.3},
+            {'name': "Ring", 'probability': 0.3},
+        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
+    },
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': sorted([
-        {'name':'Heart Locket','probability': 0.0000001}, # Jackpot!
-        {'name':'Plush Pepe','probability': 0.0000005},
-        {'name':'Durov\'s Cap','probability': 0.000005},
-        {'name':'Precious Peach','probability': 0.00002},
-        {'name':'Whip Cupcake', 'probability': 0.001}, # New common filler
+        # All prizes are cheaper than 'Precious Peach' (246.0)
+        {'name':'Whip Cupcake', 'probability': 0.001},
         {'name':'Lol Pop','probability': 0.001},
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
         {'name': "Rose",   'probability': 0.20},
-        {'name': "Rocket", 'probability': 0.1389734},
+        {'name': "Rocket", 'probability': 0.138},
         {'name': "Bottle", 'probability': 0.15},
-        {'name': "Ring",   'probability': 0.04},
+        {'name': "Ring",   'probability': 0.01},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.756,'prizes': sorted([
-        {'name':'Heroic Helmet','probability': 0.000005}, # New high-tier prize
+        # All prizes are cheaper than 'Heroic Helmet' (188.0)
         {'name':'Perfume Bottle','probability': 0.0001},
         {'name':'Vintage Cigar','probability': 0.00012},
         {'name':'Signet Ring','probability': 0.00013},
         {'name':'Swiss Watch','probability': 0.00015},
-        {'name':'Holiday Drink', 'probability': 0.002},  # New mid-tier filler
-        {'name':'Swag Bag', 'probability': 0.002},      # New mid-tier filler
+        {'name':'Holiday Drink', 'probability': 0.002},
+        {'name':'Swag Bag', 'probability': 0.002},
         {'name':'Snake Box', 'probability': 0.005},
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
         {'name': "Rose",   'probability': 0.20},
-        {'name': "Rocket", 'probability': 0.140495},
+        {'name': "Rocket", 'probability': 0.1405},
         {'name': "Bottle", 'probability': 0.15},
         {'name': "Ring",   'probability': 0.04},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
-    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': sorted([
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Neko Helmet','probability':0.00001},
-        {'name':'Snoop Dogg', 'probability': 0.05},      # New Thematic Filler
-        {'name':'Whip Cupcake', 'probability': 0.05},   # New Thematic Filler
-        {'name':'Holiday Drink', 'probability': 0.05},  # New Thematic Filler
-        {'name':'Swag Bag', 'probability': 0.05},      # New Thematic Filler
-        {'name':'Snake Box', 'probability': 0.0005},
-        {'name':'Pet Snake', 'probability': 0.0005},
-        {'name':'Party Sparkler','probability':0.1},
-        {'name':'Homemade Cake','probability':0.1},
-        {'name':'Jack-in-the-box','probability':0.1},
-        {'name':'Santa Hat','probability':0.1},
-        {'name':'Jester Hat','probability':0.05},
-        {'name':'Cookie Heart','probability':0.1},
-        {'name':'Easter Egg','probability':0.05},
-        {'name':'Lol Pop','probability':0.0988899},
-        {'name':'Hypno Lollipop','probability':0.1},
+    {'id':'lolpop', 'name':'Покетик', 'priceTON':2.0, # Price = 500 stars
+    'imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg',
+    'prizes': sorted([
+        # All prizes are <= 'Lol Pop' (1.2 TON)
+        {'name':'Lol Pop','probability':0.05},
+        {'name':'Desk Calendar','probability':0.1},
+        {'name':'B-Day Candle', 'probability': 0.1},
+        {'name': "Heart",  'probability': 0.2},
+        {'name': "Bear",   'probability': 0.2},
+        {'name': "Rose",   'probability': 0.35},
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': sorted([
@@ -2297,6 +2335,42 @@ def populate_initial_data():
         db.close()
 
 def initial_setup_and_logging():
+    global cases_data_backend_with_fixed_prices_raw, CASE_REPRESENTATIVE_IMAGE_MAP, UPDATED_FLOOR_PRICES
+    
+    # --- NEW PRIZE FILTERING LOGIC START ---
+    temp_cases_data = []
+    for case_template in cases_data_backend_with_fixed_prices_raw:
+        case_id = case_template.get('id')
+        
+        # This logic ensures the most valuable prize in a case is the one shown on its card.
+        # It does not apply to ticket-based cases or the manually configured 'lolpop' case.
+        if 'priceTON' in case_template and case_id != 'lolpop' and case_id in CASE_REPRESENTATIVE_IMAGE_MAP:
+            rep_prize_name = CASE_REPRESENTATIVE_IMAGE_MAP.get(case_id)
+            if rep_prize_name:
+                rep_prize_price = UPDATED_FLOOR_PRICES.get(rep_prize_name, float('inf'))
+                
+                original_prizes = case_template['prizes']
+                # Keep only prizes with a value less than or equal to the representative prize
+                filtered_prizes = [p for p in original_prizes if UPDATED_FLOOR_PRICES.get(p['name'], 0) <= rep_prize_price]
+                
+                if not filtered_prizes:
+                    logger.warning(f"Filtering for case '{case_id}' removed all prizes. Keeping original prize list to prevent errors.")
+                    case_template['prizes'] = original_prizes
+                else:
+                    # Double-check that the representative prize itself wasn't accidentally removed
+                    if not any(p['name'] == rep_prize_name for p in filtered_prizes):
+                        original_rep_prize = next((p for p in original_prizes if p['name'] == rep_prize_name), None)
+                        if original_rep_prize:
+                            filtered_prizes.append(original_rep_prize)
+                            logger.info(f"Re-added representative prize '{rep_prize_name}' to case '{case_id}'.")
+
+                    case_template['prizes'] = filtered_prizes
+        
+        temp_cases_data.append(case_template)
+    
+    cases_data_backend_with_fixed_prices_raw = temp_cases_data
+    # --- NEW PRIZE FILTERING LOGIC END ---
+
     populate_initial_data()
     db = SessionLocal()
     try:
@@ -2571,8 +2645,6 @@ def get_user_data_api():
             else:
                 item_image = i.nft.image_filename if i.nft else i.item_image_override or generate_image_filename_from_name(item_name)
             
-            # --- THIS IS THE CORRECTED BLOCK ---
-            # It now includes the 'variant' field from the database object `i`.
             inv.append({
                 "id": i.id,
                 "name": item_name,
@@ -2580,7 +2652,7 @@ def get_user_data_api():
                 "floorPrice": i.nft.floor_price if i.nft else i.current_value,
                 "currentValue": i.current_value,
                 "upgradeMultiplier": i.upgrade_multiplier,
-                "variant": i.variant,  # THIS LINE ENSURES THE BG INFO IS SENT
+                "variant": i.variant,
                 "is_ton_prize": i.is_ton_prize,
                 "is_emoji_gift": is_emoji,
                 "obtained_at": i.obtained_at.isoformat() if i.obtained_at else None
@@ -2595,6 +2667,10 @@ def get_user_data_api():
             "last_name":user.last_name,
             "tonBalance":user.ton_balance,
             "starBalance":user.star_balance,
+            # --- NEW/UPDATED FIELDS ---
+            "tickets": user.tickets,
+            "last_daily_case_opened": user.last_daily_case_opened.isoformat() if user.last_daily_case_opened else None,
+            # ---
             "inventory":inv,
             "referralCode":user.referral_code,
             "referralEarningsPending": int(user.referral_earnings_pending * TON_TO_STARS_RATE_BACKEND),
@@ -2664,6 +2740,9 @@ def register_referral_api():
             return jsonify({"error": "Referrer not found with this code."}), 404
 
         referred_user = db.query(User).filter(User.id == user_id).first()
+        # --- NEW: Check if the user is truly new BEFORE creating them ---
+        is_truly_new_user = not referred_user
+
         if not referred_user:
             new_referral_code_for_user = f"ref_{user_id}_{random.randint(1000,9999)}"
             while db.query(User).filter(User.referral_code == new_referral_code_for_user).first():
@@ -2687,6 +2766,12 @@ def register_referral_api():
         if referrer.id == referred_user.id:
             db.commit()
             return jsonify({"error": "Cannot refer oneself."}), 400
+
+        # --- NEW: Grant ticket to referrer if the user is new ---
+        if is_truly_new_user:
+            referrer.tickets += 1
+            logger.info(f"Awarded +1 ticket to referrer {referrer.id} for new user {user_id}.")
+        # ---
 
         # --- THIS LOGIC IS ALREADY CORRECT - Adding bonus to PENDING earnings ---
         star_bonus = 5
@@ -2950,14 +3035,28 @@ def open_case_api():
         target_case = next((c for c in cases_data_backend if c['id'] == cid), None)
         if not target_case: return jsonify({"error": "Case not found"}), 404
 
-        cost_per_case_ton = Decimal(str(target_case['priceTON']))
-        total_cost_ton = cost_per_case_ton * Decimal(multiplier)
-        user_balance_ton = Decimal(str(user.ton_balance))
+        # --- NEW/UPDATED COST CHECKING LOGIC ---
+        cost_in_tickets = target_case.get('priceTickets')
+        is_daily_case = target_case.get('isDaily', False)
 
-        if user_balance_ton < total_cost_ton:
-            return jsonify({"error": f"Not enough balance."}), 400
+        if is_daily_case:
+            # Check if the user has opened the daily case in the last ~24 hours
+            if user.last_daily_case_opened and user.last_daily_case_opened > dt.now(timezone.utc) - timedelta(hours=23, minutes=55):
+                return jsonify({"error": "You have already opened your daily case today. Come back later!"}), 400
+            user.last_daily_case_opened = dt.now(timezone.utc)
+        elif cost_in_tickets is not None:
+            if user.tickets < cost_in_tickets:
+                return jsonify({"error": f"Not enough tickets. Need {cost_in_tickets}."}), 400
+            user.tickets -= cost_in_tickets
+        else: # Standard Star/TON cost
+            cost_per_case_ton = Decimal(str(target_case['priceTON']))
+            total_cost_ton = cost_per_case_ton * Decimal(multiplier)
+            user_balance_ton = Decimal(str(user.ton_balance))
 
-        user.ton_balance = float(user_balance_ton - total_cost_ton)
+            if user_balance_ton < total_cost_ton:
+                return jsonify({"error": "Not enough balance."}), 400
+            user.ton_balance = float(user_balance_ton - total_cost_ton)
+        # --- END COST CHECKING LOGIC ---
 
         prizes_in_case = target_case['prizes']
         
@@ -3018,14 +3117,16 @@ def open_case_api():
             prize_value_ton = Decimal(str(chosen_prize_info.get('floor_price', 0)))
 
             final_prize_value_ton = prize_value_ton
-            item_variant = None
-            if target_case.get('id') == 'black_only_case':
-                final_prize_value_ton *= Decimal('3')
+            # --- NEW/UPDATED VARIANT LOGIC ---
+            item_variant = None # Default is no special background
+            if target_case.get('id') == 'lolpop' and prize_name == 'Lol Pop':
                 item_variant = 'blackbg'
-            else:
-                # Assign a random background for all other cases
+            elif target_case.get('special_variant'): # For 'black_only_case'
+                item_variant = target_case.get('special_variant')
+            else: # For all other regular cases
                 random_bg = random.choice(GIFT_BACKGROUNDS)
                 item_variant = random_bg['name']
+            # --- END VARIANT LOGIC ---
             
             total_value_this_spin_ton += final_prize_value_ton
             
@@ -3059,7 +3160,9 @@ def open_case_api():
         db.commit()
 
         return jsonify({
-            "status": "success", "won_prizes": won_prizes_response_list, "new_balance_ton": user.ton_balance
+            "status": "success", "won_prizes": won_prizes_response_list, 
+            "new_balance_ton": user.ton_balance,
+            "new_tickets": user.tickets # Send updated ticket balance back
         })
 
     except Exception as e:
