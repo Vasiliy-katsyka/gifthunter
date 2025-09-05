@@ -705,18 +705,12 @@
                 <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/BackgroundEraser_20250831_184845312.png" alt="Case Hunter Logo" class="app-logo">
                 <div class="app-title">Case Hunter</div>
             </div>
-        <div class="wallet-info">
-            <div id="balance">
-                <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
-                <span id="star-balance">0</span>
+            <div class="wallet-info">
+                <div id="balance">
+                    <img src="https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/DMJTGStarsEmoji_AgADZxIAAjoUmVI.png" alt="Star" class="balance-icon">
+                    <span id="star-balance">0</span>
+                </div>
             </div>
-            <!-- NEW TICKET BALANCE DISPLAY -->
-            <div id="ticket-balance-display" style="background-color: var(--surface-hover-color); padding: 8px 12px; border-radius: var(--button-border-radius); font-size: 0.875em; font-weight: 600; border: 1px solid var(--border-color); display: none; align-items: center; gap: 6px;">
-                <span style="font-size: 20px; line-height: 1;">🎟️</span>
-                <span id="ticket-balance">0</span>
-            </div>
-            <!-- END NEW TICKET BALANCE DISPLAY -->
-        </div>
         </header>
 
         <main id="app-content">
@@ -733,10 +727,7 @@
                 <div id="cases-grid-regular" class="cases-grid">
                     <!-- Regular animated cases will be rendered here by JavaScript -->
                 </div>
-                <h3 style="margin-top: 32px; margin-bottom: 20px;">Бесплатные</h3>
-                <div id="cases-grid-free" class="cases-grid">
-                    <!-- Free cases will be rendered here by JavaScript -->
-                </div>
+                
                 <h3 style="margin-top: 32px; margin-bottom: 20px;">Лимитированные</h3>
                 <div id="cases-grid-limited" class="cases-grid">
                     <!-- Limited image-based cases will be rendered here by JavaScript -->
@@ -1155,20 +1146,7 @@ const BG_COLORS_MAP = {
     "French Violet": "#c260e6"
 };
 
-const CASE_REPRESENTATIVE_IMAGE_MAP = {
-    'all_in_01': 'Precious Peach',
-    'small_billionaire_05': 'Heroic Helmet',
-    'lolpop': 'Lol Pop',
-    'recordplayer': 'Record Player',
-    'girls_collection': 'Neko Helmet',
-    'mens_collection': 'Top Hat',
-    'swisswatch': 'Swiss Watch',
-    'kissedfrog': 'Kissed Frog',
-    'perfumebottle': 'Perfume Bottle',
-    'vintagecigar': 'Vintage Cigar',
-    'astralshard': 'Astral Shard',
-    'plushpepe': 'Plush Pepe'
-};
+
     
 const GIFT_NAME_TO_ID_MAP = {
   "Santa Hat": "5983471780763796287","Signet Ring": "5936085638515261992","Precious Peach": "5933671725160989227","Plush Pepe": "5936013938331222567",
@@ -1428,30 +1406,26 @@ const CUSTOM_GIFT_IMAGES = {
     "Pen": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADyoUAAmZioUk.png?raw=true",
     "Suitcase": "https://github.com/Vasiliy-katsyka/gifthunter/blob/main/gifts_emoji_by_gifts_changes_bot_AgADa4wAAurDqUk.png?raw=true",
 };
+
+const CASE_REPRESENTATIVE_IMAGE_MAP = {
+    'all_in_01': 'Precious Peach',
+    'small_billionaire_05': 'Heroic Helmet',
+    'lolpop': 'Lol Pop',
+    'recordplayer': 'Record Player',
+    'girls_collection': 'Neko Helmet',
+    'mens_collection': 'Top Hat',
+    'swisswatch': 'Swiss Watch',
+    'kissedfrog': 'Kissed Frog',
+    'perfumebottle': 'Perfume Bottle',
+    'vintagecigar': 'Vintage Cigar',
+    'astralshard': 'Astral Shard',
+    'plushpepe': 'Plush Pepe'
+};
     
 // This is the clean, raw definition of all your cases.
 // --- In index.html, REPLACE the entire casesData list ---
 const casesData = [
-    {
-        'id': 'daily_case', 'name': 'Daily Case', 'priceTickets': 0, 'isDaily': true,
-        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5821261908354794038/Original.png' // Spy Agaric
-    },
-    {
-        'id': 'friend_case', 'name': 'Дружеский', 'priceTickets': 15,
-        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5170594532177215681/Original.png' // Lol Pop
-    },
-    {
-        'id': 'bro_case', 'name': 'Братский', 'priceTickets': 30,
-        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5856973938650776169/Original.png' // Record Player
-    },
-    {
-        'id': 'whale_case', 'name': 'Китяра', 'priceTickets': 50,
-        'imageFilename': 'https://cdn.changes.tg/gifts/originals/5933793770951673155/Original.png' // Neko Helmet
-    },
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': [
-        {'name':'Heart Locket','probability': 0.0000001}, // Jackpot!
-        {'name':'Plush Pepe','probability': 0.0000005},
-        {'name':'Durov\'s Cap','probability': 0.000005},
         {'name':'Precious Peach','probability': 0.00002},
         {'name':'Whip Cupcake', 'probability': 0.0001}, // New common filler
         {'name':'Lol Pop','probability': 0.0001},
@@ -1478,14 +1452,7 @@ const casesData = [
         {'name': "Bottle", 'probability': 0.15},
         {'name': "Ring", 'probability': 0.04},
     ]},
-    {'id':'lolpop', 'name':'Покетик', 'priceTON':2.0, 'prizes': [
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Neko Helmet','probability':0.00001},
-        {'name':'Snoop Dogg', 'probability': 0.05},      // New Thematic Filler
-        {'name':'Whip Cupcake', 'probability': 0.05},   // New Thematic Filler
-        {'name':'Holiday Drink', 'probability': 0.05},  // New Thematic Filler
-        {'name':'Swag Bag', 'probability': 0.05},      // New Thematic Filler
-        {'name':'Snake Box', 'probability': 0.0005},
+    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': [
         {'name':'Pet Snake', 'probability': 0.0005},
         {'name':'Party Sparkler','probability':0.1},
         {'name':'Homemade Cake','probability':0.1},
@@ -1498,13 +1465,6 @@ const casesData = [
         {'name':'Hypno Lollipop','probability':0.1},
     ]},
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': [
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Bow Tie', 'probability': 0.02},         // New
-        {'name':'Joyful Bundle', 'probability': 0.02},   // New
-        {'name':'Lush Bouquet', 'probability': 0.02},    // New
-        {'name':'Restless Jar', 'probability': 0.02},    // New
-        {'name':'Light Sword', 'probability': 0.02},     // New
-        {'name':'Tama Gadget','probability':0.001},
         {'name':'Record Player','probability':0.001},
         {'name':'Big Year', 'probability': 0.001},
         {'name':'Flying Broom','probability':0.001},
@@ -1525,7 +1485,6 @@ const casesData = [
         'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/IMG_20250901_215435_909.jpg?raw=true',
         'priceTON': 6.0,
         'prizes': [
-            {'name':'Durov\'s Cap','probability': 0.0001},
             {'name':'Suitcase','probability': 0.0001},
             {'name':'Pen','probability': 0.005},
             {'name':'Book','probability': 0.01},
@@ -1541,10 +1500,7 @@ const casesData = [
         ]
     },
     {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': [
-        {'name':'Heart Locket', 'probability': 0.00005},  // New Ultimate Prize
-        {'name':'Nail Bracelet', 'probability': 0.0001}, // New Top Prize
-        {'name':'Loot Bag', 'probability': 0.00001},
-        {'name':'Genie Lamp', 'probability': 0.00001},
+        {'name':'Neko Helmet', 'probability': 0.00001},
         {'name':'Cupid Charm', 'probability': 0.1},      // New Thematic Prize
         {'name':'Valentine Box', 'probability': 0.1},    // New Thematic Prize
         {'name':'Lush Bouquet', 'probability': 0.1},     // New Thematic Prize
@@ -1554,15 +1510,10 @@ const casesData = [
         {'name': 'Bunny Muffin', 'probability': 0.19983},
     ]},
     {'id': 'mens_collection', 'name': 'Men\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/men.jpg', 'priceTON': 8.0, 'prizes': [
-        {'name':'Heroic Helmet', 'probability': 0.0001}, // New Top Prize
-        {'name':'Durov\'s Cap', 'probability': 0.000001},
-        {'name':'Westside Sign', 'probability': 0.05},   // New Snoop Dogg Set
         {'name':'Low Rider', 'probability': 0.1},        // New Snoop Dogg Set
         {'name':'Snoop Cigar', 'probability': 0.15},     // New Snoop Dogg Set
         {'name':'Swag Bag', 'probability': 0.2},         // New Snoop Dogg Set
-        {'name':'Snoop Dogg', 'probability': 0.2},       // New Snoop Dogg Set
-        {'name':'Vintage Cigar', 'probability': 0.0001},
-        {'name':'Signet Ring', 'probability': 0.0001},
+        {'name':'Snoop Dogg', 'probability': 0.2},
         {'name':'Top Hat', 'probability': 0.1},
         {'name':'Record Player', 'probability': 0.1},
         {'name':'Spiced Wine', 'probability': 0.099699},
@@ -1608,12 +1559,7 @@ const casesData = [
      'prizes': finalKissedFrogPrizesWithConsolation
     },
     {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 20.0,'prizes': [
-        {'name':'Heart Locket','probability':0.000001},
-        {'name':'Nail Bracelet', 'probability': 0.0005},
-        {'name':'Westside Sign', 'probability': 0.02},
         {'name':'Low Rider', 'probability': 0.02},
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Bonded Ring', 'probability': 0.0000005},
         {'name':'Perfume Bottle','probability':0.000005},
         {'name':'Magic Potion','probability':0.00001},
         {'name':'Genie Lamp','probability':0.01},
@@ -1628,12 +1574,6 @@ const casesData = [
         {'name':'Pet Snake', 'probability': 0.05},
     ]},
     {'id':'vintagecigar','name':'Vintage Cigar Safe','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Vintage-Cigar.jpg','priceTON':40.0,'prizes': [
-        {'name':'Heart Locket','probability':0.000005},
-        {'name':'Heroic Helmet','probability':0.00005},
-        {'name':'Nail Bracelet','probability':0.0001},
-        {'name':'Gem Signet','probability':0.05},
-        {'name':'Westside Sign','probability':0.05},
-        {'name':'Plush Pepe','probability':0.0000001},
         {'name':'Mini Oscar','probability':0.00001},
         {'name':'Perfume Bottle','probability':0.01},
         {'name':'Scared Cat','probability':0.1},
@@ -1647,14 +1587,6 @@ const casesData = [
         {'name':'Pet Snake', 'probability': 0.05},
     ]},
     {'id':'astralshard','name':'Astral Shard Relic','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Astral-Shard.jpg','priceTON':100.0,'prizes': [
-        {'name':'Heart Locket','probability':0.0001},
-        {'name':'Heroic Helmet','probability':0.05},
-        {'name':'Nail Bracelet','probability':0.1},
-        {'name':'Gem Signet','probability':0.1},
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Durov\'s Cap','probability':0.0000005},
-        {'name':'Precious Peach','probability':0.000001},
-        {'name':'Bonded Ring', 'probability': 0.01},
         {'name':'Astral Shard','probability':0.05},
         {'name':'Ion Gem','probability':0.05},
         {'name':'Mini Oscar','probability':0.05},
@@ -2021,21 +1953,10 @@ function setupBannerEventListeners() {
 }
     
 function updateBalances() {
-    // Star balance logic remains the same
+    // All balances are now in Stars
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
-    headerElements.starBalanceSpan.textContent = `${starBalance}`;
+    headerElements.starBalanceSpan.textContent = `${starBalance}`; // Keep ID for now, but it's stars
     document.querySelector('#profile-balance-display span').textContent = `${starBalance}`;
-
-    // --- NEW TICKET BALANCE LOGIC ---
-    const ticketBalanceDisplay = document.getElementById('ticket-balance-display');
-    const ticketBalanceSpan = document.getElementById('ticket-balance');
-    if (ticketBalanceDisplay && ticketBalanceSpan) {
-        // We get the tickets count directly from the user object now
-        const tickets = currentUser.tickets || 0;
-        ticketBalanceSpan.textContent = tickets;
-        // Show the display if the user has 1 or more tickets
-        ticketBalanceDisplay.style.display = tickets > 0 ? 'flex' : 'none';
-    }
 }
 function navigateToPage(pageId) {
     pages.forEach(p => p.classList.remove('active'));
@@ -2142,88 +2063,94 @@ function updateUIBasedOnWallet(wallet) {
 function renderCasesAndSlots() {
     renderCases();
 }
-// In index.html <script>, replace the entire renderCases function
 function renderCases() {
     const regularGrid = document.getElementById('cases-grid-regular');
     const limitedGrid = document.getElementById('cases-grid-limited');
-    const freeGrid = document.getElementById('cases-grid-free'); // Get the new grid
+    const oldGrid = document.getElementById('cases-grid'); // Keep for fallback
 
-    // Check for all grids
-    if (!regularGrid || !limitedGrid || !freeGrid) {
-        console.error("One or more case grids are missing from the DOM.");
+    // If new grids don't exist, use the old one to prevent crashing
+    if (!regularGrid || !limitedGrid) {
+        if(oldGrid) oldGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
 
     regularGrid.innerHTML = '';
     limitedGrid.innerHTML = '';
-    freeGrid.innerHTML = ''; // Clear the new grid
 
     if (!casesData || casesData.length === 0) {
         regularGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
 
-    // A helper map to easily identify free cases by their ID
-    const freeCaseIds = ['daily_case', 'friend_case', 'bro_case', 'whale_case'];
-
     casesData.forEach(caseItem => {
-        const isLimited = limitedCaseIds.includes(caseItem.id);
-        const isFree = freeCaseIds.includes(caseItem.id);
-        
-        // Determine which grid to put the case in
-        let targetGrid;
-        if (isFree) {
-            targetGrid = freeGrid;
-        } else if (isLimited) {
-            targetGrid = limitedGrid;
-        } else {
-            targetGrid = regularGrid;
-        }
+        // --- RENDER LIMITED CASES (OLD STYLE) ---
+        if (limitedCaseIds.includes(caseItem.id)) {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.dataset.caseId = caseItem.id;
+            card.onclick = () => openRouletteModal(caseItem);
 
-        const card = document.createElement('div');
-        card.className = 'case-card';
-        card.dataset.caseId = caseItem.id;
-        card.onclick = () => openRouletteModal(caseItem);
+            const imgCont = document.createElement('div');
+            imgCont.className = 'case-image-display';
+            const img = document.createElement('img');
+            img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
+            img.alt = caseItem.name;
+            img.loading = 'lazy';
+            imgCont.appendChild(img);
 
-        const imgCont = document.createElement('div');
-        imgCont.className = 'case-image-display';
-        const img = document.createElement('img');
-        
-        // Use representative image logic for non-limited, non-free cases
-        const representativePrizeName = (!isLimited && !isFree && CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id])
-            ? CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] 
-            : (caseItem.imageFilename || caseItem.name);
-
-        img.src = generateImageFilename(representativePrizeName);
-        img.alt = caseItem.name;
-        img.loading = 'lazy';
-        imgCont.appendChild(img);
-        
-        const nameCont = document.createElement('div');
-        nameCont.className = 'case-name-container';
-        const nameEl = document.createElement('div');
-        nameEl.className = 'case-name';
-        // Use Russian name directly if provided, otherwise check translations
-        nameEl.textContent = caseItem.name === 'Покетик' ? 'Покетик' : (caseNameTranslations[caseItem.name] || caseItem.name);
-        nameCont.appendChild(nameEl);
+            const nameCont = document.createElement('div');
+            nameCont.className = 'case-name-container';
+            const nameEl = document.createElement('div');
+            nameEl.className = 'case-name';
+            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+            nameCont.appendChild(nameEl);
             
-        const priceEl = document.createElement('div');
-        priceEl.className = 'case-price';
-        
-        // --- NEW PRICE DISPLAY LOGIC ---
-        if (caseItem.isDaily) {
-            priceEl.textContent = 'Daily Free';
-            priceEl.style.fontSize = '0.9em'; // Make text slightly smaller
-        } else if (typeof caseItem.priceTickets !== 'undefined') {
-            priceEl.innerHTML = `<span style="font-size: 18px; line-height: 1;">🎟️</span> ${caseItem.priceTickets}`;
-        } else {
+            const priceEl = document.createElement('div');
+            priceEl.className = 'case-price';
             const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
             priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-        }
-        // --- END NEW PRICE DISPLAY LOGIC ---
+            
+            card.append(imgCont, nameCont, priceEl);
+            limitedGrid.appendChild(card);
+        } 
+        // --- RENDER ANIMATED CASES (NEW STYLE) ---
+        else {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.dataset.caseId = caseItem.id;
+            card.onclick = () => openRouletteModal(caseItem);
 
-        card.append(imgCont, nameCont, priceEl);
-        targetGrid.appendChild(card);
+            // 1. Create the image container (same as limited cases)
+            const imgCont = document.createElement('div');
+            imgCont.className = 'case-image-display';
+            const img = document.createElement('img');
+
+            // 2. Get the representative prize name from our new map and generate its image URL
+            const representativePrizeName = CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] || caseItem.name; // Fallback to case name just in case
+            img.src = generateImageFilename(representativePrizeName);
+            img.alt = caseItem.name;
+            img.loading = 'lazy';
+            imgCont.appendChild(img);
+
+            // 3. Create the name container (same as limited cases)
+            const nameCont = document.createElement('div');
+            nameCont.className = 'case-name-container';
+            const nameEl = document.createElement('div');
+            nameEl.className = 'case-name';
+            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+            nameCont.appendChild(nameEl);
+            
+            // 4. Create the price element (same as limited cases)
+            const priceEl = document.createElement('div');
+            priceEl.className = 'case-price';
+            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+            
+            // 5. Append everything in the correct order
+            card.append(imgCont, nameCont, priceEl);
+            regularGrid.appendChild(card);
+        }
+        // --- ^^^^ REPLACE THIS ENTIRE ELSE BLOCK ^^^^ ---
     });
 }
 function renderProfile() {
