@@ -2020,12 +2020,6 @@ cases_data_backend_with_fixed_prices_raw = [
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'swisswatch','name':'Swiss Watch Box','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Swiss-Watch.jpg','priceTON':10.0,'prizes': sorted([
-        {'name':'Plush Pepe','probability':0.0000001},
-        {'name':'Low Rider', 'probability': 0.02},       # New
-        {'name':'Cupid Charm', 'probability': 0.05},     # New
-        {'name':'Valentine Box', 'probability': 0.05},   # New
-        {'name':'Snoop Cigar', 'probability': 0.05},     # New
-        {'name':'Signet Ring','probability':0.00001},
         {'name':'Swiss Watch','probability':0.00001},
         {'name':'Electric Skull','probability':0.0001},
         {'name':'Voodoo Doll','probability':0.1},
