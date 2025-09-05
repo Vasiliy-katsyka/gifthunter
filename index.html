@@ -714,11 +714,6 @@
                 <div id="cases-grid-regular" class="cases-grid">
                     <!-- Regular animated cases will be rendered here by JavaScript -->
                 </div>
-                
-                <h3 style="margin-top: 32px; margin-bottom: 20px;">Лимитированные</h3>
-                <div id="cases-grid-limited" class="cases-grid">
-                    <!-- Limited image-based cases will be rendered here by JavaScript -->
-                </div>
             </div>
 
             <!-- UPGRADE PAGE - MODIFIED STRUCTURE -->
@@ -2086,90 +2081,56 @@ function renderCasesAndSlots() {
 }
 function renderCases() {
     const regularGrid = document.getElementById('cases-grid-regular');
-    const limitedGrid = document.getElementById('cases-grid-limited');
-    const oldGrid = document.getElementById('cases-grid'); // Keep for fallback
-
-    // If new grids don't exist, use the old one to prevent crashing
-    if (!regularGrid || !limitedGrid) {
-        if(oldGrid) oldGrid.innerHTML = "<p>Loading cases...</p>";
+    // The limitedGrid is no longer needed, so we can remove the reference to it.
+    
+    if (!regularGrid) {
+        console.error("Could not find the main cases grid container.");
         return;
     }
 
-    regularGrid.innerHTML = '';
-    limitedGrid.innerHTML = '';
+    regularGrid.innerHTML = ''; // Clear the grid before rendering
 
     if (!casesData || casesData.length === 0) {
         regularGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
 
+    // This loop now creates a static image card for EVERY case.
     casesData.forEach(caseItem => {
-        // --- RENDER LIMITED CASES (OLD STYLE) ---
-        if (limitedCaseIds.includes(caseItem.id)) {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
+        const card = document.createElement('div');
+        card.className = 'case-card';
+        card.dataset.caseId = caseItem.id;
+        card.onclick = () => openRouletteModal(caseItem);
 
-            const imgCont = document.createElement('div');
-            imgCont.className = 'case-image-display';
-            const img = document.createElement('img');
-            img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
-            img.alt = caseItem.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
+        // --- Image Display (replaces Lottie animation) ---
+        const imgCont = document.createElement('div');
+        imgCont.className = 'case-image-display';
+        const img = document.createElement('img');
+        // We use the 'imageFilename' property from your casesData object
+        img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
+        img.alt = caseItem.name;
+        img.loading = 'lazy';
+        imgCont.appendChild(img);
 
-            const nameCont = document.createElement('div');
-            nameCont.className = 'case-name-container';
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-name';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-            nameCont.appendChild(nameEl);
-            
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-            
-            card.append(imgCont, nameCont, priceEl);
-            limitedGrid.appendChild(card);
-        } 
-        // --- RENDER ANIMATED CASES (NEW STYLE) ---
-        else {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
-
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-card-title';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-
-            const animationCont = document.createElement('div');
-            animationCont.className = 'case-animation-display';
-
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-
-            card.append(nameEl, animationCont, priceEl);
-            regularGrid.appendChild(card);
-            
-            const animUrl = lottieAnimationUrls[caseItem.id];
-            if (animUrl) {
-                lottie.loadAnimation({
-                    container: animationCont,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: animUrl
-                });
-            } else {
-                animationCont.textContent = '❓';
-                animationCont.style.cssText = 'font-size: 2.5em; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); padding-bottom: 0;';
-            }
-        }
+        // --- Name Container ---
+        const nameCont = document.createElement('div');
+        nameCont.className = 'case-name-container';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'case-name';
+        nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+        nameCont.appendChild(nameEl);
+        
+        // --- Price Display ---
+        const priceEl = document.createElement('div');
+        priceEl.className = 'case-price';
+        const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+        priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+        
+        // Append all parts to the card in the correct order
+        card.append(imgCont, nameCont, priceEl);
+        
+        // Add the finished card to the main grid
+        regularGrid.appendChild(card);
     });
 }
 function renderProfile() {
