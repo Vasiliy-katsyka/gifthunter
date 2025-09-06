@@ -2990,7 +2990,7 @@ def open_case_api():
             final_prize_value_ton = prize_value_ton
             item_variant = None
             if target_case.get('id') == 'black_only_case':
-                final_prize_value_ton *= Decimal('3')
+                final_prize_value_ton *= Decimal('7')
                 item_variant = 'blackbg'
             else:
                 # Assign a random background for all other cases
