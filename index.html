@@ -1424,26 +1424,29 @@ const CASE_REPRESENTATIVE_IMAGE_MAP = {
     
 // This is the clean, raw definition of all your cases.
 // --- In index.html, REPLACE the entire casesData list ---
+// In index.html, find and REPLACE the entire const casesData array
+
 const casesData = [
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': [
         {'name':'Precious Peach','probability': 0.00002},
-        {'name':'Whip Cupcake', 'probability': 0.0001}, // New common filler
+        {'name':'Whip Cupcake', 'probability': 0.0001},
         {'name':'Lol Pop','probability': 0.0001},
+        {'name':'Jelly Bunny', 'probability': 0.01},
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
         {'name': "Rose",   'probability': 0.20},
-        {'name': "Rocket", 'probability': 0.1389734},
+        {'name': "Rocket", 'probability': 0.1289734},
         {'name': "Bottle", 'probability': 0.15},
-        {'name': "Ring", 'probability': 0.04},
+        {'name': "Ring", 'probability': 0.01},
     ]},
     {'id':'small_billionaire_05','name':'Small Billionaire','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Small-Billionaire.jpg','priceTON':0.756,'prizes': [
-        {'name':'Heroic Helmet','probability': 0.000005}, // New high-tier prize
+        {'name':'Heroic Helmet','probability': 0.000005},
         {'name':'Perfume Bottle','probability': 0.0001},
         {'name':'Vintage Cigar','probability': 0.00012},
         {'name':'Signet Ring','probability': 0.00013},
         {'name':'Swiss Watch','probability': 0.00015},
-        {'name':'Holiday Drink', 'probability': 0.002},  // New mid-tier filler
-        {'name':'Swag Bag', 'probability': 0.002},      // New mid-tier filler
+        {'name':'Holiday Drink', 'probability': 0.002},
+        {'name':'Swag Bag', 'probability': 0.002},
         {'name':'Snake Box', 'probability': 0.005},
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
@@ -1452,17 +1455,18 @@ const casesData = [
         {'name': "Bottle", 'probability': 0.15},
         {'name': "Ring", 'probability': 0.04},
     ]},
-    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':2.8,'prizes': [
+    {'id':'lolpop','name':'Lol Pop Stash','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Lol-Pop.jpg','priceTON':1.6,'prizes': [ // Price: 400 stars
         {'name':'Pet Snake', 'probability': 0.0005},
-        {'name':'Party Sparkler','probability':0.1},
-        {'name':'Homemade Cake','probability':0.1},
-        {'name':'Jack-in-the-box','probability':0.1},
-        {'name':'Santa Hat','probability':0.1},
-        {'name':'Jester Hat','probability':0.05},
-        {'name':'Cookie Heart','probability':0.1},
-        {'name':'Easter Egg','probability':0.05},
-        {'name':'Lol Pop','probability':0.0988899},
-        {'name':'Hypno Lollipop','probability':0.1},
+        {'name':'Party Sparkler','probability':0.05},
+        {'name':'Homemade Cake','probability':0.05},
+        {'name':'Jack-in-the-box','probability':0.05},
+        {'name':'Santa Hat','probability':0.05},
+        {'name':'Jester Hat','probability':0.025},
+        {'name':'Cookie Heart','probability':0.05},
+        {'name':'Easter Egg','probability':0.0245},
+        {'name':'Lol Pop','probability':0.35},
+        {'name':'Hypno Lollipop','probability':0.05},
+        {'name': 'Ring', 'probability': 0.30},
     ]},
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': [
         {'name':'Record Player','probability':0.001},
@@ -1475,9 +1479,10 @@ const casesData = [
         {'name':'Spy Agaric','probability':0.0809999},
         {'name':'Star Notepad','probability':0.1},
         {'name':'Ginger Cookie','probability':0.1},
-        {'name':'Party Sparkler','probability':0.15},
-        {'name':'Lol Pop','probability':0.15},
+        {'name':'Party Sparkler','probability':0.1},
+        {'name':'Lol Pop','probability':0.1},
         {'name':'Hypno Lollipop','probability':0.065},
+        {'name': 'Ring', 'probability': 0.1},
     ]},
     {
         'id': 'schooler_case',
@@ -1499,42 +1504,48 @@ const casesData = [
             {'name':'Desk Calendar','probability': 0.1548},
         ]
     },
-    {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 8.0, 'prizes': [
+    {'id': 'girls_collection', 'name': 'Girl\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/girls.jpg', 'priceTON': 3.0, 'prizes': [ // Price: 750 stars
         {'name':'Neko Helmet', 'probability': 0.00001},
-        {'name':'Cupid Charm', 'probability': 0.1},      // New Thematic Prize
-        {'name':'Valentine Box', 'probability': 0.1},    // New Thematic Prize
-        {'name':'Lush Bouquet', 'probability': 0.1},     // New Thematic Prize
+        {'name':'Cupid Charm', 'probability': 0.1},
+        {'name':'Valentine Box', 'probability': 0.1},
+        {'name':'Lush Bouquet', 'probability': 0.1},
         {'name':'Eternal Rose', 'probability': 0.1},
-        {'name': 'Berry Box', 'probability': 0.2},
-        {'name': 'Sakura Flower', 'probability': 0.2},
-        {'name': 'Bunny Muffin', 'probability': 0.19983},
+        {'name': 'Berry Box', 'probability': 0.15},
+        {'name': 'Sakura Flower', 'probability': 0.15},
+        {'name': 'Bunny Muffin', 'probability': 0.14983},
+        {'name': 'Ring', 'probability': 0.1},
     ]},
-    {'id': 'mens_collection', 'name': 'Men\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/men.jpg', 'priceTON': 8.0, 'prizes': [
-        {'name':'Low Rider', 'probability': 0.1},        // New Snoop Dogg Set
-        {'name':'Snoop Cigar', 'probability': 0.15},     // New Snoop Dogg Set
-        {'name':'Swag Bag', 'probability': 0.2},         // New Snoop Dogg Set
-        {'name':'Snoop Dogg', 'probability': 0.2},
+    {'id': 'mens_collection', 'name': 'Men\'s Collection', 'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/men.jpg', 'priceTON': 3.0, 'prizes': [ // Price: 750 stars
+        {'name':'Low Rider', 'probability': 0.1},
+        {'name':'Snoop Cigar', 'probability': 0.15},
+        {'name':'Swag Bag', 'probability': 0.15},
+        {'name':'Snoop Dogg', 'probability': 0.15},
         {'name':'Top Hat', 'probability': 0.1},
         {'name':'Record Player', 'probability': 0.1},
         {'name':'Spiced Wine', 'probability': 0.099699},
+        {'name': 'Ring', 'probability': 0.15},
     ]},
-    {'id':'swisswatch','name':'Swiss Watch Box','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Swiss-Watch.jpg','priceTON':10.0,'prizes': [
+    {'id':'swisswatch','name':'Swiss Watch Box','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Swiss-Watch.jpg','priceTON':6.0,'prizes': [ // Price: 1500 stars
         {'name':'Swiss Watch','probability':0.00001},
         {'name':'Electric Skull','probability':0.0001},
-        {'name':'Voodoo Doll','probability':0.1},
-        {'name':'Diamond Ring','probability':0.1},
-        {'name':'Love Candle','probability':0.1},
-        {'name':'Mad Pumpkin','probability':0.0798799},
-        {'name':'Sleigh Bell','probability':0.1},
-        {'name':'Top Hat','probability':0.1},
-        {'name':'Trapped Heart','probability':0.1},
-        {'name':'Love Potion','probability':0.1},
+        {'name':'Voodoo Doll','probability':0.05},
+        {'name':'Diamond Ring','probability':0.05},
+        {'name':'Love Candle','probability':0.05},
+        {'name':'Mad Pumpkin','probability':0.07988},
+        {'name':'Sleigh Bell','probability':0.05},
+        {'name':'Top Hat','probability':0.05},
+        {'name':'Trapped Heart','probability':0.05},
+        {'name':'Love Potion','probability':0.05},
+        {'name': 'Easter Egg', 'probability': 0.1},
+        {'name': 'Desk Calendar', 'probability': 0.15},
+        {'name': 'Homemade Cake', 'probability': 0.15},
+        {'name': 'Xmas Stocking', 'probability': 0.12},
     ]},
     {
         'id': 'black_only_case',
         'name': 'Black Only',
         'imageFilename': 'https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250901_225332150.jpg?raw=true',
-        'priceTON': 16.0, // 4000 stars / 250
+        'priceTON': 16.0,
         'prizes': [
             {'name':'Plush Pepe','probability': 0.000001},
             {'name':'Durov\'s Cap','probability': 0.000005},
@@ -1558,7 +1569,7 @@ const casesData = [
     {'id':'kissedfrog','name':'Kissed Frog Pond','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Kissed-Frog.jpg','priceTON':20.0,
      'prizes': finalKissedFrogPrizesWithConsolation
     },
-    {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 20.0,'prizes': [
+    {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 10.0,'prizes': [ // Price: 2500 stars
         {'name':'Low Rider', 'probability': 0.02},
         {'name':'Perfume Bottle','probability':0.000005},
         {'name':'Magic Potion','probability':0.00001},
@@ -1570,10 +1581,12 @@ const casesData = [
         {'name':'Electric Skull','probability':0.1},
         {'name':'Diamond Ring','probability':0.1},
         {'name':'Big Year', 'probability': 0.0894834},
-        {'name':'Snake Box', 'probability': 0.5},
+        {'name':'Snake Box', 'probability': 0.4},
         {'name':'Pet Snake', 'probability': 0.05},
+        {'name': 'Scared Cat', 'probability': 0.06},
+        {'name': 'Voodoo Doll', 'probability': 0.06},
     ]},
-    {'id':'vintagecigar','name':'Vintage Cigar Safe','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Vintage-Cigar.jpg','priceTON':40.0,'prizes': [
+    {'id':'vintagecigar','name':'Vintage Cigar Safe','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Vintage-Cigar.jpg','priceTON':14.0,'prizes': [ // Price: 3500 stars
         {'name':'Mini Oscar','probability':0.00001},
         {'name':'Perfume Bottle','probability':0.01},
         {'name':'Scared Cat','probability':0.1},
@@ -1581,12 +1594,14 @@ const casesData = [
         {'name':'Swiss Watch','probability':0.05},
         {'name':'Sharp Tongue','probability':0.0898349},
         {'name':'Genie Lamp','probability':0.1},
-        {'name':'Toy Bear','probability':0.15},
+        {'name':'Toy Bear','probability':0.1},
         {'name':'Neko Helmet','probability':0.1},
         {'name':'Snake Box', 'probability': 0.1},
         {'name':'Pet Snake', 'probability': 0.05},
+        {'name': 'Snoop Cigar', 'probability': 0.05},
+        {'name': 'Westside Sign', 'probability': 0.05},
     ]},
-    {'id':'astralshard','name':'Astral Shard Relic','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Astral-Shard.jpg','priceTON':100.0,'prizes': [
+    {'id':'astralshard','name':'Astral Shard Relic','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Astral-Shard.jpg','priceTON':28.0,'prizes': [ // Price: 7000 stars
         {'name':'Astral Shard','probability':0.05},
         {'name':'Ion Gem','probability':0.05},
         {'name':'Mini Oscar','probability':0.05},
@@ -1596,6 +1611,8 @@ const casesData = [
         {'name':'Scared Cat','probability':0.1},
         {'name':'Vintage Cigar','probability':0.1},
         {'name':'Swiss Watch','probability':0.1},
+        {'name': 'Bonded Ring', 'probability': 0.1},
+        {'name': 'Gem Signet', 'probability': 0.1},
     ]},
     {'id':'plushpepe','name':'Plush Pepe Hoard','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Plush-Pepe.jpg','priceTON': 200.0,'prizes': [
         {'name':'Heart Locket','probability':0.05},
