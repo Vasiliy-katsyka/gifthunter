@@ -302,17 +302,6 @@
         #upgrade-items-grid .inventory-item .inventory-item-value { font-size: 0.7em; margin-bottom: 8px; }
         #upgrade-items-grid .inventory-item .button { font-size: 0.75em; padding: 5px 8px;}
         
-        
-        #upgrade-chance-display-container {
-            position: relative;
-            width: 150px;
-            height: 150px;
-            margin: 30px auto; /* Increased margin for better spacing */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
         #upgrade-chance-circle {
             width: 100%;
             height: 100%;
@@ -687,6 +676,83 @@
             margin-top: 0;
             flex-shrink: 0; /* Prevents the price from being squished */
         }
+
+        #upgrade-page {
+            /* Darker background image */
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250907_222256007.jpg?raw=true');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* Hide the old chance display elements */
+        #upgrade-chance-display-container {
+            display: none !important;
+        }
+
+        /* Container for the new layout (0% -- circle -- 0x) */
+        #upgrade-chance-display-container-new {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px; /* Space between text and circle */
+            margin: 40px auto;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        /* Styling for the '0%' and '0x' text */
+        .chance-display-text {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--text-secondary);
+            flex: 1;
+            text-align: center;
+        }
+
+        /* The main circle element */
+        #upgrade-chance-circle-new {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid rgba(120, 120, 128, 0.35); /* Outer track for the pointer */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--surface-hover-color);
+            box-shadow: 0 0 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+
+        /* The mascot image inside the circle */
+        .upgrade-mascot-image {
+            width: 75%;
+            height: 75%;
+            object-fit: contain;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* The new pointer with corrected animation origin */
+        #upgrade-chance-pointer-new {
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 18px solid var(--primary-color);
+            position: absolute;
+            top: -11px; /* Position pointer perfectly on the border */
+            left: 50%;
+            transform: translateX(-50%);
+            /* --- ANIMATION FIX --- */
+            /* This origin makes the pointer rotate around the circle's true center */
+            transform-origin: 50% 86px; /* (150px / 2) radius + 11px top offset */
+            z-index: 2;
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.4));
+            transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        /* --- END OF UPGRADE PAGE REDESIGN CSS --- */
     </style>
 </head>
 <body>
@@ -734,7 +800,6 @@
                 </div>
             </div>
 
-            <!-- UPGRADE PAGE - MODIFIED STRUCTURE -->
             <div id="upgrade-page" class="page">
                 <h2>Апгрейд</h2>
                 <div class="content-card">
@@ -742,7 +807,7 @@
                         <div class="upgrade-item-slot" id="selected-inventory-item-slot" data-type="inventory">
                             <div class="slot-placeholder">
                                 <svg class="plus-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
-                                <span>Your Item</span>
+                                <span>Выберите ваш предмет</span>
                             </div>
                             <div class="slot-item-display" style="display: none;">
                                 <img src="" alt="Selected Item">
@@ -756,7 +821,7 @@
                         <div class="upgrade-item-slot" id="desired-upgrade-item-slot" data-type="desired">
                             <div class="slot-placeholder">
                                 <svg class="plus-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
-                                <span>Desired Item</span>
+                                <span>Выберите желаемый NFT</span>
                             </div>
                             <div class="slot-item-display" style="display: none;">
                                 <img src="" alt="Desired Item">
@@ -773,21 +838,20 @@
                         </div>
                         <button id="close-upgrade-picker-button" class="button button-secondary">Close Picker</button>
                     </div>
-                    
-                    <div id="upgrade-chance-display-container">
-                        <div id="upgrade-chance-circle">
-                            <div id="upgrade-chance-pointer"></div>
+
+                    <!-- NEW CHANCE DISPLAY a la image -->
+                    <div id="upgrade-chance-display-container-new">
+                        <span id="upgrade-chance-text-left" class="chance-display-text">0%</span>
+                        <div id="upgrade-chance-circle-new">
+                            <img src="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/RestrictedGifts_AgADvhkAAkoFcFM.png?raw=true" alt="Upgrade Mascot" class="upgrade-mascot-image">
+                            <div id="upgrade-chance-pointer-new"></div>
                         </div>
-                        <div id="upgrade-chance-text-overlay">
-                            <span id="upgrade-calculated-multiplier">--x</span>
-                            <span id="upgrade-calculated-chance">--%</span>
-                        </div>
+                        <span id="upgrade-multiplier-text-right" class="chance-display-text">0x</span>
                     </div>
-                    
+
                     <button id="do-upgrade-button" class="button" disabled>Select Items to Upgrade</button>
                 </div>
             </div>
-            <!-- END UPGRADE PAGE -->
 
             <div id="invite-page" class="page"><h2>Referrals</h2><div class="content-card"><p>Invite friends & earn <strong>5 stars</strong> per friend + <strong>10%</strong> of their deposits!</p><input type="text" id="referral-link" value="Loading..." readonly><button id="copy-ref-link-button" class="button">Copy Code</button><div class="stats-box"><div class="stat-item"><div id="referral-balance" class="value">0.00 TON</div><div class="label">Earnings</div></div><div class="stat-item"><div id="invited-count" class="value">0</div><div class="label">Invited</div></div></div><button id="withdraw-referral-button" class="button button-secondary">Вывести на баланс</button></div><div class="content-card"><h3>Invited Friends</h3><div id="invited-users-list-display" class="invited-users-list"><p>No friends invited yet.</p></div></div></div>
             <div id="leaderboard-page" class="page"><h2>Leaderboard</h2><div id="leaderboard-list" class="leaderboard-list content-card" style="padding-top:0; padding-bottom:0;"></div></div>
@@ -3249,6 +3313,11 @@ function handleSelectDesiredItemForUpgrade(itemName) {
     }
 }
 function calculateAndDisplayUpgradeStats() {
+    // Get references to the new elements
+    const chanceTextLeft = document.getElementById('upgrade-chance-text-left');
+    const multiplierTextRight = document.getElementById('upgrade-multiplier-text-right');
+    const pointer = document.getElementById('upgrade-chance-pointer-new');
+
     if (selectedItemForUpgrade && desiredItemForUpgrade) {
         if (selectedItemForUpgrade.currentValue <= 0) {
             calculatedUpgradeMultiplier = 0;
@@ -3257,45 +3326,39 @@ function calculateAndDisplayUpgradeStats() {
         } else {
             calculatedUpgradeMultiplier = desiredItemForUpgrade.floorPrice / selectedItemForUpgrade.currentValue;
             
-            // --- START OF THE FIX ---
-            // This logic now exactly mirrors the secure backend calculation.
             const xEffective = Math.max(1.01, calculatedUpgradeMultiplier);
             const maxChance = 75; 
-            // NOTE: The risk factor must be a string for JS exponentiation to work correctly with decimals
             const riskFactor = 0.60; 
 
-            // Calculate the raw, uncapped chance.
             let chance = maxChance * Math.pow(riskFactor, xEffective - 1);
-            
-            // CRITICAL CHANGE: We ONLY cap the chance at the maximum (75%).
-            // We NO LONGER enforce a minimum of 3%. The chance is allowed to be very small.
-            // We also ensure it's not negative, just as a safety measure.
             calculatedUpgradeChance = Math.min(maxChance, Math.max(0, chance));
-            // --- END OF THE FIX ---
         }
-
-        upgradePageElements.calculatedMultiplierText.textContent = `${calculatedUpgradeMultiplier.toFixed(2)}x`;
-        // For very low chances, display with more precision.
-        const chanceDisplay = calculatedUpgradeChance < 0.1 ? calculatedUpgradeChance.toFixed(4) : calculatedUpgradeChance.toFixed(1);
-        upgradePageElements.calculatedChanceText.textContent = `${chanceDisplay}% Шанс`;
+        
+        // Update the new UI elements
+        multiplierTextRight.textContent = `${calculatedUpgradeMultiplier.toFixed(1)}x`;
+        chanceTextLeft.textContent = `${calculatedUpgradeChance.toFixed(1)}%`;
         
         upgradePageElements.doUpgradeButton.disabled = false;
         upgradePageElements.doUpgradeButton.textContent = "Attempt Upgrade";
-        
-        const winAngle = (calculatedUpgradeChance / 100) * 360;
-        document.documentElement.style.setProperty('--upgrade-win-segment-angle', `${winAngle}deg`);
 
     } else {
+        // Reset the new UI elements
         calculatedUpgradeMultiplier = 0;
         calculatedUpgradeChance = 0;
-        upgradePageElements.calculatedMultiplierText.textContent = "--x";
-        upgradePageElements.calculatedChanceText.textContent = "--% Шанс";
+        multiplierTextRight.textContent = "0x";
+        chanceTextLeft.textContent = "0%";
+        
         upgradePageElements.doUpgradeButton.disabled = true;
         upgradePageElements.doUpgradeButton.textContent = "Select Items to Upgrade";
-        document.documentElement.style.setProperty('--upgrade-win-segment-angle', `0deg`);
     }
-    upgradePageElements.chancePointer.classList.remove('spinning');
-    upgradePageElements.chancePointer.style.transform = `translateX(-50%) rotate(0deg)`;
+
+    // Reset pointer animation smoothly
+    if (pointer) {
+        pointer.style.transition = 'none';
+        pointer.style.transform = `translateX(-50%) rotate(0deg)`;
+        void pointer.offsetWidth; // Force browser to apply the reset immediately
+        pointer.style.transition = `transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)`; // Re-enable for next spin
+    }
 }
 
 // --- Add this event listener to your JavaScript, near your other listeners ---
@@ -3334,27 +3397,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
 let upgradeSpinTimeout;
 function startUpgradeAnimation(isSuccess) {
-    const pointer = upgradePageElements.chancePointer;
-    pointer.classList.remove('spinning');
-    pointer.style.transform = `translateX(-50%) rotate(0deg)`;
-    void pointer.offsetWidth;
-    const winSegmentAngle = (calculatedUpgradeChance / 100) * 360;
-    const safetyMargin = 5;
-    let targetAngle;
-    if (isSuccess) {
-        targetAngle = Math.random() * (winSegmentAngle - 2 * safetyMargin) + safetyMargin;
-    } else {
-        const loseSegmentStart = winSegmentAngle;
-        const loseSegmentAngle = 360 - winSegmentAngle;
-        targetAngle = loseSegmentStart + (Math.random() * (loseSegmentAngle - 2 * safetyMargin) + safetyMargin);
-    }
-    const fullSpins = 3 + Math.floor(Math.random() * 3);
-    const finalAngle = fullSpins * 360 + targetAngle;
-    pointer.classList.add('spinning');
+    const pointer = document.getElementById('upgrade-chance-pointer-new');
+    if (!pointer) return Promise.resolve();
+
+    // The new animation is purely for visual suspense
+    const fullSpins = 4 + Math.floor(Math.random() * 4); // Spin between 4 and 7 times
+    const randomExtraAngle = Math.random() * 360;
+    const finalAngle = fullSpins * 360 + randomExtraAngle;
+
+    // Apply the rotation. The transition is already set in the CSS.
     pointer.style.transform = `translateX(-50%) rotate(${finalAngle}deg)`;
+    
+    // Return a promise that resolves when the animation is visually complete
     return new Promise(resolve => {
         if(upgradeSpinTimeout) clearTimeout(upgradeSpinTimeout);
-        upgradeSpinTimeout = setTimeout(resolve, 5100);
+        upgradeSpinTimeout = setTimeout(resolve, 5100); // Wait for the 5s transition + a small buffer
     });
 }
 function showUpgradeResultModal(isSuccess, originalItem, newItemData) {
