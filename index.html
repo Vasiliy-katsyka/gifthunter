@@ -81,31 +81,36 @@
             border: 1px solid var(--border-color);
             overflow: hidden;
             position: relative;
-            display: flex;
-            flex-direction: column;
+            display: flex;          /* Ensures flex layout */
+            flex-direction: column; /* Stacks items vertically */
             padding: 0;
         }
         .case-card:hover { filter: brightness(1.12); transform: translateY(-6px) scale(1.02); box-shadow: var(--soft-shadow); }
         .case-image-display { width: 100%; height: 0; padding-bottom: 100%; position: relative; background-color: var(--surface-hover-color); display:flex; align-items:center; justify-content:center; }
         .case-image-display img {
             position: absolute;
+            /* This perfectly centers the image */
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            /* This makes the image smaller. Adjust 70% as you like (e.g., 65% or 75%) */
             width: 70%;
             height: 70%;
+            /* 'contain' ensures the whole image is visible without cropping */
             object-fit: contain;
+            /* This adds a nice shadow to make the item pop */
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
         }
         .case-image-display .overlay-image { position: absolute; width: 70%; height: 70%; top: 50%; left: 50%; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35)); }
+        .case-name { font-weight: 600; font-size: 1.05em; margin-bottom: 8px; color: var(--text-primary); min-height: 2.5em; display: flex; align-items: center; justify-content: center; }
         .case-card .case-name {
-            display: flex;
+            display: flex; /* Make sure it's visible */
             font-weight: 600;
             font-size: 0.9em;
             color: var(--text-primary);
             line-height: 1.3;
-            padding: 0 8px;
-            min-height: 15px;
+            padding: 0 8px; /* Add some horizontal padding */
+            min-height: 15px; /* Ensure space for two lines of text */
             align-items: center;
             justify-content: center;
             text-align: center;
@@ -124,6 +129,7 @@
             50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.7; }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
         }
+
         @keyframes backgroundDrift {
             0%   { transform: translate(10vw, -15vh) scale(1.1); opacity: 0.6; }
             25%  { transform: translate(-20vw, 20vh) scale(1.3); opacity: 0.4; }
@@ -161,7 +167,7 @@
         #win-overlay-prize-image, #upgrade-result-image-container { width: 100%; min-height: 80px; margin: 0 auto 20px; border-radius: var(--main-border-radius); background-color: var(--surface-hover-color); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-wrap: wrap; gap: 10px; padding: 10px; }
         #win-overlay-prize-image img, #upgrade-result-image-container img { max-width:70px; max-height:70px; object-fit:contain; border-radius: 8px; background-color: var(--surface-color); padding: 5px; border: 1px solid var(--border-color); }
         #win-overlay-prize-name, #upgrade-result-title { font-size: 1.5em; font-weight: 700; margin-bottom: 8px; }
-        #win-overlay-prize-name { color: var(--success-color); }
+        #win-overlay-prize-name { color: var(--success-color); } /* Only for win overlay */
         #win-overlay-prize-details, #upgrade-result-message { font-size: 0.9em; color: var(--text-secondary); margin-bottom: 25px; max-height: 60px; overflow-y: auto; text-align: left; padding-left: 10px;}
         .win-overlay-actions button { margin-bottom: 10px; }
         
@@ -175,6 +181,7 @@
         #roulette-modal h4 { font-size: 0.95em; color: var(--text-secondary); margin-bottom: 12px; font-weight: 500; flex-shrink: 0; }
         
         #slot-machine-modal .modal-content { max-width: 480px; }
+        /* ... (existing slot styles, keep if slots feature is still there) ... */
         
         #withdraw-modal .modal-step { display: none; } #withdraw-modal .modal-step.active { display: block; } #withdraw-modal p { color: var(--text-secondary); margin-bottom: 18px; line-height: 1.55;} #withdraw-modal strong { color: var(--text-primary); font-weight: 600; } #withdraw-modal a.button { margin-bottom: 12px; text-decoration: none; }
         .loader { border: 4px solid var(--surface-hover-color); border-top: 4px solid var(--primary-color); border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; margin: 22px auto; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -185,35 +192,22 @@
         .inventory-item-name { font-size: 0.88em; font-weight: 500; margin-bottom: 5px; line-height: 1.35; } .inventory-item-value { font-size: 0.78em; color: var(--secondary-color); font-weight: 500; margin-bottom: 10px;} .inventory-item-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; } .inventory-item-actions .button { font-size: 0.78em; padding: 6px 9px; margin: 0; width: 100%; }
         #sell-all-button { margin-top: 18px; background-color: var(--danger-color); color: white; background-image: none; box-shadow: 0 3px 8px rgba(255, 59, 48, 0.35); } #sell-all-button:hover { filter: brightness(1.15); background-color: var(--danger-color); box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4); } #sell-all-button:active { filter: brightness(0.9); transform: scale(0.97); }
         
-        /* --- START: REPLACEMENT FOR UPGRADE PAGE STYLES --- */
-        #upgrade-page.active {
-            background: linear-gradient(rgba(10, 12, 20, 0.6), rgba(10, 12, 20, 0.6)), url('https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250907_222256007.jpg?raw=true');
-            background-size: cover;
-            background-position: center center;
-        }
-        
-        #upgrade-content-card {
-            background-color: rgba(24, 26, 37, 0.75);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(120, 120, 128, 0.15);
-        }
-        
+        /* --- NEW/UPDATED UPGRADE PAGE STYLES --- */
         #upgrade-selection-area {
             display: flex;
             justify-content: space-around;
             align-items: center;
             margin-bottom: 25px;
-            gap: 10px;
+            gap: 10px; /* Gap between slots and arrow */
         }
         
         .upgrade-item-slot {
-            flex: 1;
-            max-width: calc(50% - 25px);
-            height: 150px;
-            background-color: #12141D; /* Darker background from image */
+            flex: 1; /* Each slot takes equal width */
+            max-width: calc(50% - 25px); /* Max width considering arrow and gap */
+            height: 150px; /* Fixed height for the square */
+            background-color: var(--surface-hover-color);
             border-radius: var(--main-border-radius);
-            border: 1px solid var(--border-color); /* Solid border */
+            border: 2px dashed var(--border-color);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -225,7 +219,7 @@
         }
         .upgrade-item-slot:hover {
             border-color: var(--primary-color);
-            background-color: var(--surface-hover-color);
+            background-color: var(--surface-color);
         }
         .upgrade-item-slot .slot-placeholder {
             display: flex;
@@ -235,8 +229,8 @@
             color: var(--text-placeholder);
         }
         .upgrade-item-slot .slot-placeholder .plus-icon {
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             margin-bottom: 8px;
             fill: var(--text-placeholder);
         }
@@ -245,7 +239,7 @@
             font-weight: 500;
         }
         .upgrade-item-slot .slot-item-display img {
-            width: 60px;
+            width: 60px; /* Adjust size as needed */
             height: 60px;
             object-fit: contain;
             margin-bottom: 8px;
@@ -255,15 +249,20 @@
             font-size: 0.85em;
             font-weight: 500;
             color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 4px;
+            max-height: 2.4em; /* Approx 2 lines */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .upgrade-item-slot .slot-item-display .slot-item-value {
-            font-size: 0.8em;
+            font-size: 0.75em;
             font-weight: 600;
             color: var(--secondary-color);
         }
         
         .upgrade-arrow-connector {
-            width: 30px;
+            width: 30px; /* Width of the arrow */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -277,35 +276,38 @@
         #upgrade-picker-container {
             margin-top: 20px;
             padding: 15px;
-            background-color: rgba(0,0,0,0.2);
+            background-color: rgba(0,0,0,0.1);
             border-radius: var(--button-border-radius);
         }
-        
-        #upgrade-items-grid {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-        }
-        
-        #upgrade-stats-and-wheel-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 20px 10px;
-            margin-bottom: 25px;
-        }
-        
-        .upgrade-stat-display {
-            font-size: 1.5em;
-            font-weight: 700;
-            color: var(--text-secondary);
-            min-width: 60px;
+        #upgrade-picker-container h4 {
+            color: var(--text-primary);
+            font-size: 1.1em;
+            margin-bottom: 15px;
             text-align: center;
         }
+        /* Ensure inventory-grid within picker has proper styling */
+        #upgrade-items-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Adjust minmax for smaller cards */
+            gap: 10px; /* Smaller gap */
+            padding-right: 5px; /* For scrollbar space */
+        }
+        #upgrade-items-grid .inventory-item {
+            padding: 10px; /* Smaller padding */
+            min-height: 130px; /* Adjust height */
+        }
+        #upgrade-items-grid .inventory-item .item-image-display {
+            width: 50px; height: 50px; margin-bottom: 8px;
+        }
+        #upgrade-items-grid .inventory-item .inventory-item-name { font-size: 0.8em; }
+        #upgrade-items-grid .inventory-item .inventory-item-value { font-size: 0.7em; margin-bottom: 8px; }
+        #upgrade-items-grid .inventory-item .button { font-size: 0.75em; padding: 5px 8px;}
+        
         
         #upgrade-chance-display-container {
             position: relative;
-            width: 170px;
-            height: 170px;
+            width: 150px;
+            height: 150px;
+            margin: 30px auto; /* Increased margin for better spacing */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -315,36 +317,15 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            background-color: #12141D;
+            border: 8px solid var(--surface-hover-color); /* Default/Losing segment color */
             position: relative;
-            box-shadow: 
-                inset 0 0 10px rgba(0,0,0,0.5), 
-                0 0 0 8px #202333,
-                0 0 0 10px #181A25;
-            transition: background-image 0.3s;
-        }
-        
-        #upgrade-chance-circle.is-spinning {
-            background-image: conic-gradient(
+            /* Winning segment will be an overlay or conic-gradient if browser support is fine */
+            background: conic-gradient(
                 var(--success-color) 0deg var(--upgrade-win-segment-angle, 0deg), 
                 var(--danger-color) var(--upgrade-win-segment-angle, 0deg) 360deg
             );
-        }
-        
-        .upgrade-mascot-image {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 75%;
-            height: 75%;
-            object-fit: contain;
-            transition: opacity 0.3s;
-            opacity: 1;
-        }
-        
-        #upgrade-chance-circle.is-spinning .upgrade-mascot-image {
-            opacity: 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease-out; /* For subtle effects if needed */
         }
         
         #upgrade-chance-pointer {
@@ -352,13 +333,12 @@
             height: 0;
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 18px solid var(--primary-color);
+            border-bottom: 18px solid var(--primary-color); /* Triangle color */
             position: absolute;
-            top: -10px; /* Positioned relative to the outer ring */
+            top: -2px; /* Position slightly above the circle's border */
             left: 50%;
-            transform: translateX(-50%);
-            /* --- ANIMATION FIX: Correct transform-origin --- */
-            transform-origin: center calc(85px + 10px); /* (radius + top offset) */
+            transform: translateX(-50%) rotate(0deg); /* Initial position at the top */
+            transform-origin: center calc(75px + 9px); /* (radius + half of triangle height approx offset from center) */
             z-index: 2;
             filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.4));
         }
@@ -366,12 +346,46 @@
             transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
         
-        /* Hide old elements just in case */
-        #upgrade-chance-text-overlay, #multiplier-buttons, #upgrade-inventory-select, 
-        #upgrade-page .content-card p:first-of-type, #upgrade-page .content-card #upgrade-result {
-            display: none;
+        
+        #upgrade-chance-text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-primary);
+            background-color: rgba(40, 43, 61, 0.85); /* Slightly transparent background for text */
+            width: calc(100% - 32px); /* Inner circle for text, considering border width */
+            height: calc(100% - 32px);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
         }
-        /* --- END: REPLACEMENT FOR UPGRADE PAGE STYLES --- */
+        #upgrade-calculated-multiplier {
+            font-size: 2.2em;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--primary-gradient-end);
+            display: block;
+        }
+        #upgrade-calculated-chance {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: block;
+        }
+        
+        /* Old multiplier buttons removed from default view if any */
+        #multiplier-buttons { display: none; } 
+        #upgrade-inventory-select { display: none; }
+        #upgrade-page .content-card p:first-of-type { display: none; } /* Hide "Select an item:" */
+        #upgrade-page .content-card #upgrade-result { display: none; } /* Hide old result text */
+        
+        /* END UPGRADE PAGE STYLES */
         
         .stats-box { display: flex; justify-content: space-around; margin: 24px 0; gap: 14px; } .stat-item { background-color: var(--surface-hover-color); padding: 14px; border-radius: var(--button-border-radius); flex: 1; text-align: center; border: 1px solid var(--border-color); } .stat-item .value { font-size: 1.6em; font-weight: 600; color: var(--primary-color); } .stat-item .label { font-size: 0.8em; color: var(--text-secondary); margin-top: 5px; } .invited-users-list div { padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 0.9em;} .invited-users-list div:last-child { border-bottom: none; }
         .leaderboard-list { padding-left: 0; padding-right: 0; } .leaderboard-list .leader-entry { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-color); transition: background-color 0.25s ease-out; position: relative; } .leaderboard-list .leader-entry:hover { background-color: rgba(255,255,255,0.04); } .leaderboard-list .leader-entry:last-child { border-bottom: none; } .leader-entry .rank { font-weight: 700; font-size: 1.05em; min-width: 40px; text-align: left; color: var(--text-secondary); margin-right: 15px; } .leader-entry .avatar-placeholder { width: 44px; height: 44px; border-radius: 50%; background-color: var(--surface-hover-color); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 1.2em; font-weight: 600; margin: 0 16px 0 0; border: 2px solid var(--border-color); } .leader-entry .info { flex-grow: 1; } .leader-entry .info .name { font-weight: 600; font-size: 1.1em; color: var(--text-primary); margin-bottom: 3px; } .leader-entry .info .details { font-size: 0.85em; color: var(--text-secondary); line-height: 1.3; } .leader-entry .score { margin-left: auto; font-weight: 700; font-size: 1.05em; color: var(--primary-color); padding-left: 15px; text-align: right; } .leader-entry.current-user-entry { background-color: rgba(0, 122, 255, 0.12); border-left: 3px solid var(--primary-color); padding-left: 17px;} .leader-entry.current-user-entry .rank { color: var(--primary-color); } .leader-entry.current-user-entry .info .name { color: var(--primary-gradient-end); font-weight: 700; } .leader-entry.current-user-entry .score { color: var(--secondary-color); font-weight: 800; } .leader-entry.current-user-entry .avatar-placeholder { border-color: var(--primary-color); }
@@ -394,14 +408,18 @@
             transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
             overflow: hidden;
         }
+        
+        /* This is the new animated background glow */
         #loading-screen::before {
             content: '';
             position: absolute;
+            /* Start position is less important now as the animation will move it */
             top: 50%;
             left: 50%;
-            width: 100vmin;
+            width: 100vmin; /* Made it larger for a more ambient effect */
             height: 100vmin;
             background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0) 60%);
+            /* Use the new 'backgroundDrift' animation */
             animation: backgroundDrift 20s ease-in-out infinite; 
             z-index: 0;
         }
@@ -411,13 +429,14 @@
         }
         #loading-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .loading-logo { 
-            width: 150px;
+            width: 150px; /* --- LOGO BIGGER --- */
             height: 150px; 
             border-radius: 0; 
             margin-bottom: 10px;
             box-shadow: none; 
             object-fit: contain;
         }
+        
         .loading-title { 
             font-family: 'Inter', var(--font-family);
             font-size: 2.8em; 
@@ -425,13 +444,15 @@
             margin-bottom: 30px; 
             letter-spacing: 2px;
             color: #34AADC;
-            text-shadow: none;
+            /* --- TITLE NOT GLOWING --- */
+            text-shadow: none; /* Removed the glow effect */
             font-style: italic;
             text-transform: uppercase;
             background: none;
             -webkit-background-clip: unset;
             -webkit-text-fill-color: unset;
         }
+        
         #loading-screen .loader { 
             width: 40px; 
             height: 40px; 
@@ -444,12 +465,14 @@
             border-right-color: transparent;
             border-bottom-color: transparent;
         }
+        
         .loading-status-text { 
             font-size: 1em; 
             font-weight: 400; 
             color: #AEB4C0; 
             margin-bottom: 40px; 
         }
+        
         .channel-link-container a {
             background-color: rgba(52, 170, 220, 0.15);
             color: #34AADC;
@@ -471,20 +494,22 @@
         }
         .case-name-container {
             padding: 12px 10px;
-            min-height: 50px;
+            min-height: 50px; /* Ensure space for the name */
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
         }
+        
         .case-name {
             font-weight: 600;
             font-size: 1.05em;
             color: var(--text-primary);
             line-height: 1.3;
         }
+
         .emoji-as-image {
-            font-size: 48px;
+            font-size: 48px; /* Adjust size to match your images */
             line-height: 1;
             display: flex;
             align-items: center;
@@ -492,30 +517,36 @@
             width: 100%;
             height: 100%;
         }
+
         #roulette-modal .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Space between header and roulette wheel */
         }
+    
         #roulette-modal .modal-header h3 {
-            margin-bottom: 0;
+            margin-bottom: 0; /* Remove default margin from h3 */
             padding-bottom: 0;
             text-align: left;
-            flex-grow: 1;
+            flex-grow: 1; /* Allow title to take available space */
         }
+    
+        /* New styles for the balance display to match the image */
         #roulette-modal-balance-display {
             text-align: right;
             line-height: 1.25;
-            flex-shrink: 0;
-            margin-left: 15px;
+            flex-shrink: 0; /* Prevent balance from shrinking */
+            margin-left: 15px; /* Space between title and balance */
         }
+    
         #roulette-modal-balance-display .balance-label {
             font-size: 0.8em;
             font-weight: 500;
             color: var(--text-secondary);
             margin-bottom: 2px;
         }
+    
         #roulette-modal-balance-display .balance-value-line {
             display: flex;
             align-items: center;
@@ -525,10 +556,14 @@
             font-weight: 600;
             color: var(--text-primary);
         }
+    
         #roulette-modal-balance-display .balance-value-line .balance-icon {
             width: 20px;
             height: 20px;
         }
+
+        /* Add these styles to your main <style> block */
+        
         .banner-carousel {
             position: relative;
             width: 100%;
@@ -536,23 +571,28 @@
             overflow: hidden;
             border-radius: var(--main-border-radius);
             box-shadow: var(--soft-shadow);
+            /* Ensures touch events are smooth on iOS */
             -webkit-transform: translate3d(0, 0, 0);
         }
+        
         .banner-slides {
             display: flex;
             transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
+        
         .banner-slide {
             flex-shrink: 0;
             width: 100%;
             position: relative;
         }
+        
         .banner-slide a, .banner-slide img {
             display: block;
             width: 100%;
-            height: auto;
+            height: auto; /* Maintain aspect ratio of the image */
             border-radius: var(--main-border-radius);
         }
+        
         .banner-pagination {
             position: absolute;
             bottom: 12px;
@@ -562,6 +602,7 @@
             gap: 8px;
             z-index: 10;
         }
+        
         .banner-dot {
             width: 8px;
             height: 8px;
@@ -570,10 +611,12 @@
             cursor: pointer;
             transition: background-color 0.3s, transform 0.3s;
         }
+        
         .banner-dot.active {
             background-color: rgba(255, 255, 255, 0.9);
             transform: scale(1.2);
         }
+
         .item-variant-badge {
             position: absolute;
             bottom: 4px;
@@ -588,13 +631,17 @@
             line-height: 1.2;
             z-index: 2;
         }
+
+        /* ADD this new rule for the glow effect */
         .black-glow-bg {
             background: radial-gradient(circle, rgba(0, 0, 0, 0.85) 30%, transparent 80%);
         }
+        /* This ensures the image sits on top of the background glow */
         .item-image-display img, .prize-card-image-placeholder img, .roulette-item img {
             position: relative;
             z-index: 1;
         }
+
         .case-card-title {
             font-weight: 600;
             font-size: 1.05em;
@@ -606,32 +653,39 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            flex-shrink: 0;
+            flex-shrink: 0; /* Prevents the title from being squished */
         }
+        
         .case-animation-display {
             width: 100%;
-            padding-bottom: 100%;
+            padding-bottom: 100%; /* Maintain 1:1 aspect ratio */
             position: relative;
+            /* REMOVED: flex-grow: 1; This was causing the container to stretch vertically */
         }
-        .case-animation-display > div {
+        
+        .case-animation-display > div { /* This targets the container Lottie creates */
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transform: scale(0.7);
+            /* The transform property is the key to making it smaller */
+            transform: scale(0.7); /* You can change 0.8 to 0.7 for even smaller, etc. */
         }
-        .case-animation-display > * {
+        
+        .case-animation-display > * { /* Using '*' targets whatever Lottie creates (div/svg) */
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            transform: scale(0.8);
+            transform: scale(0.8); /* You can adjust this value (e.g., 0.7) for a smaller animation */
         }
+
         .case-card .case-price {
+            /* CRITICAL: Removing 'margin-top: auto' lets the price sit naturally after the animation */
             margin-top: 0;
-            flex-shrink: 0;
+            flex-shrink: 0; /* Prevents the price from being squished */
         }
     </style>
 </head>
@@ -683,17 +737,17 @@
             <!-- UPGRADE PAGE - MODIFIED STRUCTURE -->
             <div id="upgrade-page" class="page">
                 <h2>Апгрейд</h2>
-                <div class="content-card" id="upgrade-content-card">
+                <div class="content-card">
                     <div id="upgrade-selection-area">
                         <div class="upgrade-item-slot" id="selected-inventory-item-slot" data-type="inventory">
                             <div class="slot-placeholder">
                                 <svg class="plus-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
-                                <span>Выберите ваш предмет</span>
+                                <span>Your Item</span>
                             </div>
                             <div class="slot-item-display" style="display: none;">
                                 <img src="" alt="Selected Item">
                                 <p class="slot-item-name">Item Name</p>
-                                <p class="slot-item-value">0 ⭐</p>
+                                <p class="slot-item-value">0.00 TON</p>
                             </div>
                         </div>
                         <div class="upgrade-arrow-connector">
@@ -702,38 +756,15 @@
                         <div class="upgrade-item-slot" id="desired-upgrade-item-slot" data-type="desired">
                             <div class="slot-placeholder">
                                 <svg class="plus-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
-                                <span>Выберите желаемый NFT</span>
+                                <span>Desired Item</span>
                             </div>
                             <div class="slot-item-display" style="display: none;">
                                 <img src="" alt="Desired Item">
                                 <p class="slot-item-name">Item Name</p>
-                                <p class="slot-item-value">0 ⭐</p>
+                                <p class="slot-item-value">0.00 TON</p>
                             </div>
                         </div>
                     </div>
-            
-                    <div id="upgrade-picker-container" style="display: none;">
-                        <h4 id="upgrade-picker-title">Select Your Item</h4>
-                        <div id="upgrade-items-grid" class="inventory-grid" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px;">
-                            <!-- Items will be populated here by JS -->
-                        </div>
-                        <button id="close-upgrade-picker-button" class="button button-secondary">Close Picker</button>
-                    </div>
-                    
-                    <div id="upgrade-stats-and-wheel-container">
-                        <span class="upgrade-stat-display" id="upgrade-calculated-chance">0%</span>
-                        <div id="upgrade-chance-display-container">
-                            <div id="upgrade-chance-circle">
-                                <img src="https://github.com/Vasiliy-katsyka/gifthunter/blob/main/RestrictedGifts_AgADvhkAAkoFcFM.png?raw=true" alt="Upgrade Mascot" class="upgrade-mascot-image">
-                                <div id="upgrade-chance-pointer"></div>
-                            </div>
-                        </div>
-                        <span class="upgrade-stat-display" id="upgrade-calculated-multiplier">0x</span>
-                    </div>
-                    
-                    <button id="do-upgrade-button" class="button" disabled>Select Items to Upgrade</button>
-                </div>
-            </div>
 
                     <div id="upgrade-picker-container" style="display: none;">
                         <h4 id="upgrade-picker-title">Select Your Item</h4>
@@ -3218,9 +3249,6 @@ function handleSelectDesiredItemForUpgrade(itemName) {
     }
 }
 function calculateAndDisplayUpgradeStats() {
-    const chanceEl = upgradePageElements.calculatedChanceText;
-    const multiplierEl = upgradePageElements.calculatedMultiplierText;
-
     if (selectedItemForUpgrade && desiredItemForUpgrade) {
         if (selectedItemForUpgrade.currentValue <= 0) {
             calculatedUpgradeMultiplier = 0;
@@ -3229,16 +3257,27 @@ function calculateAndDisplayUpgradeStats() {
         } else {
             calculatedUpgradeMultiplier = desiredItemForUpgrade.floorPrice / selectedItemForUpgrade.currentValue;
             
+            // --- START OF THE FIX ---
+            // This logic now exactly mirrors the secure backend calculation.
             const xEffective = Math.max(1.01, calculatedUpgradeMultiplier);
             const maxChance = 75; 
+            // NOTE: The risk factor must be a string for JS exponentiation to work correctly with decimals
             const riskFactor = 0.60; 
 
+            // Calculate the raw, uncapped chance.
             let chance = maxChance * Math.pow(riskFactor, xEffective - 1);
+            
+            // CRITICAL CHANGE: We ONLY cap the chance at the maximum (75%).
+            // We NO LONGER enforce a minimum of 3%. The chance is allowed to be very small.
+            // We also ensure it's not negative, just as a safety measure.
             calculatedUpgradeChance = Math.min(maxChance, Math.max(0, chance));
+            // --- END OF THE FIX ---
         }
 
-        multiplierEl.textContent = `${calculatedUpgradeMultiplier.toFixed(2)}x`;
-        chanceEl.textContent = `${calculatedUpgradeChance.toFixed(1)}%`;
+        upgradePageElements.calculatedMultiplierText.textContent = `${calculatedUpgradeMultiplier.toFixed(2)}x`;
+        // For very low chances, display with more precision.
+        const chanceDisplay = calculatedUpgradeChance < 0.1 ? calculatedUpgradeChance.toFixed(4) : calculatedUpgradeChance.toFixed(1);
+        upgradePageElements.calculatedChanceText.textContent = `${chanceDisplay}% Шанс`;
         
         upgradePageElements.doUpgradeButton.disabled = false;
         upgradePageElements.doUpgradeButton.textContent = "Attempt Upgrade";
@@ -3249,16 +3288,16 @@ function calculateAndDisplayUpgradeStats() {
     } else {
         calculatedUpgradeMultiplier = 0;
         calculatedUpgradeChance = 0;
-        multiplierEl.textContent = "0x";
-        chanceEl.textContent = "0%";
+        upgradePageElements.calculatedMultiplierText.textContent = "--x";
+        upgradePageElements.calculatedChanceText.textContent = "--% Шанс";
         upgradePageElements.doUpgradeButton.disabled = true;
         upgradePageElements.doUpgradeButton.textContent = "Select Items to Upgrade";
         document.documentElement.style.setProperty('--upgrade-win-segment-angle', `0deg`);
     }
     upgradePageElements.chancePointer.classList.remove('spinning');
-    upgradePageElements.chanceCircle.classList.remove('is-spinning');
     upgradePageElements.chancePointer.style.transform = `translateX(-50%) rotate(0deg)`;
 }
+
 // --- Add this event listener to your JavaScript, near your other listeners ---
 
 document.getElementById('support-button').addEventListener('click', () => {
@@ -3296,39 +3335,26 @@ document.addEventListener('DOMContentLoaded', () => {
 let upgradeSpinTimeout;
 function startUpgradeAnimation(isSuccess) {
     const pointer = upgradePageElements.chancePointer;
-    const circle = upgradePageElements.chanceCircle;
-
-    // Reset state before starting
-    circle.classList.remove('is-spinning');
     pointer.classList.remove('spinning');
     pointer.style.transform = `translateX(-50%) rotate(0deg)`;
-    void pointer.offsetWidth; // Force reflow
-
+    void pointer.offsetWidth;
     const winSegmentAngle = (calculatedUpgradeChance / 100) * 360;
-    const safetyMargin = 5; // Degrees to keep pointer away from the very edge
+    const safetyMargin = 5;
     let targetAngle;
-
     if (isSuccess) {
-        // Land somewhere in the green (success) zone
         targetAngle = Math.random() * (winSegmentAngle - 2 * safetyMargin) + safetyMargin;
     } else {
-        // Land somewhere in the red (fail) zone
         const loseSegmentStart = winSegmentAngle;
         const loseSegmentAngle = 360 - winSegmentAngle;
         targetAngle = loseSegmentStart + (Math.random() * (loseSegmentAngle - 2 * safetyMargin) + safetyMargin);
     }
-
     const fullSpins = 3 + Math.floor(Math.random() * 3);
     const finalAngle = fullSpins * 360 + targetAngle;
-    
-    // Add classes to trigger animation and visual changes (show gradient, hide mascot)
-    circle.classList.add('is-spinning');
     pointer.classList.add('spinning');
     pointer.style.transform = `translateX(-50%) rotate(${finalAngle}deg)`;
-    
     return new Promise(resolve => {
         if(upgradeSpinTimeout) clearTimeout(upgradeSpinTimeout);
-        upgradeSpinTimeout = setTimeout(resolve, 5100); // Wait for CSS transition to end + a small buffer
+        upgradeSpinTimeout = setTimeout(resolve, 5100);
     });
 }
 function showUpgradeResultModal(isSuccess, originalItem, newItemData) {
@@ -3359,7 +3385,6 @@ function showUpgradeResultModal(isSuccess, originalItem, newItemData) {
 }
 function closeUpgradeResultModal() {
     upgradePageElements.upgradeResultModal.classList.remove('active');
-    // Reset the entire upgrade page state after closing the result modal
     selectedItemForUpgrade = null;
     desiredItemForUpgrade = null;
     updateSlotDisplay(upgradePageElements.selectedInventoryItemSlot, null, 'inventory');
