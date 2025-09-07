@@ -818,7 +818,10 @@
                 <div id="cases-grid-regular" class="cases-grid">
                     <!-- Regular animated cases will be rendered here by JavaScript -->
                 </div>
-                
+                <h3 style="margin-top: 32px; margin-bottom: 20px;">Бесплатные</h3>
+                <div id="cases-grid-free" class="cases-grid">
+                    <!-- The free daily case will be rendered here -->
+                </div>
                 <h3 style="margin-top: 32px; margin-bottom: 20px;">Лимитированные</h3>
                 <div id="cases-grid-limited" class="cases-grid">
                     <!-- Limited image-based cases will be rendered here by JavaScript -->
@@ -1111,7 +1114,7 @@ const currentUser = {
     walletAddress: null, walletAddressRaw: null, tonBalance: 0.00, starBalance: 0,
     inventory: [], referralCode: null, referralEarningsPending: 0, total_won_ton: 0,
     invited_friends_count: 0,
-    photo_url: null
+    photo_url: null, last_free_case_opened: null 
 };
 // --- In your <script> tag in index.html ---
 
@@ -1516,6 +1519,25 @@ const CASE_REPRESENTATIVE_IMAGE_MAP = {
 // In index.html, find and REPLACE the entire const casesData array
 
 const casesData = [
+    {
+        'id': 'daily_case',
+        'name': 'Ежедневный',
+        'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/IMG_20250907_231324_450.PNG',
+        'priceTON': 0,
+        'prizes': [
+            { 'name': 'Heart Locket', 'probability': 0.000001 },
+            { 'name': 'Durov\'s Cap', 'probability': 0.000005 },
+            { 'name': 'Desk Calendar', 'probability': 0.05 },
+            { 'name': 'Lol Pop', 'probability': 0.05 },
+            { 'name': 'Homemade Cake', 'probability': 0.10 },
+            { 'name': 'Ring', 'probability': 0.10 },
+            { 'name': 'Bottle', 'probability': 0.15 },
+            { 'name': 'Rocket', 'probability': 0.15 },
+            { 'name': 'Rose', 'probability': 0.149994 },
+            { 'name': 'Bear', 'probability': 0.20 },
+            { 'name': 'Heart', 'probability': 0.15 },
+        ]
+    },
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': [
         {'name':'Precious Peach','probability': 0.00002},
         {'name':'Whip Cupcake', 'probability': 0.0001},
@@ -1880,6 +1902,41 @@ function updateLoadingStatus(message) {
         loadingStatusText.textContent = message;
     }
 }
+let dailyCaseInterval = null;
+
+// Add these two new helper functions anywhere in your script
+function formatTimeLeft(seconds) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
+
+function updateDailyCaseTimer() {
+    const priceDiv = document.getElementById('daily-case-button'); // It's a div now
+    const card = priceDiv ? priceDiv.closest('.case-card') : null;
+
+    if (!priceDiv || !card) {
+        if(dailyCaseInterval) clearInterval(dailyCaseInterval);
+        return;
+    }
+
+    const lastOpenedTime = currentUser.last_free_case_opened ? new Date(currentUser.last_free_case_opened).getTime() : 0;
+    const nextAvailableTime = lastOpenedTime + 24 * 60 * 60 * 1000;
+    const now = new Date().getTime();
+    const timeLeft = nextAvailableTime - now;
+
+    if (timeLeft > 0) {
+        priceDiv.textContent = formatTimeLeft(timeLeft / 1000);
+        card.style.pointerEvents = 'none'; // Disable clicking the card
+        priceDiv.style.opacity = '0.7';
+    } else {
+        priceDiv.textContent = "Бесплатно"; // Set the correct free text
+        card.style.pointerEvents = 'auto'; // Re-enable clicking
+        priceDiv.style.opacity = '1';
+        clearInterval(dailyCaseInterval);
+    }
+}
 async function apiRequest(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (Telegram.WebApp.initData) headers['X-Telegram-Init-Data'] = Telegram.WebApp.initData;
@@ -2169,94 +2226,88 @@ function updateUIBasedOnWallet(wallet) {
 function renderCasesAndSlots() {
     renderCases();
 }
+// In your <script> tag, REPLACE the entire renderCases function
+
 function renderCases() {
     const regularGrid = document.getElementById('cases-grid-regular');
     const limitedGrid = document.getElementById('cases-grid-limited');
-    const oldGrid = document.getElementById('cases-grid'); // Keep for fallback
+    const freeGrid = document.getElementById('cases-grid-free');
 
-    // If new grids don't exist, use the old one to prevent crashing
-    if (!regularGrid || !limitedGrid) {
-        if(oldGrid) oldGrid.innerHTML = "<p>Loading cases...</p>";
+    if (!regularGrid || !limitedGrid || !freeGrid) {
+        console.error("One or more case grids are missing from the DOM.");
         return;
     }
 
     regularGrid.innerHTML = '';
     limitedGrid.innerHTML = '';
+    freeGrid.innerHTML = '';
 
     if (!casesData || casesData.length === 0) {
         regularGrid.innerHTML = "<p>Loading cases...</p>";
         return;
     }
 
+    if (dailyCaseInterval) clearInterval(dailyCaseInterval);
+
     casesData.forEach(caseItem => {
-        // --- RENDER LIMITED CASES (OLD STYLE) ---
-        if (limitedCaseIds.includes(caseItem.id)) {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
+        const card = document.createElement('div');
+        card.className = 'case-card';
+        card.dataset.caseId = caseItem.id;
+        card.onclick = () => openRouletteModal(caseItem); // Moved onclick to the card itself
 
-            const imgCont = document.createElement('div');
-            imgCont.className = 'case-image-display';
-            const img = document.createElement('img');
-            img.src = generateImageFilename(caseItem.imageFilename || caseItem.name);
-            img.alt = caseItem.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
-
-            const nameCont = document.createElement('div');
-            nameCont.className = 'case-name-container';
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-name';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-            nameCont.appendChild(nameEl);
-            
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-            
-            card.append(imgCont, nameCont, priceEl);
-            limitedGrid.appendChild(card);
-        } 
-        // --- RENDER ANIMATED CASES (NEW STYLE) ---
-        else {
-            const card = document.createElement('div');
-            card.className = 'case-card';
-            card.dataset.caseId = caseItem.id;
-            card.onclick = () => openRouletteModal(caseItem);
-
-            // 1. Create the image container (same as limited cases)
-            const imgCont = document.createElement('div');
-            imgCont.className = 'case-image-display';
-            const img = document.createElement('img');
-
-            // 2. Get the representative prize name from our new map and generate its image URL
-            const representativePrizeName = CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] || caseItem.name; // Fallback to case name just in case
-            img.src = generateImageFilename(representativePrizeName);
-            img.alt = caseItem.name;
-            img.loading = 'lazy';
-            imgCont.appendChild(img);
-
-            // 3. Create the name container (same as limited cases)
-            const nameCont = document.createElement('div');
-            nameCont.className = 'case-name-container';
-            const nameEl = document.createElement('div');
-            nameEl.className = 'case-name';
-            nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
-            nameCont.appendChild(nameEl);
-            
-            // 4. Create the price element (same as limited cases)
-            const priceEl = document.createElement('div');
-            priceEl.className = 'case-price';
-            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
-            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
-            
-            // 5. Append everything in the correct order
-            card.append(imgCont, nameCont, priceEl);
-            regularGrid.appendChild(card);
+        const imgCont = document.createElement('div');
+        imgCont.className = 'case-image-display';
+        const img = document.createElement('img');
+        
+        // --- FIX #1: CORRECTLY USE THE IMAGE MAP ---
+        // For regular cases, use the representative image map.
+        // For limited and daily cases, use their direct imageFilename.
+        if (limitedCaseIds.includes(caseItem.id) || caseItem.id === 'daily_case') {
+             img.src = caseItem.imageFilename;
+        } else {
+             const representativePrizeName = CASE_REPRESENTATIVE_IMAGE_MAP[caseItem.id] || caseItem.name;
+             img.src = generateImageFilename(representativePrizeName);
         }
-        // --- ^^^^ REPLACE THIS ENTIRE ELSE BLOCK ^^^^ ---
+        
+        img.alt = caseItem.name;
+        img.loading = 'lazy';
+        imgCont.appendChild(img);
+
+        const nameCont = document.createElement('div');
+        nameCont.className = 'case-name-container';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'case-name';
+        nameEl.textContent = caseNameTranslations[caseItem.name] || caseItem.name;
+        nameCont.appendChild(nameEl);
+
+        // --- RENDER BASED ON CASE TYPE ---
+        if (caseItem.id === 'daily_case') {
+            // --- FIX #2: USE A DIV FOR "Бесплатно" TEXT, NOT A BUTTON ---
+            const freePriceDiv = document.createElement('div');
+            freePriceDiv.id = 'daily-case-button'; // Keep ID for timer logic
+            freePriceDiv.className = 'case-price'; // Use same class for styling
+            
+            card.append(imgCont, nameCont, freePriceDiv);
+            freeGrid.appendChild(card);
+            
+            updateDailyCaseTimer(); // Initial check
+            dailyCaseInterval = setInterval(updateDailyCaseTimer, 1000); // Start timer
+
+        } else {
+            // Logic for paid cases
+            const priceEl = document.createElement('div');
+            priceEl.className = 'case-price';
+            const casePriceInStars = Math.floor(caseItem.priceTON * TON_TO_STARS_RATE);
+            priceEl.innerHTML = `<img src="${STAR_ICON_URL}" class="balance-icon" style="width: 18px; height: 18px;"> ${formatLargeNumber(casePriceInStars)}`;
+            
+            card.append(imgCont, nameCont, priceEl);
+
+            if (limitedCaseIds.includes(caseItem.id)) {
+                limitedGrid.appendChild(card);
+            } else {
+                regularGrid.appendChild(card);
+            }
+        }
     });
 }
 function renderProfile() {
@@ -2515,54 +2566,54 @@ function initializeRouletteVisuals(caseItem, multiplier) {
 
 function openRouletteModal(caseItem) {
     currentOpenCaseOrSlot = caseItem;
-    selectedCaseMultiplier = 1;
-    updateCaseMultiplierButtons();
 
     const translatedCaseName = caseNameTranslations[caseItem.name] || caseItem.name;
     rouletteCaseName.textContent = translatedCaseName;
 
-    updateSpinButtonText();
-    updateModalBalanceDisplay();
+    // --- FIX #3: EXPLICITLY SHOW REELS FOR DAILY CASE ---
+    if (caseItem.id === 'daily_case') {
+        selectedCaseMultiplier = 1;
+        caseMultiplierSelector.style.display = 'none'; // Hide x1, x2, x3 buttons
+        spinButton.innerHTML = `Открыть бесплатно`;
+        initializeRouletteVisuals(caseItem, 1); // IMPORTANT: Show 1 reel
+    } else {
+        selectedCaseMultiplier = 1;
+        caseMultiplierSelector.style.display = 'flex'; // Show multiplier buttons
+        updateCaseMultiplierButtons(); // This calls initializeRouletteVisuals inside it
+        updateSpinButtonText();
+    }
 
+    updateModalBalanceDisplay();
     const starBalance = Math.floor(currentUser.tonBalance * TON_TO_STARS_RATE);
     const balanceValueEl = document.getElementById('roulette-modal-balance-value');
     if (balanceValueEl) {
         balanceValueEl.textContent = formatLargeNumber(starBalance);
     }
 
+    // (The rest of the function to populate "Possible Prizes" remains the same...)
     possiblePrizesDisplay.innerHTML = '';
     const sortedPrizes = [...caseItem.prizes].sort((a, b) => (b.floorPrice || 0) - (a.floorPrice || 0));
 
     sortedPrizes.forEach(pData => {
         if (!pData || !pData.name) return;
-
         const card = document.createElement('div');
         card.className = 'prize-card';
-
         let itemValueInTon = pData.floorPrice || 0;
         if (caseItem.id === 'black_only_case') {
             itemValueInTon *= 7;
         }
         const displayPriceInStars = Math.floor(itemValueInTon * TON_TO_STARS_RATE);
-
         const imgCont = document.createElement('div');
         imgCont.className = 'prize-card-image-placeholder';
-
-        // --- START OF CHANGE ---
-        // Add glow effect to possible prizes if it's the Black Only case
         if (caseItem.id === 'black_only_case') {
             imgCont.classList.add('black-glow-bg');
         }
-        // --- END OF CHANGE ---
-
         const img = document.createElement('img');
         img.src = generateImageFilename(pData.imageFilename || pData.name);
         img.alt = pData.name;
         imgCont.appendChild(img);
-
         const priceHTML = `<span class="prize-card-price">${formatLargeNumber(displayPriceInStars)} <img src="${STAR_ICON_URL}" class="balance-icon" style="width: 10px; height: 10px; vertical-align: baseline;"></span>`;
         const nameHTML = `<span class="prize-card-name">${pData.name}</span>`;
-
         card.innerHTML = `${priceHTML}${nameHTML}`;
         card.insertBefore(imgCont, card.firstChild);
         possiblePrizesDisplay.appendChild(card);
@@ -2607,61 +2658,49 @@ function getItemValue(prizeObject) {
 async function spinRoulette() {
     if (!currentOpenCaseOrSlot) return;
 
-    // --- START OF THE CHANGE ---
-    // The entire 'subStatus' block is now deleted.
-    // We no longer need to check for subscriptions here.
-    /*
-    const subStatus = await checkSubscription();
-
-    if (!subStatus.is_subscribed) {
-        // ... all the popup logic is gone ...
-        return;
-    }
-    */
-    // --- END OF THE CHANGE ---
-
     spinButton.disabled = true;
     spinButton.textContent = 'Spinning...';
     Telegram.WebApp.HapticFeedback?.impactOccurred('light');
 
-    const costInTon = currentOpenCaseOrSlot.priceTON * selectedCaseMultiplier;
-    const userBalanceTon = currentUser.tonBalance; // Using the direct TON balance for calculation
+    // --- LOGIC BRANCH: Daily Free Case vs. Paid Case ---
+    if (currentOpenCaseOrSlot.id === 'daily_case') {
+        const lastOpenedTime = currentUser.last_free_case_opened ? new Date(currentUser.last_free_case_opened).getTime() : 0;
+        const nextAvailableTime = lastOpenedTime + 24 * 60 * 60 * 1000;
+        if (new Date().getTime() < nextAvailableTime) {
+            showTGNotification("Ежедневный кейс еще не готов.", "warning");
+            spinButton.disabled = false;
+            spinButton.innerHTML = `Открыть бесплатно`;
+            return;
+        }
+        // No balance check is needed for the free case.
+    } else {
+        const costInTon = currentOpenCaseOrSlot.priceTON * selectedCaseMultiplier;
+        const userBalanceTon = currentUser.tonBalance;
 
-    if (userBalanceTon < costInTon) {
-        // The comparison is now correctly done with TON values
-        const costInStars = Math.floor(costInTon * TON_TO_STARS_RATE);
-        showTGNotification(`Not enough Stars to spin. Need ${costInStars}.`, "error");
-        spinButton.disabled = false;
-        updateSpinButtonText();
-        return;
-    }
-
-    currentUser.tonBalance -= costInTon;
-    updateBalances();
-    updateModalBalanceDisplay();
-
-    const allReelContainers = [rouletteReel1, rouletteReel2, rouletteReel3];
-    const activeSpinners = allReelContainers.filter(container => container.classList.contains('active')).map(container => container.querySelector('.roulette-spinner-reel'));
-
-    if (activeSpinners.length === 0) {
-        showTGNotification("No active reels to spin. Please select a multiplier.", "error");
-        spinButton.disabled = false;
-        updateSpinButtonText();
-        currentUser.tonBalance += costInTon;
+        if (userBalanceTon < costInTon) {
+            const costInStars = Math.floor(costInTon * TON_TO_STARS_RATE_BACKEND);
+            showTGNotification(`Недостаточно звезд. Необходимо ${costInStars}.`, "error");
+            spinButton.disabled = false;
+            updateSpinButtonText();
+            return;
+        }
+        // Optimistically deduct balance for faster UI feedback
+        currentUser.tonBalance -= costInTon;
         updateBalances();
         updateModalBalanceDisplay();
-        return;
     }
 
+    // --- COMMON LOGIC: API Call, Animation, and Result Handling ---
+    const allReelContainers = [rouletteReel1, rouletteReel2, rouletteReel3];
+    const activeSpinners = allReelContainers.filter(container => container.classList.contains('active')).map(container => container.querySelector('.roulette-spinner-reel'));
     const availablePrizes = currentOpenCaseOrSlot.prizes;
-    const itemHeight = activeSpinners[0].querySelector('.roulette-item').offsetHeight;
-    const rouletteRowVisibleHeight = activeSpinners[0].parentElement.clientHeight;
+    const itemHeight = 80; // Assuming fixed height from CSS
+    const rouletteRowVisibleHeight = 260; // Assuming fixed height from CSS
     const centerOffset = (rouletteRowVisibleHeight / 2);
-
     const colorKeys = Object.keys(BG_COLORS_MAP);
 
-    // In the `spinRoulette` function, find this block of code:
-    activeSpinners.forEach((spinnerReel, reelIndex) => {
+    // Populate reels with buffer items for a long spin animation
+    activeSpinners.forEach((spinnerReel) => {
         spinnerReel.style.transition = 'none';
         void spinnerReel.offsetWidth;
         for (let j = 0; j < VISUAL_ITEMS_PER_REEL_SPIN_BUFFER; j++) {
@@ -2669,8 +2708,6 @@ async function spinRoulette() {
             const itemEl = document.createElement('div');
             itemEl.className = 'roulette-item';
             
-            // --- START OF CHANGE ---
-            // Add the glow class to the spinning items as well
             if (currentOpenCaseOrSlot.id === 'black_only_case') {
                 itemEl.classList.add('black-glow-bg');
             } else {
@@ -2678,26 +2715,26 @@ async function spinRoulette() {
                 const color = BG_COLORS_MAP[randomColorName];
                 itemEl.style.background = `radial-gradient(circle, ${color}99 30%, transparent 80%)`;
             }
-            // --- END OF CHANGE ---
     
             const img = document.createElement('img');
             img.src = generateImageFilename(randomPrize.imageFilename || randomPrize.name);
             img.alt = randomPrize.name;
             itemEl.appendChild(img);
-            itemEl.dataset.prizeData = JSON.stringify({
-                name: randomPrize.name,
-                imageFilename: randomPrize.imageFilename,
-                is_ton_prize: randomPrize.is_ton_prize,
-                floorPrice: randomPrize.floor_price,
-                value: randomPrize.value
-            });
+            itemEl.dataset.prizeData = JSON.stringify(randomPrize);
             spinnerReel.appendChild(itemEl);
         }
     });
 
     try {
-        const result = await apiRequest('/api/open_case', 'POST', { case_id: currentOpenCaseOrSlot.id, multiplier: selectedCaseMultiplier });
+        const result = await apiRequest('/api/open_case', 'POST', { 
+            case_id: currentOpenCaseOrSlot.id, 
+            multiplier: selectedCaseMultiplier 
+        });
         
+        // After a successful spin, update client-side state from server response
+        if (currentOpenCaseOrSlot.id === 'daily_case' && result.status === 'success') {
+            currentUser.last_free_case_opened = new Date().toISOString();
+        }
         currentUser.tonBalance = result.new_balance_ton;
         updateBalances();
         updateModalBalanceDisplay();
@@ -2706,68 +2743,20 @@ async function spinRoulette() {
             if (spinAnimationTimeoutOuter) clearTimeout(spinAnimationTimeoutOuter);
 
             activeSpinners.forEach((spinnerReel, index) => {
-                let currentReelItemsDOMElements = Array.from(spinnerReel.children);
-                const actualWonPrizeBackendData = result.won_prizes[index] || (index === 0 && result.won_prizes[0]);
-                if (!actualWonPrizeBackendData) {
-                    console.warn(`No won prize data for reel ${index}. Skipping animation for this reel.`);
-                    return;
-                }
+                const currentReelItemsDOMElements = Array.from(spinnerReel.children);
+                const actualWonPrizeBackendData = result.won_prizes[index];
+                if (!actualWonPrizeBackendData) return;
+
                 const landingSpotIndex = VISUAL_ITEMS_PER_REEL_INITIAL + Math.floor(VISUAL_ITEMS_PER_REEL_SPIN_BUFFER / 2);
-                if (currentReelItemsDOMElements[landingSpotIndex]) {
-                    const targetEl = currentReelItemsDOMElements[landingSpotIndex];
-                    const imgElement = targetEl.querySelector('img');
-                    if (imgElement) {
-                        imgElement.src = generateImageFilename(actualWonPrizeBackendData.imageFilename || actualWonPrizeBackendData.name);
-                        imgElement.alt = actualWonPrizeBackendData.name;
-                    }
+                const targetEl = currentReelItemsDOMElements[landingSpotIndex];
+                if (targetEl) {
+                    targetEl.querySelector('img').src = generateImageFilename(actualWonPrizeBackendData.imageFilename || actualWonPrizeBackendData.name);
+                    targetEl.querySelector('img').alt = actualWonPrizeBackendData.name;
                     targetEl.dataset.isWinner = 'true';
                     targetEl.dataset.prizeData = JSON.stringify(actualWonPrizeBackendData);
-                } else {
-                    console.warn(`Could not place winning item at target index ${landingSpotIndex}. Reel may be too short or index is off.`);
                 }
+                
                 let scrollDist = (landingSpotIndex * itemHeight) + (itemHeight / 2) - centerOffset;
-                const randomBiasRange = itemHeight * 0.4;
-                let visualBiasOffsetPx = (Math.random() * randomBiasRange) - (randomBiasRange / 2);
-                scrollDist += visualBiasOffsetPx;
-                const nudgeRange = 3;
-                const winningItemValue = getItemValue(actualWonPrizeBackendData);
-                let nudgeValueThreshold = winningItemValue * 1.5;
-                let bestNudgeCandidate = null;
-                let maxNudgeAmount = itemHeight * 0.4;
-                for (let j = 1; j <= nudgeRange; j++) {
-                    const idxAbove = landingSpotIndex - j;
-                    const idxBelow = landingSpotIndex + j;
-                    if (idxAbove >= 0 && currentReelItemsDOMElements[idxAbove]) {
-                        try {
-                            const itemAboveData = JSON.parse(currentReelItemsDOMElements[idxAbove].dataset.prizeData);
-                            const itemAboveValue = getItemValue(itemAboveData);
-                            if (itemAboveValue > nudgeValueThreshold && (!bestNudgeCandidate || itemAboveValue > getItemValue(JSON.parse(bestNudgeCandidate.item.dataset.prizeData)))) {
-                                bestNudgeCandidate = { item: currentReelItemsDOMElements[idxAbove], direction: 'above', distance: j };
-                            }
-                        } catch (e) {}
-                    }
-                    if (idxBelow < currentReelItemsDOMElements.length && currentReelItemsDOMElements[idxBelow]) {
-                        try {
-                            const itemBelowData = JSON.parse(currentReelItemsDOMElements[idxBelow].dataset.prizeData);
-                            const itemBelowValue = getItemValue(itemBelowData);
-                            if (itemBelowValue > nudgeValueThreshold && (!bestNudgeCandidate || itemBelowValue > getItemValue(JSON.parse(bestNudgeCandidate.item.dataset.prizeData)))) {
-                                bestNudgeCandidate = { item: currentReelItemsDOMElements[idxBelow], direction: 'below', distance: j };
-                            }
-                        } catch (e) {}
-                    }
-                }
-                if (bestNudgeCandidate) {
-                    let nudgeMagnitude = maxNudgeAmount * (1 / (bestNudgeCandidate.distance + 1));
-                    nudgeMagnitude = Math.min(nudgeMagnitude, maxNudgeAmount);
-                    if (bestNudgeCandidate.direction === 'above') {
-                        scrollDist -= nudgeMagnitude;
-                    } else {
-                        scrollDist += nudgeMagnitude;
-                    }
-                }
-                const minScrollPosForWinner = (landingSpotIndex * itemHeight) + (itemHeight * 0.1) - centerOffset;
-                const maxScrollPosForWinner = (landingSpotIndex * itemHeight) + (itemHeight * 0.9) - centerOffset;
-                scrollDist = Math.max(minScrollPosForWinner, Math.min(maxScrollPosForWinner, scrollDist));
                 spinnerReel.style.transition = `top 6s cubic-bezier(0.25, 0.1, 0.2, 1)`;
                 spinnerReel.style.top = `-${scrollDist}px`;
             });
@@ -2775,47 +2764,60 @@ async function spinRoulette() {
             const animationDuration = 6000;
             spinAnimationTimeoutOuter = setTimeout(() => {
                 result.won_prizes.forEach(wp => {
-                    const existingItemIndex = currentUser.inventory.findIndex(invItem => invItem.id === wp.id);
-                    if (existingItemIndex === -1 && wp.id) {
-                        currentUser.inventory.push({
-                            id: wp.id, name: wp.name, imageFilename: wp.imageFilename,
-                            currentValue: wp.currentValue, variant: wp.variant, is_ton_prize: wp.is_ton_prize || false,
-                            is_emoji_gift: wp.is_emoji_gift
-                        });
-                    }
+                    currentUser.inventory.push({ ...wp, floorPrice: wp.currentValue });
                 });
                 renderInventory();
                 showWinOverlay(result.won_prizes);
                 
                 spinButton.disabled = false;
-                updateSpinButtonText();
+                if (currentOpenCaseOrSlot.id === 'daily_case') {
+                    spinButton.innerHTML = `Открыть бесплатно`;
+                    updateDailyCaseTimer(); // Start the cooldown timer display
+                } else {
+                    updateSpinButtonText();
+                }
 
+                // Clean up DOM for performance
                 activeSpinners.forEach(spinnerReel => {
                     const currentTop = parseFloat(spinnerReel.style.top.replace('px', ''));
-                    const itemHeightCalc = spinnerReel.querySelector('.roulette-item') ? spinnerReel.querySelector('.roulette-item').offsetHeight : 80;
-                    const itemsScrolledPast = Math.floor(Math.abs(currentTop) / itemHeightCalc);
-                    const startIndex = Math.max(0, itemsScrolledPast - 10);
-                    const endIndex = Math.min(spinnerReel.children.length, itemsScrolledPast + 10 + Math.ceil(rouletteRowVisibleHeight / itemHeightCalc) * 2);
+                    const itemsScrolledPast = Math.floor(Math.abs(currentTop) / itemHeight);
+                    const startIndex = Math.max(0, itemsScrolledPast - 15);
+                    const endIndex = Math.min(spinnerReel.children.length, itemsScrolledPast + 20);
                     const itemsToKeep = Array.from(spinnerReel.children).slice(startIndex, endIndex);
                     spinnerReel.innerHTML = '';
                     itemsToKeep.forEach(itemEl => spinnerReel.appendChild(itemEl));
                     spinnerReel.style.transition = 'none';
-                    spinnerReel.style.top = `${currentTop + (startIndex * itemHeightCalc)}px`;
-                    void spinnerReel.offsetWidth;
+                    spinnerReel.style.top = `${currentTop + (startIndex * itemHeight)}px`;
                 });
             }, animationDuration + 100);
+
         } else {
+            // Handle API error response (e.g., cooldown not met on backend)
             showTGNotification(result.error || result.message || 'Failed to open case.', 'error');
             spinButton.disabled = false;
-            updateSpinButtonText();
+            // Restore button text based on case type
+            if (currentOpenCaseOrSlot.id === 'daily_case') {
+                spinButton.innerHTML = `Открыть бесплатно`;
+            } else {
+                updateSpinButtonText();
+            }
         }
     } catch (e) {
+        // Handle network/critical errors
         console.error("Spin roulette error", e);
-        currentUser.tonBalance += costInTon;
-        updateBalances();
-        updateModalBalanceDisplay();
+        // If it was a paid case, refund the optimistically deducted balance
+        if (currentOpenCaseOrSlot.id !== 'daily_case') {
+            currentUser.tonBalance += currentOpenCaseOrSlot.priceTON * selectedCaseMultiplier;
+            updateBalances();
+            updateModalBalanceDisplay();
+        }
         spinButton.disabled = false;
-        updateSpinButtonText();
+        // Restore button text based on case type
+        if (currentOpenCaseOrSlot.id === 'daily_case') {
+            spinButton.innerHTML = `Открыть бесплатно`;
+        } else {
+            updateSpinButtonText();
+        }
         showTGNotification("Error during spin. Please try again.", "error");
     }
 }
