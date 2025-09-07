@@ -1969,7 +1969,30 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Hypno Lollipop','probability':0.05},
         {'name': 'Ring', 'probability': 0.30}, # High chance
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
-
+    {
+        'id': 'rick_and_morty_case',
+        'name': 'Рик и Морти',
+        'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/IMG_20250908_000501_222.PNG',
+        'priceTON': 2.0, # 500 Stars / 250 Stars per TON = 2.0 TON
+        'prizes': sorted([
+            # Thematic Rare Prizes
+            {'name': 'Magic Potion', 'probability': 0.01},      # Rick's Flask
+            {'name': 'Genie Lamp', 'probability': 0.01},        # Interdimensional travel device?
+            {'name': 'Ion Gem', 'probability': 0.005},          # Valuable space crystal
+            {'name': 'Astral Shard', 'probability': 0.005},     # Another valuable space crystal
+            
+            # Thematic Uncommon Prizes
+            {'name': 'Electric Skull', 'probability': 0.05},    # Something went wrong in the lab...
+            {'name': 'Kissed Frog', 'probability': 0.05},       # Alien creature
+            {'name': 'Spy Agaric', 'probability': 0.10},        # Alien plant life
+            {'name': 'Hex Pot', 'probability': 0.10},           # A weird gadget
+            
+            # Common Filler Prizes
+            {'name': 'Hypno Lollipop', 'probability': 0.15},    # Mind-bending candy
+            {'name': 'Bottle', 'probability': 0.26},            # A regular bottle this time
+            {'name': 'Rocket', 'probability': 0.26}             # Rick's ship
+        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
+    },
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': sorted([
         {'name':'Record Player','probability':0.001},
         {'name':'Big Year', 'probability': 0.001},
