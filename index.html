@@ -677,15 +677,27 @@
             flex-shrink: 0; /* Prevents the price from being squished */
         }
 
-        #upgrade-page {
-            /* Darker background image */
-            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250907_222256007.jpg?raw=true');
+        #upgrade-page.active {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.65)), url('https://github.com/Vasiliy-katsyka/gifthunter/blob/main/BackgroundEraser_20250907_222256007.jpg?raw=true');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            
+            /* Use negative margins to break out of the parent's padding */
+            margin: -24px -18px; 
+            /* Re-apply padding so the content itself isn't at the screen edges */
+            padding: 24px 18px; 
         }
 
-        /* Hide the old chance display elements */
+        /* 2. Make the card container transparent so the background shows through */
+        #upgrade-page .content-card {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0; /* Remove card padding */
+        }
+        
+        /* Hide the old chance display */
         #upgrade-chance-display-container {
             display: none !important;
         }
@@ -695,13 +707,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 20px; /* Space between text and circle */
+            gap: 20px;
             margin: 40px auto;
             width: 100%;
             max-width: 320px;
         }
 
-        /* Styling for the '0%' and '0x' text */
         .chance-display-text {
             font-size: 1.6em;
             font-weight: 700;
@@ -710,46 +721,60 @@
             text-align: center;
         }
 
-        /* The main circle element */
+        /* 3. The main circle element with the new red/blue gradient */
         #upgrade-chance-circle-new {
             position: relative;
             width: 150px;
             height: 150px;
             border-radius: 50%;
-            border: 4px solid rgba(120, 120, 128, 0.35); /* Outer track for the pointer */
+            
+            /* The conic gradient creates the blue (win) and red (loss) segments */
+            background: conic-gradient(
+                var(--primary-color) 0deg var(--upgrade-win-segment-angle, 0deg), 
+                var(--danger-color) var(--upgrade-win-segment-angle, 0deg) 360deg
+            );
+            
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: var(--surface-hover-color);
-            box-shadow: 0 0 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.4);
+            box-shadow: 0 0 25px rgba(0,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5);
             flex-shrink: 0;
         }
 
-        /* The mascot image inside the circle */
-        .upgrade-mascot-image {
-            width: 75%;
-            height: 75%;
-            object-fit: contain;
-            position: relative;
-            z-index: 1;
+        /* Create an inner circle for the mascot to sit on */
+        #upgrade-chance-circle-new::before {
+            content: '';
+            position: absolute;
+            width: calc(100% - 16px); /* Makes the colored ring 8px thick */
+            height: calc(100% - 16px);
+            background-color: var(--surface-hover-color);
+            border-radius: 50%;
+            z-index: 0;
         }
 
-        /* The new pointer with corrected animation origin */
+        .upgrade-mascot-image {
+            width: 70%;
+            height: 70%;
+            object-fit: contain;
+            position: relative;
+            z-index: 1; /* Sits on top of the ::before pseudo-element */
+        }
+
+        /* The pointer, adjusted to sit perfectly on the new gradient ring */
         #upgrade-chance-pointer-new {
             width: 0;
             height: 0;
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 18px solid var(--primary-color);
+            border-bottom: 18px solid #F5F5F7; /* Changed to a more visible color */
             position: absolute;
-            top: -11px; /* Position pointer perfectly on the border */
+            top: -2px; /* Position pointer just outside the gradient ring */
             left: 50%;
             transform: translateX(-50%);
-            /* --- ANIMATION FIX --- */
-            /* This origin makes the pointer rotate around the circle's true center */
-            transform-origin: 50% 86px; /* (150px / 2) radius + 11px top offset */
+            /* Corrected origin for smooth rotation around the circle's center */
+            transform-origin: 50% 77px; /* (150px / 2) + 2px offset */
             z-index: 2;
-            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.4));
+            filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.5));
             transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
         /* --- END OF UPGRADE PAGE REDESIGN CSS --- */
@@ -3313,7 +3338,6 @@ function handleSelectDesiredItemForUpgrade(itemName) {
     }
 }
 function calculateAndDisplayUpgradeStats() {
-    // Get references to the new elements
     const chanceTextLeft = document.getElementById('upgrade-chance-text-left');
     const multiplierTextRight = document.getElementById('upgrade-multiplier-text-right');
     const pointer = document.getElementById('upgrade-chance-pointer-new');
@@ -3334,30 +3358,32 @@ function calculateAndDisplayUpgradeStats() {
             calculatedUpgradeChance = Math.min(maxChance, Math.max(0, chance));
         }
         
-        // Update the new UI elements
         multiplierTextRight.textContent = `${calculatedUpgradeMultiplier.toFixed(1)}x`;
         chanceTextLeft.textContent = `${calculatedUpgradeChance.toFixed(1)}%`;
+        
+        // This is the key part: set the CSS variable for the conic-gradient
+        const winAngle = (calculatedUpgradeChance / 100) * 360;
+        document.documentElement.style.setProperty('--upgrade-win-segment-angle', `${winAngle}deg`);
         
         upgradePageElements.doUpgradeButton.disabled = false;
         upgradePageElements.doUpgradeButton.textContent = "Attempt Upgrade";
 
     } else {
-        // Reset the new UI elements
         calculatedUpgradeMultiplier = 0;
         calculatedUpgradeChance = 0;
         multiplierTextRight.textContent = "0x";
         chanceTextLeft.textContent = "0%";
+        document.documentElement.style.setProperty('--upgrade-win-segment-angle', `0deg`); // Reset to all red
         
         upgradePageElements.doUpgradeButton.disabled = true;
         upgradePageElements.doUpgradeButton.textContent = "Select Items to Upgrade";
     }
 
-    // Reset pointer animation smoothly
     if (pointer) {
         pointer.style.transition = 'none';
         pointer.style.transform = `translateX(-50%) rotate(0deg)`;
-        void pointer.offsetWidth; // Force browser to apply the reset immediately
-        pointer.style.transition = `transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)`; // Re-enable for next spin
+        void pointer.offsetWidth; 
+        pointer.style.transition = `transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)`;
     }
 }
 
@@ -3400,18 +3426,32 @@ function startUpgradeAnimation(isSuccess) {
     const pointer = document.getElementById('upgrade-chance-pointer-new');
     if (!pointer) return Promise.resolve();
 
-    // The new animation is purely for visual suspense
-    const fullSpins = 4 + Math.floor(Math.random() * 4); // Spin between 4 and 7 times
-    const randomExtraAngle = Math.random() * 360;
-    const finalAngle = fullSpins * 360 + randomExtraAngle;
+    // 1. Calculate the win segment angle from our chance variable
+    const winSegmentAngle = (calculatedUpgradeChance / 100) * 360;
+    const safetyMargin = 5; // Degrees to stay away from the color edges
+    let targetAngle;
 
-    // Apply the rotation. The transition is already set in the CSS.
+    // 2. Determine the target angle based on success (blue) or failure (red)
+    if (isSuccess) {
+        // Land somewhere within the blue (win) segment
+        targetAngle = Math.random() * (winSegmentAngle - (2 * safetyMargin)) + safetyMargin;
+    } else {
+        // Land somewhere within the red (loss) segment
+        const lossSegmentStart = winSegmentAngle + safetyMargin;
+        const lossSegmentAngle = 360 - winSegmentAngle - (2 * safetyMargin);
+        targetAngle = lossSegmentStart + (Math.random() * lossSegmentAngle);
+    }
+    
+    // 3. Add multiple full spins for visual effect
+    const fullSpins = 4 + Math.floor(Math.random() * 4);
+    const finalAngle = fullSpins * 360 + targetAngle;
+    
+    // 4. Apply the rotation
     pointer.style.transform = `translateX(-50%) rotate(${finalAngle}deg)`;
     
-    // Return a promise that resolves when the animation is visually complete
     return new Promise(resolve => {
         if(upgradeSpinTimeout) clearTimeout(upgradeSpinTimeout);
-        upgradeSpinTimeout = setTimeout(resolve, 5100); // Wait for the 5s transition + a small buffer
+        upgradeSpinTimeout = setTimeout(resolve, 5100); // Wait for the 5s transition
     });
 }
 function showUpgradeResultModal(isSuccess, originalItem, newItemData) {
