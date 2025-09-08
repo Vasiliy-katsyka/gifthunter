@@ -1676,7 +1676,45 @@ def calculate_rtp_probabilities_proportional_fallback(case_data, all_floor_price
         'is_ton_prize': p['is_ton_prize'] # Preserved
     } for p in prizes]
 
+# In app.py, add this new function
 
+def normalize_probabilities_for_free_case(case_data, all_floor_prices):
+    """
+    Normalizes probabilities for a free case so they sum to 1.0, without EV/RTP adjustments.
+    """
+    prizes = []
+    total_initial_prob = Decimal('0')
+    for p_info in case_data['prizes']:
+        prob = Decimal(str(p_info['probability']))
+        total_initial_prob += prob
+        prizes.append({
+            'name': p_info['name'],
+            'probability': prob,
+            'floor_price': Decimal(str(all_floor_prices.get(p_info['name'], 0))),
+            'imageFilename': p_info.get('imageFilename', generate_image_filename_from_name(p_info['name'])),
+            'is_ton_prize': p_info.get('is_ton_prize', False)
+        })
+
+    if total_initial_prob == Decimal('0'):
+        logger.error(f"Free case '{case_data['id']}' has total initial probability of zero. Cannot normalize.")
+        return []
+
+    # Normalize probabilities so they sum to 1.0
+    for p in prizes:
+        p['probability'] /= total_initial_prob
+    
+    # Final check to ensure sum is exactly 1.0
+    final_sum = sum(p['probability'] for p in prizes)
+    if final_sum != Decimal('1.0') and prizes:
+        prizes[0]['probability'] += (Decimal('1.0') - final_sum)
+
+    return [{
+        'name': p['name'],
+        'probability': float(p['probability']),
+        'floor_price': float(p['floor_price']),
+        'imageFilename': p['imageFilename'],
+        'is_ton_prize': p['is_ton_prize']
+    } for p in prizes]
 def calculate_rtp_probabilities_for_slots(slot_data, all_floor_prices):
     """
     Calculates and adjusts prize probabilities for a given slot data
@@ -1969,28 +2007,30 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Hypno Lollipop','probability':0.05},
         {'name': 'Ring', 'probability': 0.30}, # High chance
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
+    # In app.py, inside cases_data_backend_with_fixed_prices_raw list
+
     {
         'id': 'rick_and_morty_case',
         'name': 'Рик и Морти',
         'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/IMG_20250908_000501_222.PNG',
-        'priceTON': 2.0, # 500 Stars / 250 Stars per TON = 2.0 TON
+        'priceTON': 2.0, # 500 Stars
         'prizes': sorted([
-            # Thematic Rare Prizes
-            {'name': 'Magic Potion', 'probability': 0.01},      # Rick's Flask
-            {'name': 'Genie Lamp', 'probability': 0.01},        # Interdimensional travel device?
-            {'name': 'Ion Gem', 'probability': 0.005},          # Valuable space crystal
-            {'name': 'Astral Shard', 'probability': 0.005},     # Another valuable space crystal
+            # RARE (probabilities drastically reduced)
+            {'name': 'Astral Shard', 'probability': 0.0001},     # Was 0.005
+            {'name': 'Ion Gem', 'probability': 0.0001},          # Was 0.005
+            {'name': 'Magic Potion', 'probability': 0.0005},      # Was 0.01
+            {'name': 'Genie Lamp', 'probability': 0.0005},        # Was 0.01
             
-            # Thematic Uncommon Prizes
-            {'name': 'Electric Skull', 'probability': 0.05},    # Something went wrong in the lab...
-            {'name': 'Kissed Frog', 'probability': 0.05},       # Alien creature
-            {'name': 'Spy Agaric', 'probability': 0.10},        # Alien plant life
-            {'name': 'Hex Pot', 'probability': 0.10},           # A weird gadget
+            # UNCOMMON
+            {'name': 'Electric Skull', 'probability': 0.01},    # Was 0.05
+            {'name': 'Kissed Frog', 'probability': 0.01},       # Was 0.05
+            {'name': 'Spy Agaric', 'probability': 0.05},        # Was 0.10
+            {'name': 'Hex Pot', 'probability': 0.05},           # Was 0.10
             
-            # Common Filler Prizes
-            {'name': 'Hypno Lollipop', 'probability': 0.15},    # Mind-bending candy
-            {'name': 'Bottle', 'probability': 0.26},            # A regular bottle this time
-            {'name': 'Rocket', 'probability': 0.26}             # Rick's ship
+            # COMMON (probabilities increased to balance)
+            {'name': 'Hypno Lollipop', 'probability': 0.25},    # Was 0.15
+            {'name': 'Bottle', 'probability': 0.3144},          # Was 0.26
+            {'name': 'Rocket', 'probability': 0.3144}           # Was 0.26
         ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
     },
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': sorted([
@@ -2973,8 +3013,14 @@ def open_case_api():
 
         # --- FIX: Process prizes for ALL cases right here ---
         target_case = {**target_case_template}
-        target_case['prizes'] = calculate_rtp_probabilities(target_case, UPDATED_FLOOR_PRICES)
+        if target_case['priceTON'] == 0:
+            target_case['prizes'] = normalize_probabilities_for_free_case(target_case, UPDATED_FLOOR_PRICES)
+        else:
+            target_case['prizes'] = calculate_rtp_probabilities(target_case, UPDATED_FLOOR_PRICES)
         
+        if not target_case['prizes']:
+             logger.error(f"Case '{cid}' resulted in an empty prize list after processing.")
+             return jsonify({"error": "Case is empty, cannot be opened."}), 500
         if not target_case['prizes']:
              logger.error(f"Case '{cid}' resulted in an empty prize list after RTP calculation.")
              return jsonify({"error": "Case is empty, cannot be opened."}), 500
