@@ -2229,11 +2229,11 @@ for case in cases_data_backend_with_fixed_prices_raw:
     case['prizes'] = [p for p in case['prizes'] if p['name'] != 'Nothing']
     # Add new emoji gifts as low-tier prizes
     case['prizes'].extend([
-        {'name': "💝", 'probability': 0.25},
-        {'name': "🐻", 'probability': 0.25},
-        {'name': "🌹", 'probability': 0.20},
-        {'name': "🚀", 'probability': 0.15},
-        {'name': "🍾", 'probability': 0.15},
+        {'name': "Heart", 'probability': 0.25},
+        {'name': "Bear", 'probability': 0.25},
+        {'name': "Rose", 'probability': 0.20},
+        {'name': "Rocket", 'probability': 0.15},
+        {'name': "Bottle", 'probability': 0.15},
     ])
 
 def finalize_slot_prize_pools():
