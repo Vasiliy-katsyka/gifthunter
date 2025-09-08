@@ -1,4 +1,3 @@
-
 import os
 import logging
 from flask import Flask, jsonify, request as flask_request, abort as flask_abort
@@ -2022,8 +2021,8 @@ cases_data_backend_with_fixed_prices_raw = [
             {'name': 'Genie Lamp', 'probability': 0.0005},        # Was 0.01
             
             # UNCOMMON
-            {'name': 'Electric Skull', 'probability': 0.01},    # Was 0.05
-            {'name': 'Kissed Frog', 'probability': 0.01},       # Was 0.05
+            {'name': 'Electric Skull', 'probability': 0.001},    # Was 0.05
+            {'name': 'Kissed Frog', 'probability': 0.001},       # Was 0.05
             {'name': 'Spy Agaric', 'probability': 0.05},        # Was 0.10
             {'name': 'Hex Pot', 'probability': 0.05},           # Was 0.10
             
