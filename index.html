@@ -1580,23 +1580,28 @@ const casesData = [
         {'name':'Hypno Lollipop','probability':0.05},
         {'name': 'Ring', 'probability': 0.30},
     ]},
+    // In index.html, inside the casesData array in the <script> tag
+
     {
         'id': 'rick_and_morty_case',
         'name': 'Рик и Морти',
         'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/IMG_20250908_000501_222.PNG',
         'priceTON': 2.0, // 500 Stars
         'prizes': [
-            {'name': 'Magic Potion', 'probability': 0.01},
-            {'name': 'Genie Lamp', 'probability': 0.01},
-            {'name': 'Ion Gem', 'probability': 0.005},
-            {'name': 'Astral Shard', 'probability': 0.005},
-            {'name': 'Electric Skull', 'probability': 0.05},
-            {'name': 'Kissed Frog', 'probability': 0.05},
-            {'name': 'Spy Agaric', 'probability': 0.10},
-            {'name': 'Hex Pot', 'probability': 0.10},
-            {'name': 'Hypno Lollipop', 'probability': 0.15},
-            {'name': 'Bottle', 'probability': 0.26},
-            {'name': 'Rocket', 'probability': 0.26}
+            // RARE
+            {'name': 'Astral Shard', 'probability': 0.0001},
+            {'name': 'Ion Gem', 'probability': 0.0001},
+            {'name': 'Magic Potion', 'probability': 0.0005},
+            {'name': 'Genie Lamp', 'probability': 0.0005},
+            // UNCOMMON
+            {'name': 'Electric Skull', 'probability': 0.001},
+            {'name': 'Kissed Frog', 'probability': 0.001},
+            {'name': 'Spy Agaric', 'probability': 0.05},
+            {'name': 'Hex Pot', 'probability': 0.05},
+            // COMMON
+            {'name': 'Hypno Lollipop', 'probability': 0.25},
+            {'name': 'Bottle', 'probability': 0.3144},
+            {'name': 'Rocket', 'probability': 0.3144}
         ]
     },
     {'id':'recordplayer','name':'Record Player Vault','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Record-Player.jpg','priceTON':3.6,'prizes': [
