@@ -1951,7 +1951,7 @@ cases_data_backend_with_fixed_prices_raw = [
             {'name': 'Heart Locket', 'probability': 0.000001},
             {'name': 'Durov\'s Cap', 'probability': 0.000005},
             # Cheap NFT Prizes
-            {'name': 'Desk Calendar', 'probability': 0.0005},
+            {'name': 'Desk Calendar', 'probability': 0.00005},
             {'name': 'Lol Pop', 'probability': 0.00005},
             {'name': 'Homemade Cake', 'probability': 0.00010},
             # Emoji Gift Prizes (most common)
