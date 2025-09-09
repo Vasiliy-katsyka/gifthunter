@@ -1941,28 +1941,6 @@ kissed_frog_processed_prizes = calculate_rtp_probabilities(
 # In app.py, find and REPLACE the entire cases_data_backend_with_fixed_prices_raw list
 
 cases_data_backend_with_fixed_prices_raw = [
-    {
-        'id': 'daily_case',
-        'name': 'Ежедневный',
-        'imageFilename': 'https://raw.githubusercontent.com/Vasiliy-katsyka/gifthunter/refs/heads/main/IMG_20250907_231324_450.PNG',
-        'priceTON': 0, # FREE
-        'prizes': sorted([
-            # Extremely Rare Prizes
-            {'name': 'Heart Locket', 'probability': 0.000001},
-            {'name': 'Durov\'s Cap', 'probability': 0.000005},
-            # Cheap NFT Prizes
-            {'name': 'Desk Calendar', 'probability': 0.00005},
-            {'name': 'Lol Pop', 'probability': 0.00005},
-            {'name': 'Homemade Cake', 'probability': 0.00010},
-            # Emoji Gift Prizes (most common)
-            {'name': 'Ring', 'probability': 0.10},
-            {'name': 'Bottle', 'probability': 0.15},
-            {'name': 'Rocket', 'probability': 0.15},
-            {'name': 'Rose', 'probability': 0.149994},
-            {'name': 'Bear', 'probability': 0.20},
-            {'name': 'Heart', 'probability': 0.15},
-        ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)
-    },
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': sorted([
         {'name':'Precious Peach','probability': 0.00002},
         {'name':'Whip Cupcake', 'probability': 0.0001},
