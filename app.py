@@ -2101,40 +2101,42 @@ cases_data_backend_with_fixed_prices_raw = [
     {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 10.0,'prizes': sorted([
         {'name':'Perfume Bottle','probability':0.000005},
         {'name':'Magic Potion','probability':0.0001},
-        {'name':'Genie Lamp','probability':0.001},
+        {'name':'Genie Lamp','probability':0.0005},
         {'name':'Swiss Watch','probability':0.001},
-        {'name':'Sharp Tongue','probability':0.002},
+        {'name':'Sharp Tongue','probability':0.001},
         {'name':'Neko Helmet','probability':0.002},
         {'name':'Kissed Frog','probability':0.005},
         {'name':'Love Potion','probability': 0.1},
-        {'name':'Electric Skull','probability':0.1},
-        {'name':'Diamond Ring','probability':0.1},
         {'name':'Sakura Flower','probability': 0.2},
-        {'name':'Berry Box','probability': 0.488895}
+        {'name':'Berry Box','probability': 0.3},
+        {'name':'Spiced Wine','probability': 0.390395}
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'vintagecigar','name':'Vintage Cigar Safe','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Vintage-Cigar.jpg','priceTON':14.0,'prizes': sorted([
         {'name':'Mini Oscar','probability':0.00001},
-        {'name':'Perfume Bottle','probability':0.0005},
-        {'name':'Genie Lamp','probability':0.001},
-        {'name':'Swiss Watch','probability':0.005},
-        {'name':'Sharp Tongue','probability':0.005},
-        {'name':'Vintage Cigar','probability':0.01},
+        {'name':'Perfume Bottle','probability':0.0001},
+        {'name':'Genie Lamp','probability':0.0005},
+        {'name':'Swiss Watch','probability':0.001},
+        {'name':'Sharp Tongue','probability':0.001},
+        {'name':'Vintage Cigar','probability':0.005},
         {'name':'Record Player','probability':0.1},
-        {'name':'Top Hat','probability':0.2},
-        {'name':'Scared Cat','probability':0.1},
+        {'name':'Top Hat','probability':0.1},
+        {'name':'Skull Flower','probability': 0.2},
+        {'name':'Snoop Cigar','probability': 0.2},
+        {'name':'Spy Agaric','probability': 0.39239}
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'astralshard','name':'Astral Shard Relic','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Astral-Shard.jpg','priceTON':28.0,'prizes': sorted([
-        {'name':'Astral Shard','probability':0.0001},
-        {'name':'Ion Gem','probability':0.0005},
-        {'name':'Mini Oscar','probability':0.001},
-        {'name':'Perfume Bottle','probability':0.001},
-        {'name':'Magic Potion','probability':0.002},
-        {'name':'Loot Bag','probability':0.05},
-        {'name':'Flying Broom','probability':0.1},
-        {'name':'Crystal Ball','probability':0.2},
-        {'name':'Evil Eye','probability': 0.6454}
+        {'name':'Astral Shard','probability':0.00001},
+        {'name':'Ion Gem','probability':0.00005},
+        {'name':'Mini Oscar','probability':0.0001},
+        {'name':'Perfume Bottle','probability':0.0001},
+        {'name':'Magic Potion','probability':0.0005},
+        {'name':'Loot Bag','probability':0.001},
+        {'name':'Voodoo Doll','probability':0.1},
+        {'name':'Top Hat','probability':0.2},
+        {'name':'Skull Flower','probability': 0.3},
+        {'name':'Spy Agaric','probability': 0.39824}
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)},
 
     {'id':'plushpepe','name':'Plush Pepe Hoard','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Plush-Pepe.jpg','priceTON': 200.0,'prizes': sorted([
@@ -2144,14 +2146,13 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Heroic Helmet','probability':0.0001},
         {'name':'Nail Bracelet','probability':0.0001},
         {'name':'Precious Peach','probability':0.0005},
+        {'name':'Astral Shard','probability': 0.1},
         {'name':'Mini Oscar', 'probability': 0.2},
-        {'name':'Kissed Frog', 'probability': 0.5},
-        {'name':'Astral Shard','probability': 0.299244}
+        {'name':'Genie Lamp', 'probability': 0.3},
+        {'name':'Kissed Frog', 'probability': 0.399244}
     ], key=lambda p: UPDATED_FLOOR_PRICES.get(p['name'], 0), reverse=True)}
 ]
 # --- END: REPLACE THE ENTIRE cases_data_backend_with_fixed_prices_raw LIST IN app.py WITH THIS ---
-# --- END: REPLACE THE ENTIRE cases_data_backend_with_fixed_prices_raw LIST IN app.py WITH THIS ---
-
 cases_data_backend = []
 for case_template in cases_data_backend_with_fixed_prices_raw:
     processed_case = {**case_template}
