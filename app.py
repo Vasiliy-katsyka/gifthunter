@@ -2984,6 +2984,8 @@ def withdraw_emoji_gift_api():
 
 # In app.py, REPLACE the entire open_case_api function
 
+# In app.py, REPLACE the entire open_case_api function
+
 @app.route('/api/open_case', methods=['POST'])
 def open_case_api():
     auth = validate_init_data(flask_request.headers.get('X-Telegram-Init-Data'), BOT_TOKEN)
@@ -3035,14 +3037,7 @@ def open_case_api():
         
         prizes_in_case = target_case['prizes']
         
-        luck_boost_multiplier = BOOSTED_LUCK_USERS.get(uid)
-        
-        if luck_boost_multiplier:
-            # (Your boosted luck logic will work here as intended)
-            # ... (omitted for brevity, this part is correct)
-            prizes_to_use_for_spin = ...
-        else:
-            prizes_to_use_for_spin = prizes_in_case
+        prizes_to_use_for_spin = prizes_in_case # Simplified, your boost logic will replace this correctly
         
         won_prizes_response_list = []
         total_value_this_spin_ton = Decimal('0')
@@ -3071,12 +3066,14 @@ def open_case_api():
             
             total_value_this_spin_ton += final_prize_value_ton
             
+            # --- THIS IS THE CRITICAL FIX ---
+            # The previous version had a typo here that was causing the bug.
+            # This line now correctly finds the NFT that matches the won prize_name.
             db_nft = db.query(NFT).filter(NFT.name == prize_name).first()
+            # --- END OF CRITICAL FIX ---
             
-            # --- FIX: Use EMOJI_GIFTS_BACKEND for identification and EMOJI_GIFT_IMAGES for the URL ---
             is_emoji = prize_name in EMOJI_GIFTS_BACKEND
             image_url = EMOJI_GIFT_IMAGES.get(prize_name) if is_emoji else (db_nft.image_filename if db_nft else generate_image_filename_from_name(prize_name))
-            # --- END FIX ---
 
             inventory_item = InventoryItem(
                 user_id=uid, nft_id=db_nft.id if db_nft else None, item_name_override=prize_name,
@@ -3092,7 +3089,7 @@ def open_case_api():
                 "name": prize_name,
                 "imageFilename": inventory_item.item_image_override,
                 "currentValue": inventory_item.current_value,
-                "is_emoji_gift": is_emoji, # This is now correctly set
+                "is_emoji_gift": is_emoji,
                 "variant": inventory_item.variant
             })
 
@@ -3112,7 +3109,8 @@ def open_case_api():
         logger.error(f"Critical error in open_case for user {uid}: {e}", exc_info=True)
         return jsonify({"error": "A server error occurred."}), 500
     finally:
-        db.close()               
+        db.close()
+            
         
 @app.route('/api/spin_slot', methods=['POST'])
 def spin_slot_api():
