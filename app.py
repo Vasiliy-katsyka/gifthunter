@@ -55,7 +55,7 @@ UPGRADE_MIN_CHANCE = Decimal('3.0')   # Minimum possible chance in %
 UPGRADE_RISK_FACTOR = Decimal('0.60')
 UPGRADE_HOUSE_EDGE_FACTOR = Decimal('0.80')
 
-RTP_TARGET = Decimal('0.45') # 85% Return to Player target for all cases and slots
+RTP_TARGET = Decimal('0.25') # 85% Return to Player target for all cases and slots
 TON_TO_STARS_RATE_BACKEND = 250
 PAYMENT_PROVIDER_TOKEN = "" # Add this to your .env file!
 
@@ -1967,7 +1967,7 @@ cases_data_backend_with_fixed_prices_raw = [
         {'name':'Precious Peach','probability': 0.00002},
         {'name':'Whip Cupcake', 'probability': 0.0001},
         {'name':'Lol Pop','probability': 0.0001},
-        {'name':'Jelly Bunny', 'probability': 0.01}, # Added filler
+        {'name':'Jelly Bunny', 'probability': 0.0001}, # Added filler
         {'name': "Heart",  'probability': 0.25},
         {'name': "Bear",   'probability': 0.25},
         {'name': "Rose",   'probability': 0.20},
@@ -2090,10 +2090,10 @@ cases_data_backend_with_fixed_prices_raw = [
     {'id':'swisswatch','name':'Swiss Watch Box','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Swiss-Watch.jpg','priceTON':6.0,'prizes': sorted([ # Price: 1500 stars
         {'name':'Swiss Watch','probability':0.00001},
         {'name':'Electric Skull','probability':0.0001},
-        {'name':'Voodoo Doll','probability':0.05},
-        {'name':'Diamond Ring','probability':0.05},
-        {'name':'Love Candle','probability':0.05},
-        {'name':'Mad Pumpkin','probability':0.07988},
+        {'name':'Voodoo Doll','probability':0.0005},
+        {'name':'Diamond Ring','probability':0.0005},
+        {'name':'Love Candle','probability':0.0005},
+        {'name':'Mad Pumpkin','probability':0.007988},
         {'name':'Sleigh Bell','probability':0.05},
         {'name':'Top Hat','probability':0.05},
         {'name':'Trapped Heart','probability':0.05},
