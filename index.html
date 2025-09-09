@@ -1515,11 +1515,6 @@ const CASE_REPRESENTATIVE_IMAGE_MAP = {
     'plushpepe': 'Plush Pepe'
 };
     
-// This is the clean, raw definition of all your cases.
-// --- In index.html, REPLACE the entire casesData list ---
-// In index.html, find and REPLACE the entire const casesData array
-// --- START: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
- // --- START: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
 // --- START: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
 const casesData = [
     {'id':'all_in_01','name':'All In','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/All-In.jpg','priceTON':0.2,'prizes': [
@@ -1688,43 +1683,40 @@ const casesData = [
     {'id':'perfumebottle','name':'Perfume Chest','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Perfume-Bottle.jpg','priceTON': 10.0,'prizes': [
         {'name':'Perfume Bottle','probability':0.000005},
         {'name':'Magic Potion','probability':0.0001},
-        {'name':'Genie Lamp','probability':0.001},
+        {'name':'Genie Lamp','probability':0.0005},
         {'name':'Swiss Watch','probability':0.001},
-        {'name':'Sharp Tongue','probability':0.002},
+        {'name':'Sharp Tongue','probability':0.001},
         {'name':'Neko Helmet','probability':0.002},
         {'name':'Kissed Frog','probability':0.005},
-        {'name':'Love Potion','probability': 0.1},     // Loss Item
-        {'name':'Electric Skull','probability':0.1},
-        {'name':'Diamond Ring','probability':0.1},
-        {'name':'Sakura Flower','probability': 0.2},    // Loss Item
-        {'name':'Berry Box','probability': 0.488895}    // Loss Item
+        {'name':'Love Potion','probability': 0.1},
+        {'name':'Sakura Flower','probability': 0.2},
+        {'name':'Berry Box','probability': 0.3},
+        {'name':'Spiced Wine','probability': 0.390395}
     ]},
     {'id':'vintagecigar','name':'Vintage Cigar Safe','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Vintage-Cigar.jpg','priceTON':14.0,'prizes': [
         {'name':'Mini Oscar','probability':0.00001},
-        {'name':'Perfume Bottle','probability':0.0005},
-        {'name':'Genie Lamp','probability':0.001},
-        {'name':'Swiss Watch','probability':0.005},
-        {'name':'Sharp Tongue','probability':0.005},
-        {'name':'Vintage Cigar','probability':0.01},
-        {'name':'Record Player','probability':0.1},     // Loss Item
-        {'name':'Top Hat','probability':0.2},          // Loss Item
-        {'name':'Scared Cat','probability':0.1},
+        {'name':'Perfume Bottle','probability':0.0001},
+        {'name':'Genie Lamp','probability':0.0005},
+        {'name':'Swiss Watch','probability':0.001},
+        {'name':'Sharp Tongue','probability':0.001},
+        {'name':'Vintage Cigar','probability':0.005},
+        {'name':'Record Player','probability':0.1},
+        {'name':'Top Hat','probability':0.1},
+        {'name':'Skull Flower','probability': 0.2},
+        {'name':'Snoop Cigar','probability': 0.2},
+        {'name':'Spy Agaric','probability': 0.39239}
     ]},
     {'id':'astralshard','name':'Astral Shard Relic','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Astral-Shard.jpg','priceTON':28.0,'prizes': [
-        {'name':'Astral Shard','probability':0.0001},
-        {'name':'Ion Gem','probability':0.0005},
-        {'name':'Mini Oscar','probability':0.001},
-        {'name':'Perfume Bottle','probability':0.001},
-        {'name':'Magic Potion','probability':0.002},
-        {'name':'Loot Bag','probability':0.05},
-        {'name':'Flying Broom','probability':0.1},      // Loss Item
-        {'name':'Crystal Ball','probability':0.2},      // Loss Item
-        {'name':'Evil Eye','probability': 0.6454},      // Loss Item
-        {'name':'Scared Cat','probability':0.0},        // Removed for balance
-        {'name':'Vintage Cigar','probability':0.0},     // Removed for balance
-        {'name':'Swiss Watch','probability':0.0},       // Removed for balance
-        {'name': 'Bonded Ring', 'probability': 0.0},    // Removed for balance
-        {'name': 'Gem Signet', 'probability': 0.0}      // Removed for balance
+        {'name':'Astral Shard','probability':0.00001},
+        {'name':'Ion Gem','probability':0.00005},
+        {'name':'Mini Oscar','probability':0.0001},
+        {'name':'Perfume Bottle','probability':0.0001},
+        {'name':'Magic Potion','probability':0.0005},
+        {'name':'Loot Bag','probability':0.001},
+        {'name':'Voodoo Doll','probability':0.1},
+        {'name':'Top Hat','probability':0.2},
+        {'name':'Skull Flower','probability': 0.3},
+        {'name':'Spy Agaric','probability': 0.39824}
     ]},
     {'id':'plushpepe','name':'Plush Pepe Hoard','imageFilename':'https://raw.githubusercontent.com/Vasiliy-katsyka/case/main/caseImages/Plush-Pepe.jpg','priceTON': 200.0,'prizes': [
         {'name':'Plush Pepe','probability':0.000001},
@@ -1733,14 +1725,13 @@ const casesData = [
         {'name':'Heroic Helmet','probability':0.0001},
         {'name':'Nail Bracelet','probability':0.0001},
         {'name':'Precious Peach','probability':0.0005},
-        {'name':'Mini Oscar', 'probability': 0.2},      // Loss Item
-        {'name':'Kissed Frog', 'probability': 0.5},     // Loss Item
-        {'name':'Astral Shard','probability': 0.299244} // Loss Item
+        {'name':'Astral Shard','probability': 0.1},
+        {'name':'Mini Oscar', 'probability': 0.2},
+        {'name':'Genie Lamp', 'probability': 0.3},
+        {'name':'Kissed Frog', 'probability': 0.399244}
     ]}
     // --- END OF REBALANCED HIGH-TIER CASES ---
 ];
-// --- END: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
-// --- END: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
 // --- END: REPLACE THE ENTIRE casesData ARRAY IN index.html WITH THIS ---
 
 // --- CRUCIAL PROCESSING STEP ---
